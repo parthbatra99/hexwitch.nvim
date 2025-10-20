@@ -1,0 +1,198 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        nvim-version: ['v0.9.5', 'v0.10.0', 'nightly']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.nvim-version }}
+
+      - name: Install dependencies
+        run: |
+          git clone --depth=1 https://github.com/nvim-lua/plenary.nvim.git ~/.local/share/nvim/lazy/plenary.nvim
+          git clone --depth=1 https://github.com/nvim-telescope/telescope.nvim.git ~/.local/share/nvim/lazy/telescope.nvim
+
+      - name: Cache test dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.local/share/nvim/lazy
+            ~/.cache/nvim
+          key: ${{ runner.os }}-deps-${{ matrix.nvim-version }}-${{ hashFiles('**/minimal_init.lua') }}
+          restore-keys: |
+            ${{ runner.os }}-deps-${{ matrix.nvim-version }}-
+            ${{ runner.os }}-deps-
+
+      - name: Run unit tests
+        run: |
+          nvim --headless --noplugin -u tests/minimal_init.lua \
+            -c "PlenaryBustedDirectory tests/hexwitch/ { minimal_init = 'tests/minimal_init.lua' }"
+
+      - name: Run type checking
+        uses: mrcjkb/lua-typecheck-action@v0.1.0
+        with:
+          directories: lua
+
+      - name: Test plugin loading
+        run: |
+          nvim --headless -c "
+            set rtp+=.
+            try
+              lua require('hexwitch')
+              print('Plugin loaded successfully')
+            catch
+              print('Plugin failed to load: ' .. vim.inspect(err))
+              os.exit(1)
+            end
+          " -c "qa"
+
+      - name: Test plugin health check
+        run: |
+          nvim --headless -c "
+            set rtp+=.
+            lua require('hexwitch').setup()
+          " -c "checkhealth hexwitch" -c "qa"
+
+  check-documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check documentation completeness
+        run: |
+          # Check if README exists and has content
+          if [ ! -s README.md ]; then
+            echo "README.md is missing or empty"
+            exit 1
+          fi
+
+          # Check if help documentation exists
+          if [ ! -s doc/hexwitch.txt ]; then
+            echo "doc/hexwitch.txt is missing or empty"
+            exit 1
+          fi
+
+          # Check for required sections in README
+          if ! grep -q "## Installation" README.md; then
+            echo "README.md missing required section: Installation"
+            exit 1
+          fi
+
+          if ! grep -q "## Usage" README.md; then
+            echo "README.md missing required section: Usage"
+            exit 1
+          fi
+
+          if ! grep -q "## Configuration" README.md; then
+            echo "README.md missing required section: Configuration"
+            exit 1
+          fi
+
+          # Check help tags
+          if ! grep -q "\*hexwitch\*" doc/hexwitch.txt; then
+            echo "doc/hexwitch.txt missing proper help tags"
+            exit 1
+          fi
+
+      - name: Validate help documentation
+        run: |
+          nvim --headless -c "helptags doc/" -c "qa"
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint with luacheck
+        uses: lunarmodules/luacheck@v1
+        with:
+          args: --globals vim
+
+      - name: Check code formatting
+        run: |
+          # Check for trailing whitespace
+          if git grep -l "\\s\\+$" -- "*.lua"; then
+            echo "Found trailing whitespace in files:"
+            git grep -n "\\s\\+$" -- "*.lua"
+            exit 1
+          fi
+
+      - name: Validate plugin structure
+        run: |
+          # Check for required plugin structure
+          required_files=(
+            "plugin/hexwitch.lua"
+            "lua/hexwitch/init.lua"
+            "lua/hexwitch/config/init.lua"
+            "lua/hexwitch/ai/openai.lua"
+            "lua/hexwitch/theme/applier.lua"
+            "lua/hexwitch/theme/storage.lua"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "Missing required file: $file"
+              exit 1
+            fi
+          done
+
+  build-check:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: 'v0.10.0'
+
+      - name: Test plugin loading
+        run: |
+          nvim --headless -c "
+            set rtp+=.
+            try
+              lua require('hexwitch')
+              print('Plugin loaded successfully')
+            catch
+              print('Plugin failed to load: ' .. vim.inspect(err))
+              os.exit(1)
+            end
+          " -c "qa"
+
+  notify-results:
+    needs: [test, lint, check-documentation, build-check]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify on success
+        if: ${{ needs.test.result == 'success' && needs.lint.result == 'success' && needs.check-documentation.result == 'success' && needs.build-check.result == 'success' }}
+        run: |
+          echo "✅ All tests passed successfully!"
+
+      - name: Notify on failure
+        if: ${{ needs.test.result == 'failure' || needs.lint.result == 'failure' || needs.check-documentation.result == 'failure' || needs.build-check.result == 'failure' }}
+        run: |
+          echo "❌ Some tests failed. Please check the job logs for details."
+          exit 1
+
