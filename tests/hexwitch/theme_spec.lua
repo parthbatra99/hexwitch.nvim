@@ -66,11 +66,15 @@ describe("hexwitch.theme", function()
 
       -- Check some basic highlights were set
       local normal_hl = vim.api.nvim_get_hl(0, { name = "Normal" })
-      assert.equals(test_theme_data.colors.fg, normal_hl.fg)
-      assert.equals(test_theme_data.colors.bg, normal_hl.bg)
+      -- Neovim returns colors as decimal numbers, so we need to convert hex to compare
+      local function hex_to_decimal(hex)
+        return tonumber(hex:sub(2), 16)
+      end
+      assert.equals(hex_to_decimal(test_theme_data.colors.fg), normal_hl.fg)
+      assert.equals(hex_to_decimal(test_theme_data.colors.bg), normal_hl.bg)
 
       local comment_hl = vim.api.nvim_get_hl(0, { name = "Comment" })
-      assert.equals(test_theme_data.colors.comment, comment_hl.fg)
+      assert.equals(hex_to_decimal(test_theme_data.colors.comment), comment_hl.fg)
       assert.is_true(comment_hl.italic)
 
       -- Check terminal colors
@@ -166,8 +170,14 @@ describe("hexwitch.theme", function()
       for _, group in ipairs(expected_groups) do
         local hl = vim.api.nvim_get_hl(0, { name = group })
         assert.is_not_nil(hl, "Highlight group " .. group .. " should be defined")
-        assert.is_true(hl.fg ~= nil or hl.bg ~= nil or hl.italic ~= nil or hl.underline ~= nil,
-          "Highlight group " .. group .. " should have some properties")
+        -- Special handling for DiagnosticUnderline* groups which only have sp and undercurl
+        if group:match("^DiagnosticUnderline") then
+          assert.is_true(hl.sp ~= nil or hl.undercurl ~= nil,
+            "Highlight group " .. group .. " should have sp or undercurl properties")
+        else
+          assert.is_true(hl.fg ~= nil or hl.bg ~= nil or hl.italic ~= nil or hl.underline ~= nil,
+            "Highlight group " .. group .. " should have some properties")
+        end
       end
 
       for _, group in ipairs(treesitter_groups) do
@@ -181,25 +191,30 @@ describe("hexwitch.theme", function()
     it("should set correct colors for specific groups", function()
       applier.apply(test_theme_data)
 
+      -- Helper function to convert hex to decimal for comparison
+      local function hex_to_decimal(hex)
+        return tonumber(hex:sub(2), 16)
+      end
+
       -- Test specific color mappings
       local comment_hl = vim.api.nvim_get_hl(0, { name = "Comment" })
-      assert.equals(test_theme_data.colors.comment, comment_hl.fg)
+      assert.equals(hex_to_decimal(test_theme_data.colors.comment), comment_hl.fg)
       assert.is_true(comment_hl.italic)
 
       local string_hl = vim.api.nvim_get_hl(0, { name = "String" })
-      assert.equals(test_theme_data.colors.green, string_hl.fg)
+      assert.equals(hex_to_decimal(test_theme_data.colors.green), string_hl.fg)
 
       local keyword_hl = vim.api.nvim_get_hl(0, { name = "Keyword" })
-      assert.equals(test_theme_data.colors.purple, keyword_hl.fg)
+      assert.equals(hex_to_decimal(test_theme_data.colors.purple), keyword_hl.fg)
 
       local function_hl = vim.api.nvim_get_hl(0, { name = "Function" })
-      assert.equals(test_theme_data.colors.blue, function_hl.fg)
+      assert.equals(hex_to_decimal(test_theme_data.colors.blue), function_hl.fg)
 
       local diagnostic_error_hl = vim.api.nvim_get_hl(0, { name = "DiagnosticError" })
-      assert.equals(test_theme_data.colors.red, diagnostic_error_hl.fg)
+      assert.equals(hex_to_decimal(test_theme_data.colors.red), diagnostic_error_hl.fg)
 
       local diagnostic_underline_hl = vim.api.nvim_get_hl(0, { name = "DiagnosticUnderlineError" })
-      assert.equals(test_theme_data.colors.red, diagnostic_underline_hl.sp)
+      assert.equals(hex_to_decimal(test_theme_data.colors.red), diagnostic_underline_hl.sp)
       assert.is_true(diagnostic_underline_hl.undercurl)
     end)
 
@@ -481,8 +496,12 @@ describe("hexwitch.theme", function()
         assert.equals("test-theme", vim.g.colors_name)
 
         local normal_hl = vim.api.nvim_get_hl(0, { name = "Normal" })
-        assert.equals(test_theme_data.colors.fg, normal_hl.fg)
-        assert.equals(test_theme_data.colors.bg, normal_hl.bg)
+        -- Convert hex to decimal for comparison
+        local function hex_to_decimal(hex)
+          return tonumber(hex:sub(2), 16)
+        end
+        assert.equals(hex_to_decimal(test_theme_data.colors.fg), normal_hl.fg)
+        assert.equals(hex_to_decimal(test_theme_data.colors.bg), normal_hl.bg)
       end)
 
       it("should handle theme listing before and after operations", function()

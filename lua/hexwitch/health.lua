@@ -27,18 +27,35 @@ function M.check()
 
   -- Check configuration
   local cfg = config.get()
-  local valid, err = pcall(function()
-    assert(cfg.openai_api_key and cfg.openai_api_key ~= "", "OpenAI API key not configured")
-  end)
+  local ai = require("hexwitch.ai")
+  local state = require("hexwitch.storage.state")
 
-  if valid then
-    health.ok("Configuration valid")
-    health.ok("API key configured")
+  -- Check AI provider configuration
+  local provider_info = ai.get_provider_info()
+  if provider_info.primary.available then
+    health.ok(string.format("AI provider: %s configured", provider_info.primary.name))
   else
-    health.warn("Configuration issue: " .. (err or "unknown"), {
-      "Set OPENAI_API_KEY environment variable",
-      "Or configure in setup(): require('hexwitch').setup({ openai_api_key = 'sk-...' })",
+    health.warn(string.format("AI provider: %s not available", provider_info.primary.name), {
+      "Check API key configuration",
+      "Or change provider with: require('hexwitch').setup({ ai_provider = 'openrouter' })",
     })
+  end
+
+  -- Check fallback provider
+  if provider_info.fallback.available then
+    health.ok(string.format("Fallback provider: %s available", provider_info.fallback.name))
+  else
+    health.info(string.format("Fallback provider: %s not available", provider_info.fallback.name))
+  end
+
+  -- Check state management
+  local ok, current_state = pcall(state.get)
+  if ok and current_state then
+    health.ok("State management initialized")
+    local stack_sizes = state.get_stack_sizes()
+    health.info(string.format("Undo stack: %d items, Redo stack: %d items", stack_sizes.undo, stack_sizes.redo))
+  else
+    health.error("State management failed to initialize")
   end
 
   -- Check themes directory
@@ -53,15 +70,13 @@ function M.check()
     end
   end
 
-  -- Check telescope (optional)
-  if cfg.ui_mode == "telescope" then
-    if validate_utils.can_require("telescope") then
-      health.ok("Telescope UI mode: telescope.nvim installed")
-    else
-      health.warn("UI mode set to 'telescope' but telescope.nvim not found", {
-        "Install telescope.nvim or change ui_mode to 'input'",
-      })
-    end
+  -- Check telescope (required)
+  if validate_utils.can_require("telescope") then
+    health.ok("Telescope UI: telescope.nvim installed")
+  else
+    health.error("Telescope.nvim not found", {
+      "Install telescope.nvim: { 'nvim-telescope/telescope.nvim' }",
+    })
   end
 
   -- Check curl

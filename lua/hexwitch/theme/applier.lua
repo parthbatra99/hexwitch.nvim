@@ -136,7 +136,11 @@ function M.apply(colorscheme_data)
   end
 
   -- Set colorscheme name
-  vim.g.colors_name = colorscheme_data.name or "hexwitch"
+  local theme_name = colorscheme_data.name
+  if not theme_name or theme_name == "" then
+    theme_name = "hexwitch"
+  end
+  vim.g.colors_name = theme_name
 
   -- Apply highlights
   for group, hl in pairs(highlights) do

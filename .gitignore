@@ -2,11 +2,17 @@
 *.luac
 lua/**/*.luac
 
+
+.claude/
 # Neovim specific
 *.nvr
 *.swp
 *.swo
 *~
+.nvimlog
+doc/tags
+tags
+plugin/packer_compiled.lua
 
 # Vim swap files
 [._]*.s[a-v][a-z]
@@ -63,6 +69,13 @@ docs/build/
 # Rocks/luarocks
 rockspecs/
 *.rock
+lua_modules/
+
+# Lua coverage and lint caches
+.luacov
+luacov.stats.out
+luacov.report.out
+.luacheckcache
 
 # Telemetry and debugging
 *.prof
@@ -73,11 +86,24 @@ rockspecs/
 .idea/
 *.iml
 
+# Local dev environments
+.envrc
+.direnv/
+
+# Temporary work dirs
+tmp/
+.tmp/
+
+# Archives
+*.zip
+*.tar.gz
+
 # Local configuration
 .env
 .env.local
 .env.*.local
 config.local.*
+devconfig/
 
 # Cache directories
 .cache/

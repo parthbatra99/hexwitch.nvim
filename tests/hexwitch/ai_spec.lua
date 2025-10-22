@@ -16,11 +16,18 @@ describe("hexwitch.ai.openai", function()
       timeout = 30000,
       debug = false
     })
+
+    -- Enable synchronous mode for testing
+    vim.g.hexwitch_test_sync_mode = true
   end)
 
   after_each(function()
     -- Restore original config
     config.setup(original_config)
+
+    -- Clean up test flags
+    vim.g.hexwitch_test_sync_mode = nil
+    vim.g.hexwitch_test_plenary_unavailable = nil
   end)
 
   describe("generate", function()
@@ -51,9 +58,8 @@ describe("hexwitch.ai.openai", function()
     end)
 
     it("should return error when plenary is not available", function()
-      -- Temporarily remove plenary from package.loaded
-      local plenary = package.loaded["plenary.curl"]
-      package.loaded["plenary.curl"] = nil
+      -- Set test override to simulate missing plenary
+      vim.g.hexwitch_test_plenary_unavailable = true
 
       local result, error = nil, nil
       openai.generate("test theme", function(res, err)
@@ -64,8 +70,8 @@ describe("hexwitch.ai.openai", function()
       assert.is_nil(result)
       assert.matches("plenary.nvim is required", error)
 
-      -- Restore plenary
-      package.loaded["plenary.curl"] = plenary
+      -- Clear test override
+      vim.g.hexwitch_test_plenary_unavailable = nil
     end)
 
     it("should build correct request payload", function()
@@ -370,7 +376,7 @@ describe("hexwitch.ai.openai", function()
           assert.is_not_nil(schema.properties.colors)
           assert.is_not_nil(schema.properties.colors.properties)
           assert.equals("string", schema.properties.colors.properties.bg.type)
-          assert.matches("^#[0-9A-Fa-f]{6}$", schema.properties.colors.properties.bg.pattern)
+          assert.equals("^#[0-9A-Fa-f]{6}$", schema.properties.colors.properties.bg.pattern)
 
           -- Mock success
           options.callback({

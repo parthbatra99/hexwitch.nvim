@@ -4,6 +4,26 @@ local openai = require("hexwitch.ai.openai")
 local applier = require("hexwitch.theme.applier")
 local storage = require("hexwitch.theme.storage")
 
+-- Test helper to call AI provider directly with sync mode
+local function test_ai_generate(user_input)
+  local result, error = nil, nil
+
+  -- Enable test sync mode
+  vim.g.hexwitch_test_sync_mode = true
+  vim.g.hexwitch_test_plenary_unavailable = false
+
+  openai.generate(user_input, function(res, err)
+    result = res
+    error = err
+  end)
+
+  -- Clean up test flags
+  vim.g.hexwitch_test_sync_mode = nil
+  vim.g.hexwitch_test_plenary_unavailable = nil
+
+  return result, error
+end
+
 describe("hexwitch error handling and edge cases", function()
   local original_config
   local temp_dir
@@ -33,6 +53,10 @@ describe("hexwitch error handling and edge cases", function()
       save_themes = true,
       debug = false
     })
+
+    -- Enable synchronous mode for testing
+    vim.g.hexwitch_test_sync_mode = true
+    vim.g.hexwitch_test_plenary_unavailable = nil
   end)
 
   after_each(function()
@@ -49,35 +73,31 @@ describe("hexwitch error handling and edge cases", function()
     for i = 0, 15 do
       vim.g["terminal_color_" .. i] = nil
     end
+
+    -- Clean up test flags
+    vim.g.hexwitch_test_sync_mode = nil
+    vim.g.hexwitch_test_plenary_unavailable = nil
   end)
 
   describe("configuration errors", function()
     it("should handle missing API key", function()
       config.setup({ openai_api_key = nil })
 
-      local error_received = false
-      hexwitch.generate("test theme", function(result, error)
-        assert.is_nil(result)
-        assert.is_not_nil(error)
-        assert.matches("OpenAI API key not configured", error)
-        error_received = true
-      end)
+      local result, error = test_ai_generate("test theme")
 
-      assert.is_true(error_received)
+      assert.is_nil(result)
+      assert.is_not_nil(error)
+      assert.matches("OpenAI API key not configured", error)
     end)
 
     it("should handle empty API key", function()
       config.setup({ openai_api_key = "" })
 
-      local error_received = false
-      hexwitch.generate("test theme", function(result, error)
-        assert.is_nil(result)
-        assert.is_not_nil(error)
-        assert.matches("OpenAI API key not configured", error)
-        error_received = true
-      end)
+      local result, error = test_ai_generate("test theme")
 
-      assert.is_true(error_received)
+      assert.is_nil(result)
+      assert.is_not_nil(error)
+      assert.matches("OpenAI API key not configured", error)
     end)
 
     it("should handle invalid API key format", function()

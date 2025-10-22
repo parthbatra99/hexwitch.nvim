@@ -1,0 +1,3 @@
+- [x] save flow is not there after refinement window
+- [x] themes names should be prefilled on save
+- [x] icons handling in UI and copy polishing as well like 'Generating theme...' instead of 'Generating theme'

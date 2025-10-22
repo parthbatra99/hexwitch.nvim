@@ -14,6 +14,31 @@ local function get_theme_path(theme_name)
   return get_theme_dir() .. "/" .. theme_name .. ".json"
 end
 
+---Read theme data without applying it
+---@param theme_name string
+---@return table|nil colorscheme_data
+function M.read(theme_name)
+  if not theme_name or theme_name == "" then
+    return nil
+  end
+
+  local theme_path = get_theme_path(theme_name)
+  local file = io.open(theme_path, "r")
+  if not file then
+    return nil
+  end
+
+  local content = file:read("*all")
+  file:close()
+
+  local ok, colorscheme_data = pcall(vim.json.decode, content)
+  if not ok then
+    return nil
+  end
+
+  return colorscheme_data
+end
+
 ---Save the current theme
 ---@param theme_name string Name to save theme as
 function M.save(theme_name)
@@ -30,26 +55,40 @@ function M.save(theme_name)
   colorscheme_data.description = "Saved theme: " .. theme_name
   colorscheme_data.colors = {}
 
-  -- Extract current highlight colors
-  local highlight_groups = {
-    "Normal", "NormalFloat", "NormalSB", "StatusLine", "StatusLineNC",
-    "Cursor", "CursorLine", "CursorLineNr", "Visual", "VisualNOS",
-    "Comment", "Constant", "String", "Character", "Number", "Boolean", "Float",
-    "Identifier", "Function", "Keyword", "Conditional", "Repeat", "Label",
-    "Operator", "Exception", "PreProc", "Include", "Define", "Macro", "PreCondit",
-    "Type", "StorageClass", "Structure", "Typedef", "Special", "SpecialChar",
-    "Tag", "Delimiter", "SpecialComment", "Error", "Todo", "Underlined", "Ignore"
-  }
+  -- Extract current highlight colors in the expected format
+  local normal_hl = vim.api.nvim_get_hl(0, { name = "Normal" })
+  local comment_hl = vim.api.nvim_get_hl(0, { name = "Comment" })
+  local string_hl = vim.api.nvim_get_hl(0, { name = "String" })
+  local keyword_hl = vim.api.nvim_get_hl(0, { name = "Keyword" })
+  local function_hl = vim.api.nvim_get_hl(0, { name = "Function" })
+  local constant_hl = vim.api.nvim_get_hl(0, { name = "Constant" })
+  local identifier_hl = vim.api.nvim_get_hl(0, { name = "Identifier" })
+  local type_hl = vim.api.nvim_get_hl(0, { name = "Type" })
+  local diagnostic_error_hl = vim.api.nvim_get_hl(0, { name = "DiagnosticError" })
+  local diagnostic_warn_hl = vim.api.nvim_get_hl(0, { name = "DiagnosticWarn" })
+  local diagnostic_info_hl = vim.api.nvim_get_hl(0, { name = "DiagnosticInfo" })
+  local diagnostic_hint_hl = vim.api.nvim_get_hl(0, { name = "DiagnosticHint" })
+  local visual_hl = vim.api.nvim_get_hl(0, { name = "Visual" })
+  local cursor_hl = vim.api.nvim_get_hl(0, { name = "Cursor" })
 
-  for _, group in ipairs(highlight_groups) do
-    local hl = vim.api.nvim_get_hl(0, { name = group })
-    if hl and (hl.fg or hl.bg) then
-      colorscheme_data.colors[group:lower()] = {
-        fg = hl.fg and string.format("#%06x", hl.fg) or nil,
-        bg = hl.bg and string.format("#%06x", hl.bg) or nil,
-      }
-    end
-  end
+  colorscheme_data.colors = {
+    fg = normal_hl.fg and string.format("#%06x", normal_hl.fg) or "#ffffff",
+    bg = normal_hl.bg and string.format("#%06x", normal_hl.bg) or "#000000",
+    bg_sidebar = normal_hl.bg and string.format("#%06x", normal_hl.bg) or "#000000",
+    bg_float = normal_hl.bg and string.format("#%06x", normal_hl.bg) or "#000000",
+    bg_statusline = normal_hl.bg and string.format("#%06x", normal_hl.bg) or "#000000",
+    red = diagnostic_error_hl.fg and string.format("#%06x", diagnostic_error_hl.fg) or "#ff0000",
+    orange = constant_hl.fg and string.format("#%06x", constant_hl.fg) or "#ff8800",
+    yellow = diagnostic_warn_hl.fg and string.format("#%06x", diagnostic_warn_hl.fg) or "#ffff00",
+    green = string_hl.fg and string.format("#%06x", string_hl.fg) or "#00ff00",
+    cyan = diagnostic_info_hl.fg and string.format("#%06x", diagnostic_info_hl.fg) or "#00ffff",
+    blue = function_hl.fg and string.format("#%06x", function_hl.fg) or "#0000ff",
+    purple = keyword_hl.fg and string.format("#%06x", keyword_hl.fg) or "#ff00ff",
+    magenta = constant_hl.fg and string.format("#%06x", constant_hl.fg) or "#ff00ff",
+    comment = comment_hl.fg and string.format("#%06x", comment_hl.fg) or "#888888",
+    selection = visual_hl.bg and string.format("#%06x", visual_hl.bg) or "#444444",
+    cursor = cursor_hl.bg and string.format("#%06x", cursor_hl.bg) or "#ffffff",
+  }
 
   -- Add terminal colors if available
   if vim.g.terminal_color_0 then

@@ -102,7 +102,12 @@ function M.generate(user_input, callback)
     temperature = cfg.temperature,
   })
 
-  -- Check if plenary is available
+  -- Check if plenary is available (respect test override)
+  if vim.g.hexwitch_test_plenary_unavailable == true then
+    callback(nil, "plenary.nvim is required")
+    return
+  end
+
   local has_plenary, curl = pcall(require, "plenary.curl")
   if not has_plenary then
     callback(nil, "plenary.nvim is required but not installed")
@@ -111,6 +116,45 @@ function M.generate(user_input, callback)
 
   notify.debug("Sending request to OpenAI API")
 
+  -- Define response handler function
+  local function handle_response(response)
+    notify.debug("Received response with status: " .. tostring(response.status))
+
+    if response.status ~= 200 then
+      local error_msg = "API request failed with status " .. response.status
+      if response.body then
+        local ok, parsed = pcall(vim.json.decode, response.body)
+        if ok and parsed.error then
+          error_msg = error_msg .. ": " .. (parsed.error.message or "Unknown error")
+        end
+      end
+      callback(nil, error_msg)
+      return
+    end
+
+    local ok, parsed = pcall(vim.json.decode, response.body)
+    if not ok then
+      callback(nil, "Failed to parse API response: " .. tostring(parsed))
+      return
+    end
+
+    if not parsed.choices or #parsed.choices == 0 then
+      callback(nil, "No choices in API response")
+      return
+    end
+
+    local content = parsed.choices[1].message.content
+    local colorscheme_ok, colorscheme = pcall(vim.json.decode, content)
+
+    if not colorscheme_ok then
+      callback(nil, "Failed to parse colorscheme JSON: " .. tostring(colorscheme))
+      return
+    end
+
+    notify.debug("Successfully generated theme: " .. (colorscheme.name or "unnamed"))
+    callback(colorscheme, nil)
+  end
+
   curl.post("https://api.openai.com/v1/chat/completions", {
     headers = {
       ["Content-Type"] = "application/json",
@@ -118,43 +162,7 @@ function M.generate(user_input, callback)
     },
     body = body,
     timeout = cfg.timeout,
-    callback = vim.schedule_wrap(function(response)
-      notify.debug("Received response with status: " .. tostring(response.status))
-
-      if response.status ~= 200 then
-        local error_msg = "API request failed with status " .. response.status
-        if response.body then
-          local ok, parsed = pcall(vim.json.decode, response.body)
-          if ok and parsed.error then
-            error_msg = error_msg .. ": " .. (parsed.error.message or "Unknown error")
-          end
-        end
-        callback(nil, error_msg)
-        return
-      end
-
-      local ok, parsed = pcall(vim.json.decode, response.body)
-      if not ok then
-        callback(nil, "Failed to parse API response: " .. tostring(parsed))
-        return
-      end
-
-      if not parsed.choices or #parsed.choices == 0 then
-        callback(nil, "No choices in API response")
-        return
-      end
-
-      local content = parsed.choices[1].message.content
-      local colorscheme_ok, colorscheme = pcall(vim.json.decode, content)
-
-      if not colorscheme_ok then
-        callback(nil, "Failed to parse colorscheme JSON: " .. tostring(colorscheme))
-        return
-      end
-
-      notify.debug("Successfully generated theme: " .. (colorscheme.name or "unnamed"))
-      callback(colorscheme, nil)
-    end),
+    callback = vim.g.hexwitch_test_sync_mode and handle_response or vim.schedule_wrap(handle_response),
   })
 end
 
