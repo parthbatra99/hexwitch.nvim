@@ -7,6 +7,7 @@ local entry_display = require("telescope.pickers.entry_display")
 
 local config = require("hexwitch.config")
 local logger = require("hexwitch.utils.logger")
+local system_utils = require("hexwitch.utils.system")
 
 local M = {}
 
@@ -255,7 +256,7 @@ function M.handle_status_action(item)
     M.show_performance_details()
   elseif item.action == "open_themes_dir" then
     local cfg = config.get()
-    vim.fn.system({ "open", cfg.themes_dir }) -- macOS, adjust for other OS
+    system_utils.open_path(cfg.themes_dir)
   elseif item.action == "manage_undo" then
     M.show_undo_stack()
   elseif item.action == "manage_redo" then

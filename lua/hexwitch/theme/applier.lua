@@ -2,12 +2,59 @@ local notify = require("hexwitch.utils.notify")
 
 local M = {}
 
+-- Validate theme data structure and color format
+local function validate_theme_data(data)
+  if not data or type(data) ~= "table" then
+    return false, "Theme data must be a table"
+  end
+
+  if not data.colors or type(data.colors) ~= "table" then
+    return false, "Theme must have a colors table"
+  end
+
+  -- Define required color fields
+  local required_colors = {
+    "bg", "fg", "bg_sidebar", "bg_float", "bg_statusline",
+    "red", "orange", "yellow", "green", "cyan", "blue", "purple", "magenta",
+    "comment", "selection", "cursor"
+  }
+
+  -- Check all required colors exist and are valid hex colors
+  for _, color_key in ipairs(required_colors) do
+    local color = data.colors[color_key]
+    if not color or type(color) ~= "string" then
+      return false, string.format("Missing or invalid color: %s", color_key)
+    end
+
+    -- Validate hex color format (#RRGGBB)
+    if not color:match("^#[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]$") then
+      return false, string.format("Invalid color format for %s: %s (must be #RRGGBB)", color_key, color)
+    end
+  end
+
+  -- Validate optional terminal colors if present
+  if data.terminal and type(data.terminal) == "table" then
+    for i = 0, 15 do
+      if data.terminal[i] then
+        local term_color = data.terminal[i]
+        if type(term_color) ~= "string" or not term_color:match("^#[0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f][0-9A-Fa-f]$") then
+          return false, string.format("Invalid terminal color %d: %s", i, tostring(term_color))
+        end
+      end
+    end
+  end
+
+  return true, "Theme data is valid"
+end
+
 ---Apply a colorscheme from AI-generated data
 ---@param colorscheme_data hexwitch.ColorschemeData
 function M.apply(colorscheme_data)
-  if not colorscheme_data or not colorscheme_data.colors then
-    notify.error("Invalid colorscheme data")
-    return
+  -- Validate theme data before applying
+  local is_valid, validation_message = validate_theme_data(colorscheme_data)
+  if not is_valid then
+    notify.error("Theme validation failed: " .. validation_message)
+    return false
   end
 
   local colors = colorscheme_data.colors
@@ -166,6 +213,7 @@ function M.apply(colorscheme_data)
   vim.g.terminal_color_15 = colors.fg
 
   notify.debug("Theme applied successfully")
+  return true
 end
 
 return M

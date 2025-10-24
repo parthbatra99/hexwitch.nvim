@@ -4,6 +4,33 @@ local prompts = require("hexwitch.ai.prompts")
 
 local M = {}
 
+-- Sanitize sensitive data for logging
+local function sanitize_log_data(data)
+  if not data then return nil end
+
+  local sanitized = vim.deepcopy(data)
+
+  -- Redact API keys
+  if sanitized.api_key then
+    sanitized.api_key = "***REDACTED***"
+  end
+
+  -- Redact authorization headers
+  if sanitized.headers and sanitized.headers.Authorization then
+    sanitized.headers.Authorization = "Bearer ***REDACTED***"
+  end
+
+  -- Redact any field that might contain API keys
+  local sensitive_fields = {"key", "token", "secret", "password", "credential"}
+  for _, field in ipairs(sensitive_fields) do
+    if sanitized[field] then
+      sanitized[field] = "***REDACTED***"
+    end
+  end
+
+  return sanitized
+end
+
 -- Check if required dependencies are available
 function M.is_available()
   local has_plenary, curl = pcall(require, "plenary.curl")
@@ -109,7 +136,8 @@ function M:generate(user_input, callback)
   local schema = self:get_schema()
 
   logger.debug("ai.providers.openai", "generate",
-    string.format("Sending request to OpenAI API: model=%s, temp=%.1f", self.model, self.temperature))
+    string.format("Sending request to OpenAI API: model=%s, temp=%.1f", self.model, self.temperature),
+    sanitize_log_data({ provider = "openai", model = self.model }))
 
   curl.post("https://api.openai.com/v1/chat/completions", {
     headers = {
@@ -147,7 +175,7 @@ function M:_handle_response(response, callback, user_input)
   if response.status ~= 200 then
     local error_msg = string.format("OpenAI API error: %d - %s", response.status, response.body or "Unknown error")
     logger.error("ai.providers.openai", "_handle_response", error_msg,
-      { status = response.status, body = response.body })
+      sanitize_log_data({ status = response.status, body = response.body }))
     callback(nil, error_msg)
     return
   end
@@ -156,7 +184,7 @@ function M:_handle_response(response, callback, user_input)
   if not success then
     local error_msg = "Failed to parse OpenAI API response"
     logger.error("ai.providers.openai", "_handle_response", error_msg,
-      { parse_error = data, response_body = response.body })
+      sanitize_log_data({ parse_error = data, response_body = response.body }))
     callback(nil, error_msg)
     return
   end
@@ -164,7 +192,7 @@ function M:_handle_response(response, callback, user_input)
   if not data.choices or #data.choices == 0 or not data.choices[1].message or not data.choices[1].message.content then
     local error_msg = "Invalid response format from OpenAI API"
     logger.error("ai.providers.openai", "_handle_response", error_msg,
-      { response_data = data })
+      sanitize_log_data({ response_data = data }))
     callback(nil, error_msg)
     return
   end
@@ -205,7 +233,7 @@ function M:_handle_response(response, callback, user_input)
   if not colorscheme_data then
     local error_msg = "Failed to parse theme data from OpenAI response"
     logger.error("ai.providers.openai", "_handle_response", error_msg,
-      { parse_error = parse_err, message = message })
+      sanitize_log_data({ parse_error = parse_err, message = message }))
     callback(nil, error_msg)
     return
   end

@@ -7,6 +7,7 @@ local entry_display = require("telescope.pickers.entry_display")
 
 local config = require("hexwitch.config")
 local logger = require("hexwitch.utils.logger")
+local system_utils = require("hexwitch.utils.system")
 
 local M = {}
 
@@ -514,7 +515,7 @@ function M.handle_error_action(action, message, error_details, opts)
   elseif action == "help" then
     vim.notify("Opening documentation...", vim.log.levels.INFO)
     -- Open GitHub docs or help
-    vim.fn.system({ "open", "https://github.com/hexwitch/hexwitch.nvim" })
+    system_utils.open_path("https://github.com/hexwitch/hexwitch.nvim")
   elseif action == "close" then
     -- Just close
   end

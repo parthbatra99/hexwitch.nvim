@@ -288,9 +288,15 @@ function M.import_theme()
     return
   end
 
-  -- Apply theme
-  theme.apply(theme_data)
-  vim.notify("Theme imported and applied", vim.log.levels.INFO)
+  -- Security: Validate theme data before applying
+  local applier = require("hexwitch.theme.applier")
+  local success = applier.apply(theme_data)
+  if not success then
+    vim.notify("Theme validation failed: clipboard contains invalid or malicious theme data", vim.log.levels.ERROR)
+    return
+  end
+
+  vim.notify("Theme imported and applied successfully", vim.log.levels.INFO)
 end
 
 -- Show help

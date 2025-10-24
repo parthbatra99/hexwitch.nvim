@@ -265,7 +265,83 @@ for _, theme in ipairs(themes) do
 end
 ```
 
-### Debug Mode
+### 🔒 Security Considerations
+
+hexwitch.nvim takes security seriously and implements several safeguards to protect your system. However, please review the following security guidelines:
+
+### API Key Security
+
+⚠️ **Never commit API keys to version control**
+
+- **Recommended:** Use environment variables instead of configuration files
+```bash
+export OPENAI_API_KEY="sk-your-key-here"
+export OPENROUTER_API_KEY="sk-or-v1-your-key-here"
+```
+
+- **If using config files:** Ensure they're not tracked by git
+```lua
+-- Add to .gitignore
+echo ".env" >> .gitignore
+echo "lua/private/" >> .gitignore
+```
+
+- **API Key Rotation:** Regularly rotate your API keys and monitor usage
+
+### Theme Security
+
+The plugin validates all theme data before application:
+
+- **Input Validation:** Theme names are sanitized to prevent path traversal attacks
+- **Theme Validation:** All colors must be valid hex format (`#RRGGBB`)
+- **Clipboard Security:** Imported themes are validated before application
+
+### Network Security
+
+- **HTTPS Only:** All API communications use HTTPS encryption
+- **Certificate Validation:** SSL certificates are validated automatically
+- **No Data Persistence:** Sensitive data is not stored in logs after validation
+
+### Debug Mode Security
+
+⚠️ **Debug mode may log sensitive information**
+
+When debug mode is enabled, API keys and request data may be logged temporarily:
+```lua
+require("hexwitch").setup({
+  debug = true  -- ⚠️ May log API keys in development
+})
+```
+
+- **Log Files:** Debug logs are stored in `~/.local/share/nvim/hexwitch/logs/`
+- **Log Cleanup:** Regularly clean up old log files
+- **Production:** Keep debug mode disabled in production
+
+### File System Security
+
+- **Theme Directory:** Themes are stored in a sandboxed directory under `~/.local/share/nvim/hexwitch/`
+- **Path Validation:** All file operations are validated to prevent directory traversal
+- **Permission Checks:** The plugin checks file permissions before operations
+
+### Security Best Practices
+
+1. **Use Environment Variables** for API keys instead of configuration files
+2. **Keep Debug Mode Disabled** in production environments
+3. **Review Theme Content** before importing from untrusted sources
+4. **Monitor API Usage** for unusual activity
+5. **Regular Updates** to get the latest security fixes
+6. **Secure Configuration Files** with proper file permissions
+
+### Reporting Security Issues
+
+If you discover a security vulnerability, please report it responsibly:
+
+- **Do not** create public issues for security vulnerabilities
+- **Email:** security at hexwitch project (email available at [ batra.blog ]( batra.blog ))
+- **Include:** Steps to reproduce, expected vs actual behavior
+- **Response:** Security issues are typically addressed within 48 hours
+
+## Debug Mode
 
 Enable debug mode to troubleshoot issues:
 
@@ -363,12 +439,6 @@ MIT License.
 - [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) for utility functions
 - [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) for the fuzzy finder
 - The Neovim community for inspiration and feedback
-
-## Additional Resources
-
-- [Neovim Colorscheme Guide](https://neovim.io/doc/user/syntax.html)
-- [OpenAI API Documentation](https://platform.openai.com/docs/api-reference)
-- [Lua Development Patterns](https://github.com/nvim-lua/lua-dev.nvim)
 
 ---
 

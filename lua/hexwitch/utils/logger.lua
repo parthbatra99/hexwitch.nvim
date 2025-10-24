@@ -200,7 +200,8 @@ end
 
 -- Memory usage helper
 function M.log_memory_usage(module, fn_name, context)
-  local kb = vim.fn.system("ps -o rss= -p " .. vim.fn.getpid()):gsub("%s+", "")
+  -- Use parameterized system call to prevent command injection
+  local kb = vim.fn.system({"ps", "-o", "rss=", "-p", tostring(vim.fn.getpid())}):gsub("%s+", "")
   M.debug(module, fn_name or "memory", string.format("Memory usage %s: %s KB", context or "", kb))
 end
 

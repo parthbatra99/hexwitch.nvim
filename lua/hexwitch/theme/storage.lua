@@ -2,6 +2,27 @@ local notify = require("hexwitch.utils.notify")
 
 local M = {}
 
+-- Sanitize theme name to prevent path traversal attacks
+local function sanitize_theme_name(name)
+  if not name or type(name) ~= "string" then
+    return nil
+  end
+
+  -- Remove path separators and dangerous characters including command injection patterns
+  local sanitized = name:gsub("[/\\:%*%?\"<>|%c`$(){};&]", "_")
+
+  -- Limit length and ensure it starts with alphanumeric
+  sanitized = sanitized:sub(1, 50)
+  if not sanitized:match("^[a-zA-Z0-9]") then
+    sanitized = "_" .. sanitized
+  end
+
+  -- Ensure no null bytes or other injection patterns
+  sanitized = sanitized:gsub("%z", "_")
+
+  return sanitized
+end
+
 -- Get the directory for storing themes
 local function get_theme_dir()
   local config_dir = vim.fn.stdpath("data") .. "/hexwitch"
@@ -9,9 +30,24 @@ local function get_theme_dir()
   return config_dir
 end
 
--- Get the full path for a theme file
+-- Get the full path for a theme file with security validation
 local function get_theme_path(theme_name)
-  return get_theme_dir() .. "/" .. theme_name .. ".json"
+  local safe_name = sanitize_theme_name(theme_name)
+  if not safe_name or safe_name ~= theme_name then
+    notify.error("Invalid theme name: theme names can only contain letters, numbers, underscores, and hyphens")
+    return nil
+  end
+
+  local theme_path = get_theme_dir() .. "/" .. safe_name .. ".json"
+
+  -- Ensure the path stays within the theme directory
+  local resolved_path = vim.fn.resolve(theme_path)
+  if not resolved_path:match("^" .. vim.pesc(get_theme_dir())) then
+    notify.error("Security error: theme path attempted to escape theme directory")
+    return nil
+  end
+
+  return resolved_path
 end
 
 ---Read theme data without applying it
@@ -23,6 +59,10 @@ function M.read(theme_name)
   end
 
   local theme_path = get_theme_path(theme_name)
+  if not theme_path then
+    return nil
+  end
+
   local file = io.open(theme_path, "r")
   if not file then
     return nil
@@ -44,6 +84,12 @@ end
 function M.save(theme_name)
   if not theme_name or theme_name == "" then
     notify.error("Theme name cannot be empty")
+    return
+  end
+
+  -- Security validation of theme name
+  if sanitize_theme_name(theme_name) ~= theme_name then
+    notify.error("Invalid theme name: theme names can only contain letters, numbers, underscores, and hyphens")
     return
   end
 
@@ -113,6 +159,11 @@ function M.save(theme_name)
   end
 
   local theme_path = get_theme_path(theme_name)
+  if not theme_path then
+    notify.error("Failed to create secure theme path")
+    return
+  end
+
   local file = io.open(theme_path, "w")
   if not file then
     notify.error("Failed to create theme file: " .. theme_path)
@@ -141,6 +192,11 @@ function M.load(theme_name)
   end
 
   local theme_path = get_theme_path(theme_name)
+  if not theme_path then
+    notify.error("Security error: invalid theme path")
+    return
+  end
+
   local file = io.open(theme_path, "r")
   if not file then
     notify.error("Theme file not found: " .. theme_path)
@@ -156,9 +212,13 @@ function M.load(theme_name)
     return
   end
 
-  -- Apply the loaded theme using the applier
+  -- Apply the loaded theme using the applier with validation
   local applier = require("hexwitch.theme.applier")
-  applier.apply(colorscheme_data)
+  local success = applier.apply(colorscheme_data)
+  if not success then
+    notify.error("Failed to apply theme: invalid theme data")
+    return
+  end
 
   notify.info("Theme '" .. theme_name .. "' loaded successfully")
 end
@@ -187,6 +247,11 @@ function M.delete(theme_name)
   end
 
   local theme_path = get_theme_path(theme_name)
+  if not theme_path then
+    notify.error("Security error: invalid theme path")
+    return
+  end
+
   local ok, err = os.remove(theme_path)
   if not ok then
     notify.error("Failed to delete theme: " .. err)
