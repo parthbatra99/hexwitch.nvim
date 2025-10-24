@@ -171,9 +171,9 @@ function M.test_connectivity(args)
 
   ai.test_connectivity(provider, function(success, message)
     if success then
-      vim.notify("✅ " .. message, vim.log.levels.INFO)
+      vim.notify("[OK] " .. message, vim.log.levels.INFO)
     else
-      vim.notify("❌ " .. message, vim.log.levels.ERROR)
+      vim.notify("[ERROR] " .. message, vim.log.levels.ERROR)
     end
   end)
 end
@@ -184,13 +184,13 @@ function M.show_providers()
   local info = ai.get_provider_info()
 
   local lines = {
-    "🤖 AI Provider Information",
+    "[AI] AI Provider Information",
     "=========================",
     "",
     string.format("Primary: %s %s", info.primary.name,
-      info.primary.available and "✅" or "❌"),
+      info.primary.available and "[OK]" or "[ERROR]"),
     string.format("Fallback: %s %s", info.fallback.name,
-      info.fallback.available and "✅" or "❌"),
+      info.fallback.available and "[OK]" or "[ERROR]"),
     string.format("Model: %s", info.model),
     string.format("Temperature: %.1f", info.temperature),
     "",
@@ -200,7 +200,7 @@ function M.show_providers()
   local providers = ai.get_available_providers()
   for _, provider in ipairs(providers) do
     local available = provider == info.primary.name and info.primary.available
-    table.insert(lines, string.format("  %s %s", provider, available and "✅" or "❌"))
+    table.insert(lines, string.format("  %s %s", provider, available and "[OK]" or "[ERROR]"))
   end
 
   -- Create floating window
@@ -298,7 +298,7 @@ function M.show_help()
   logger.info("commands", "show_help", "Showing help")
 
   local help_lines = {
-    "🔮 hexwitch.nvim Commands",
+    "[WITCH] hexwitch.nvim Commands",
     "========================",
     "",
     "Core Commands:",

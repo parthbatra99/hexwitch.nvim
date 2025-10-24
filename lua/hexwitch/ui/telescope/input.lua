@@ -47,7 +47,7 @@ function M.show_examples(opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "🎨 Choose a Theme Description or Type Your Own",
+    prompt_title = "Choose Theme Description or Type Your Own",
     finder = finders.new_table({
       results = examples,
       entry_maker = function(example)
@@ -119,7 +119,7 @@ function M.show_simple_input(opts)
   }
 
   pickers.new(opts, {
-    prompt_title = "🎨 Describe Your Desired Theme",
+    prompt_title = "Describe Your Desired Theme",
     finder = finders.new_table({
       results = {},
       entry_maker = function(input)
@@ -158,7 +158,7 @@ function M.show_simple_input(opts)
 
         -- Show examples picker
         pickers.new(opts, {
-          prompt_title = "💡 Theme Examples",
+          prompt_title = "Theme Examples",
           finder = finders.new_table({
             results = current_examples,
           }),
@@ -214,7 +214,7 @@ function M.show_save_dialog(default_name, on_save, opts)
   default_name = sanitized_name
 
   pickers.new(opts, {
-    prompt_title = "💾 Save Current Theme (letters, numbers, _, - only)",
+    prompt_title = "Save Current Theme (letters, numbers, _, - only)",
     default_text = default_name,
     finder = finders.new_table({
       results = {},
@@ -329,8 +329,8 @@ function M.show_confirmation(message, on_confirm, opts)
     { message = message })
 
   local options = {
-    { name = "Confirm", value = "confirm", icon = "✅" },
-    { name = "Cancel", value = "cancel", icon = "❌" },
+    { name = "Confirm", value = "confirm", icon = "✓" },
+    { name = "Cancel", value = "cancel", icon = "✗" },
   }
 
   local displayer = entry_display.create({
@@ -342,7 +342,7 @@ function M.show_confirmation(message, on_confirm, opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "❓ Confirmation",
+    prompt_title = "Confirmation",
     finder = finders.new_table({
       results = options,
       entry_maker = function(option)

@@ -42,11 +42,11 @@ function M._create_loading_display_items()
   for i, stage in ipairs(loading_state.stages) do
     local status = ""
     if i < loading_state.current_stage then
-      status = "✅"
+      status = "[DONE]"
     elseif i == loading_state.current_stage then
-      status = "⏳"
+      status = "[BUSY]"
     else
-      status = "⏸️"
+      status = "[WAIT]"
     end
 
     table.insert(items, {
@@ -79,7 +79,7 @@ function M._create_loading_display_items()
       value = "timer",
       display = function()
         local elapsed = os.time() - loading_state.start_time
-        return string.format("⏱️ Time elapsed: %ds", elapsed)
+        return string.format("Time elapsed: %ds", elapsed)
       end,
       ordinal = "timer",
     })
@@ -121,10 +121,10 @@ function M.show_loading(message, opts)
   loading_state.progress = 0
   loading_state.current_stage = 1
   loading_state.stages = opts.stages or {
-    "🤖 Connecting to AI provider...",
-    "📝 Building theme prompt...",
-    "🎨 Generating colors...",
-    "✨ Finalizing theme...",
+    "Connecting to AI provider...",
+    "Building theme prompt...",
+    "Generating colors...",
+    "Finalizing theme...",
   }
   loading_state.spinner_index = 1
   loading_state.start_time = os.time()
@@ -135,7 +135,7 @@ function M.show_loading(message, opts)
   })
 
   local picker = pickers.new({}, {
-    prompt_title = "✨ Generating Theme...",
+    prompt_title = "Generating Theme...",
     finder = finders.new_table({
       results = M._create_loading_display_items(),
     }),
@@ -238,7 +238,7 @@ function M.show_success(message, theme_name, theme_data, opts)
     {
       value = "header",
       display = function()
-        return "🎉 " .. message
+        return "✓ " .. message
       end,
       ordinal = "success",
       is_header = true,
@@ -247,7 +247,7 @@ function M.show_success(message, theme_name, theme_data, opts)
     {
       value = "theme_info",
       display = function()
-        return "🎨 Theme: " .. (theme_name or "unnamed")
+        return "T: " .. (theme_name or "unnamed")
       end,
       ordinal = "theme " .. (theme_name or ""),
     },
@@ -265,7 +265,7 @@ function M.show_success(message, theme_name, theme_data, opts)
           theme_data.colors.green or "#00ff00",
           theme_data.colors.blue or "#0000ff",
         }
-        return "🎨 Colors: " .. table.concat(colors, "  ")
+        return "C: " .. table.concat(colors, "  ")
       end,
       ordinal = "colors",
     })
@@ -273,12 +273,12 @@ function M.show_success(message, theme_name, theme_data, opts)
 
   -- Add actions
   local actions_list = {
-    { name = "Love it!", value = "love", icon = "❤️", desc = "Mark as favorite" },
-    { name = "Tweak it", value = "tweak", icon = "🔧", desc = "Refine the theme" },
+    { name = "Love it!", value = "love", icon = "♥", desc = "Mark as favorite" },
+    { name = "Tweak it", value = "tweak", icon = "✏", desc = "Refine the theme" },
     { name = "Save Theme", value = "save", icon = "💾", desc = "Save to collection" },
-    { name = "Create Variant", value = "variant", icon = "🎭", desc = "Generate similar theme" },
-    { name = "Undo", value = "undo", icon = "↩️", desc = "Revert to previous" },
-    { name = "Close", value = "close", icon = "✖️", desc = "Dismiss" },
+    { name = "Create Variant", value = "variant", icon = "⊕", desc = "Generate similar theme" },
+    { name = "Undo", value = "undo", icon = "↶", desc = "Revert to previous" },
+    { name = "Close", value = "close", icon = "✕", desc = "Dismiss" },
   }
 
   for _, action in ipairs(actions_list) do
@@ -301,7 +301,7 @@ function M.show_success(message, theme_name, theme_data, opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "✨ Theme Generated Successfully",
+    prompt_title = "Theme Generated Successfully",
     finder = finders.new_table({
       results = success_items,
       entry_maker = function(item)
@@ -375,7 +375,7 @@ function M.handle_success_action(action, theme_name, theme_data)
     { action = action, theme_name = theme_name })
 
   if action == "love" then
-    vim.notify("Theme loved! 💖", vim.log.levels.INFO)
+    vim.notify("Theme loved!", vim.log.levels.INFO)
   elseif action == "tweak" then
     require("hexwitch.ui.refinement").open()
   elseif action == "save" then
@@ -408,13 +408,13 @@ function M.show_error(message, error_details, opts)
     { message = message, details = error_details })
 
   local actions_list = {
-    { name = "Retry", value = "retry", icon = "🔄" },
-    { name = "View Debug Logs", value = "debug", icon = "🐛" },
-    { name = "Close", value = "close", icon = "✖️" },
+    { name = "Retry", value = "retry", icon = "↻" },
+    { name = "View Debug Logs", value = "debug", icon = "L" },
+    { name = "Close", value = "close", icon = "✕" },
   }
 
   local error_content = {
-    "❌ " .. message,
+    "✗ " .. message,
     "",
   }
 
@@ -442,7 +442,7 @@ function M.show_error(message, error_details, opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "⚠️ Error Occurred",
+    prompt_title = "Error Occurred",
     finder = finders.new_table({
       results = actions_list,
       entry_maker = function(action)
@@ -506,9 +506,9 @@ function M.handle_error_action(action, message, error_details, opts)
     vim.notify("Testing API connectivity...", vim.log.levels.INFO)
     require("hexwitch.ai").test_connectivity(nil, function(success, result)
       if success then
-        vim.notify("✅ " .. result, vim.log.levels.INFO)
+        vim.notify("✓ " .. result, vim.log.levels.INFO)
       else
-        vim.notify("❌ " .. result, vim.log.levels.ERROR)
+        vim.notify("✗ " .. result, vim.log.levels.ERROR)
       end
     end)
   elseif action == "help" then
@@ -529,8 +529,8 @@ function M.show_warning(message, opts)
   logger.warn("ui.telescope.notifications", "show_warning", "Showing warning message", { message = message })
 
   local actions_list = {
-    { name = "OK", value = "ok", icon = "✅" },
-    { name = "View Details", value = "details", icon = "🔍" },
+    { name = "OK", value = "ok", icon = "✓" },
+    { name = "View Details", value = "details", icon = "i" },
   }
 
   local displayer = entry_display.create({
@@ -542,7 +542,7 @@ function M.show_warning(message, opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "⚠️ Warning",
+    prompt_title = "Warning",
     finder = finders.new_table({
       results = actions_list,
       entry_maker = function(action)
@@ -597,7 +597,7 @@ function M.show_info(message, opts)
   logger.info("ui.telescope.notifications", "show_info", "Showing info message", { message = message })
 
   local actions_list = {
-    { name = "OK", value = "ok", icon = "✅" },
+    { name = "OK", value = "ok", icon = "✓" },
   }
 
   local displayer = entry_display.create({
@@ -609,7 +609,7 @@ function M.show_info(message, opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "ℹ️ Information",
+    prompt_title = "Information",
     finder = finders.new_table({
       results = actions_list,
       entry_maker = function(action)

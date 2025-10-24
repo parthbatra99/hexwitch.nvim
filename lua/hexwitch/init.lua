@@ -49,10 +49,10 @@ function M.generate(user_input)
   end
 
   local ui = get_ui()
-  notify.info("🧙‍♀️ Hexwitch is brewing your theme...")
+  notify.info("Generating your theme...")
   local loading_handle
   if ui and ui.show_loading then
-    loading_handle = ui.show_loading("🧙‍♀️ Hexwitch is brewing your theme...")
+    loading_handle = ui.show_loading("Generating your theme...")
   end
 
   local ai = get_ai()
@@ -78,9 +78,9 @@ function M.generate(user_input)
       refinement.set_current_theme(colorscheme_data)
     end
     if ui and ui.show_success then
-      ui.show_success("✨ Theme '" .. theme_name .. "' applied!", theme_name, colorscheme_data)
+      ui.show_success("[SUCCESS] Theme '" .. theme_name .. "' applied!", theme_name, colorscheme_data)
     else
-      notify.info("✨ Theme '" .. theme_name .. "' applied!")
+      notify.info("[SUCCESS] Theme '" .. theme_name .. "' applied!")
     end
   end)
 end

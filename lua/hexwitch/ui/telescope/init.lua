@@ -104,7 +104,7 @@ function M.browse_themes(opts)
   logger.info("ui.telescope", "browse_themes", "Opening enhanced theme browser", { theme_count = #themes })
 
   pickers.new(opts, {
-    prompt_title = "🎨 Browse Saved Themes",
+    prompt_title = "Browse Saved Themes",
     finder = finders.new_table({
       results = themes,
       entry_maker = function(theme_name)
@@ -180,30 +180,30 @@ function M.show_theme_preview(theme_data)
   table.insert(preview_items, {
     name = "Theme Name",
     value = theme_data.name or "unnamed",
-    icon = "🏷️",
+    icon = "[NAME]",
   })
 
   table.insert(preview_items, {
     name = "Description",
     value = theme_data.description or "No description",
-    icon = "📝",
+    icon = "[DESC]",
   })
 
   table.insert(preview_items, {
     name = "Provider",
     value = theme_data.provider or "unknown",
-    icon = "🤖",
+    icon = "[AI]",
   })
 
   table.insert(preview_items, {
     name = "Generated",
     value = theme_data.generated_at or "unknown",
-    icon = "⏰",
+    icon = "[TIME]",
   })
 
   -- Add colors
   table.insert(preview_items, { name = "", value = "", icon = "" }) -- separator
-  table.insert(preview_items, { name = "Colors", value = "", icon = "🎨" })
+  table.insert(preview_items, { name = "Colors", value = "", icon = "[COLOR]" })
 
   for color_name, color_value in pairs(theme_data.colors) do
     table.insert(preview_items, {
@@ -223,7 +223,7 @@ function M.show_theme_preview(theme_data)
   })
 
   pickers.new({}, {
-    prompt_title = "👁️ Theme Preview",
+    prompt_title = "Theme Preview",
     finder = finders.new_table({
       results = preview_items,
       entry_maker = function(item)
@@ -265,7 +265,7 @@ function M.show_history(opts)
     { history_entries = #history })
 
   pickers.new(opts, {
-    prompt_title = "📚 Generation History",
+    prompt_title = "Generation History",
     finder = finders.new_table({
       results = history,
       entry_maker = function(entry)
@@ -372,7 +372,7 @@ function M.browse_presets(opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "💡 Preset Theme Ideas",
+    prompt_title = "Preset Theme Ideas",
     finder = finders.new_table({
       results = presets,
       entry_maker = function(preset)
@@ -421,30 +421,30 @@ function M.quick_actions(opts)
   local action_groups = {
     {
       name = "Theme Generation",
-      icon = "🎨",
+      icon = "G",
       actions = {
-        { name = "Generate New Theme", value = "generate", icon = "✨", description = "Create a new theme" },
-        { name = "Browse Preset Ideas", value = "presets", icon = "💡", description = "Get inspiration from presets" },
-        { name = "Generate Random Theme", value = "random", icon = "🎲", description = "Surprise me" },
-        { name = "Refine Current Theme", value = "refine", icon = "🔧", description = "Tweak current theme" },
+        { name = "Generate New Theme", value = "generate", icon = "N", description = "Create a new theme" },
+        { name = "Browse Preset Ideas", value = "presets", icon = "I", description = "Get inspiration from presets" },
+        { name = "Generate Random Theme", value = "random", icon = "?", description = "Surprise me" },
+        { name = "Refine Current Theme", value = "refine", icon = "R", description = "Tweak current theme" },
       }
     },
     {
       name = "Theme Management",
-      icon = "📚",
+      icon = "M",
       actions = {
-        { name = "Browse Saved Themes", value = "browse", icon = "📖", description = "View your themes" },
-        { name = "View Generation History", value = "history", icon = "📜", description = "Past generations" },
-        { name = "Undo Last Theme", value = "undo", icon = "↩️", description = "Go back one theme" },
-        { name = "Redo Theme", value = "redo", icon = "↪️", description = "Restore undone theme" },
+        { name = "Browse Saved Themes", value = "browse", icon = "B", description = "View your themes" },
+        { name = "View Generation History", value = "history", icon = "H", description = "Past generations" },
+        { name = "Undo Last Theme", value = "undo", icon = "↶", description = "Go back one theme" },
+        { name = "Redo Theme", value = "redo", icon = "↷", description = "Restore undone theme" },
       }
     },
     {
       name = "System",
-      icon = "⚙️",
+      icon = "S",
       actions = {
-        { name = "Plugin Status", value = "status", icon = "📊", description = "Check system status" },
-        { name = "Show Debug Logs", value = "logs", icon = "🐛", description = "View recent logs" },
+        { name = "Plugin Status", value = "status", icon = "⚙", description = "Check system status" },
+        { name = "Show Debug Logs", value = "logs", icon = "L", description = "View recent logs" },
       }
     },
   }
@@ -477,7 +477,7 @@ function M.quick_actions(opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "⚡ Hexwitch Quick Actions",
+    prompt_title = "Hexwitch Quick Actions",
     finder = finders.new_table({
       results = all_actions,
       entry_maker = function(action)

@@ -55,22 +55,22 @@ function M.show_status(opts)
         {
           name = "Primary Provider",
           value = "primary_provider",
-          description = string.format("%s %s", ai_info.primary.name, ai_info.primary.available and "✅" or "❌"),
-          icon = ai_info.primary.available and "🤖" or "⚠️",
+          description = ai_info.primary.name,
+          icon = ai_info.primary.available and "✓" or "✗",
           action = ai_info.primary.available and "change_provider" or "configure_provider",
         },
         {
           name = "Model",
           value = "model",
           description = cfg.model,
-          icon = "🧠",
+          icon = "M",
           action = "change_model",
         },
         {
           name = "Fallback Provider",
           value = "fallback_provider",
-          description = string.format("%s %s", ai_info.fallback.name, ai_info.fallback.available and "✅" or "❌"),
-          icon = ai_info.fallback.available and "🔄" or "⚠️",
+          description = ai_info.fallback.name,
+          icon = ai_info.fallback.available and "✓" or "✗",
           action = "configure_fallback",
         },
       }
@@ -83,21 +83,21 @@ function M.show_status(opts)
           name = "Themes Generated",
           value = "generated_count",
           description = tostring(stats.commands_used.generate or 0),
-          icon = "🎨",
+          icon = "T",
           action = "view_history",
         },
         {
           name = "Themes Saved",
           value = "saved_count",
           description = tostring(stats.commands_used.save or 0),
-          icon = "💾",
+          icon = "S",
           action = "browse_themes",
         },
         {
           name = "Avg Generation Time",
           value = "avg_time",
           description = string.format("%.1fms", stats.average_generation_time),
-          icon = "⏱️",
+          icon = "⏱",
           action = "view_performance",
         },
       }
@@ -110,21 +110,21 @@ function M.show_status(opts)
           name = "Themes Directory",
           value = "themes_dir",
           description = cfg.themes_dir,
-          icon = "📁",
+          icon = "D",
           action = "open_themes_dir",
         },
         {
           name = "Undo Stack",
           value = "undo_stack",
           description = string.format("%d items", stack_sizes.undo),
-          icon = "↩️",
+          icon = "↶",
           action = "manage_undo",
         },
         {
           name = "Redo Stack",
           value = "redo_stack",
           description = string.format("%d items", stack_sizes.redo),
-          icon = "↪️",
+          icon = "↷",
           action = "manage_redo",
         },
       }
@@ -137,14 +137,14 @@ function M.show_status(opts)
           name = "UI Mode",
           value = "ui_mode",
           description = cfg.ui_mode,
-          icon = "🎨",
+          icon = "U",
           action = "change_ui_mode",
         },
         {
           name = "Debug Mode",
           value = "debug_mode",
           description = cfg.debug and "Enabled" or "Disabled",
-          icon = cfg.debug and "🐛" or "🔧",
+          icon = cfg.debug and "●" or "○",
           action = "toggle_debug",
         },
       }
@@ -157,7 +157,7 @@ function M.show_status(opts)
     -- Add section header
     table.insert(all_items, {
       value = "section_" .. section.category,
-      display = "📋 " .. section.category,
+      display = section.category,
       ordinal = section.category,
       is_section = true,
     })
@@ -180,7 +180,7 @@ function M.show_status(opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "📊 Hexwitch Plugin Status",
+    prompt_title = "Hexwitch Plugin Status",
     finder = finders.new_table({
       results = all_items,
       entry_maker = function(item)
@@ -302,7 +302,7 @@ function M.show_model_selection(opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "🧠 Select AI Model",
+    prompt_title = "Select AI Model",
     finder = finders.new_table({
       results = models,
       entry_maker = function(model)
@@ -311,7 +311,7 @@ function M.show_model_selection(opts)
           value = model,
           display = function()
             return displayer({
-              { is_current and "👉" or "  ", "Special" },
+              { is_current and "[>]" or "  ", "Special" },
               { model, is_current and "Function" or "String" },
             })
           end,
@@ -348,17 +348,17 @@ function M.show_performance_details(opts)
     {
       name = "Average Generation Time",
       value = string.format("%.1fms", stats.average_generation_time),
-      icon = "⏱️",
+      icon = "",
     },
     {
       name = "Total Generations",
       value = tostring(stats.commands_used.generate or 0),
-      icon = "🎨",
+      icon = "[THEME]",
     },
     {
       name = "Recent Activity",
       value = string.format("%d themes in last 10", #recent_history),
-      icon = "📈",
+      icon = "[CHART]",
     },
   }
 
@@ -372,7 +372,7 @@ function M.show_performance_details(opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "📊 Performance Details",
+    prompt_title = "Performance Details",
     finder = finders.new_table({
       results = performance_items,
       entry_maker = function(item)
@@ -423,7 +423,7 @@ function M.show_frequency_selection(opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "🔔 Set Prompt Frequency",
+    prompt_title = "Set Prompt Frequency",
     finder = finders.new_table({
       results = frequencies,
       entry_maker = function(freq)
@@ -494,7 +494,7 @@ function M.show_undo_stack(opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "↩️ Undo Stack",
+    prompt_title = "Undo Stack",
     finder = finders.new_table({
       results = undo_stack,
       entry_maker = function(item, index)
@@ -504,7 +504,7 @@ function M.show_undo_stack(opts)
             local timestamp = parse_iso8601(item.applied_at)
             local date_str = timestamp and os.date("%Y-%m-%d %H:%M", timestamp) or "N/A"
             return displayer({
-              { "↩️", "Special" },
+              { "[UNDO]", "Special" },
               { item.theme.name or "unnamed", "Function" },
               { date_str, "String" },
             })
@@ -558,7 +558,7 @@ function M.show_redo_stack(opts)
   })
 
   pickers.new(opts, {
-    prompt_title = "↪️ Redo Stack",
+    prompt_title = "Redo Stack",
     finder = finders.new_table({
       results = redo_stack,
       entry_maker = function(item, index)
@@ -568,7 +568,7 @@ function M.show_redo_stack(opts)
             local timestamp = parse_iso8601(item.applied_at)
             local date_str = timestamp and os.date("%Y-%m-%d %H:%M", timestamp) or "N/A"
             return displayer({
-              { "↪️", "Special" },
+              { "[REDO]", "Special" },
               { item.theme.name or "unnamed", "Function" },
               { date_str, "String" },
             })

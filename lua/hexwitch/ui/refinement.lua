@@ -200,7 +200,7 @@ local function show_save_options()
 
       -- Save the theme
       require("hexwitch").save(name)
-      vim.notify("Theme '" .. name .. "' saved successfully! 💾", vim.log.levels.INFO)
+      vim.notify("Theme '" .. name .. "' saved successfully!", vim.log.levels.INFO)
     end
   end)
 end
@@ -213,24 +213,17 @@ function M.open(opts)
   logger.info("ui.refinement", "open", "Opening theme refinement UI")
 
   local content = {
-    "🔧 Refine Theme",
+    "[EDIT] Refine Theme",
     "================",
     "",
     "Quick Adjustments:",
     "",
   }
 
-  if cfg.ui.icons then
-    table.insert(content, "📊 Contrast:    [I]ncrease  [D]ecrease")
-    table.insert(content, "🌡️  Temperature: [W]armer   [C]ooler")
-    table.insert(content, "🎨 Saturation:  [M]ore      [L]ess")
-    table.insert(content, "💡 Brightness:  [B]righter  [J]darker")
-  else
-    table.insert(content, "Contrast:    [I]ncrease  [D]ecrease")
-    table.insert(content, "Temperature: [W]armer   [C]ooler")
-    table.insert(content, "Saturation:  [M]ore      [L]ess")
-    table.insert(content, "Brightness:  [B]righter  [J]darker")
-  end
+  table.insert(content, "[CONTRAST] Contrast:    [I]ncrease  [D]ecrease")
+  table.insert(content, "[TEMP] Temperature: [W]armer   [C]ooler")
+  table.insert(content, "[COLOR] Saturation:  [M]ore      [L]ess")
+  table.insert(content, "[BRIGHT] Brightness:  [B]righter  [J]darker")
 
   table.insert(content, "")
   table.insert(content, "[Ctrl+O] Restore completely original theme")
@@ -261,7 +254,7 @@ function M.open(opts)
     col = col,
     row = row,
     border = cfg.ui.border,
-    title = " 🔧 Theme Refinement ",
+    title = " Theme Refinement ",
     title_pos = "center",
     style = "minimal",
   })
