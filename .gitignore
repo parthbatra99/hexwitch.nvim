@@ -108,3 +108,8 @@ devconfig/
 # Cache directories
 .cache/
 *.cache
+
+# Documentation files that should not be published
+VISION.md
+PRD-*.md
+todo.md
