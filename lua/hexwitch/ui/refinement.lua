@@ -8,19 +8,38 @@ local M = {}
 -- Current theme being refined
 local current_theme = nil
 
+-- Original theme before any refinements (for restoration)
+local original_theme = nil
+
+-- Track which adjustments have been applied to prevent repeated adjustments
+local applied_adjustments = {
+  contrast = nil,
+  temperature = nil,
+  saturation = nil,
+  brightness = nil
+}
+
 local function apply_original_theme()
-  if not current_theme or not current_theme.colors then
+  if not original_theme or not original_theme.colors then
     vim.notify("No original theme available to restore", vim.log.levels.WARN)
     return
   end
 
   logger.info("ui.refinement", "apply_original_theme", "Restoring original theme")
 
-  local restored_theme = vim.deepcopy(current_theme)
+  local restored_theme = vim.deepcopy(original_theme)
 
   require("hexwitch.theme").apply(restored_theme)
 
   state.add_to_undo_stack(restored_theme, "refinement")
+
+  -- Reset adjustment tracking
+  applied_adjustments = {
+    contrast = nil,
+    temperature = nil,
+    saturation = nil,
+    brightness = nil
+  }
 
   vim.notify("Restored original theme", vim.log.levels.INFO)
 end
@@ -115,6 +134,17 @@ end
 ---@param adjustment_type string Type of adjustment
 ---@param direction string Direction (increase/decrease, warmer/cooler, etc.)
 local function apply_adjustment(adjustment_type, direction)
+  -- Check if this adjustment type was already applied
+  if applied_adjustments[adjustment_type] then
+    local applied_direction = applied_adjustments[adjustment_type]
+    vim.notify(
+      adjustment_type:gsub("^%l", string.upper) .. " already adjusted (" .. applied_direction ..
+      "). Press [Ctrl+O] to restore original and try again",
+      vim.log.levels.WARN
+    )
+    return
+  end
+
   local colors = get_current_theme_colors()
   local adjustment = adjustments[adjustment_type]
 
@@ -141,6 +171,9 @@ local function apply_adjustment(adjustment_type, direction)
   -- Update current theme to the refined version
   current_theme = refined_theme
 
+  -- Track that this adjustment was applied
+  applied_adjustments[adjustment_type] = direction
+
   -- Add to undo stack
   state.add_to_undo_stack(refined_theme, "refinement")
 
@@ -150,6 +183,26 @@ local function apply_adjustment(adjustment_type, direction)
   vim.defer_fn(function()
     vim.notify("Press [S] in refinement window to save this refined theme", vim.log.levels.INFO)
   end, 1000)
+end
+
+-- Show save options for refined theme
+local function show_save_options()
+  local theme_name = current_theme and current_theme.name or "refined_theme"
+
+  logger.info("ui.refinement", "show_save_options", "Showing save options for refined theme",
+    { theme_name = theme_name })
+
+  require("hexwitch.ui.telescope.input").show_save_dialog(theme_name, function(name)
+    if name and name ~= "" then
+      -- Create a copy of current theme with the new name
+      local theme_to_save = vim.deepcopy(current_theme)
+      theme_to_save.name = name
+
+      -- Save the theme
+      require("hexwitch").save(name)
+      vim.notify("Theme '" .. name .. "' saved successfully! 💾", vim.log.levels.INFO)
+    end
+  end)
 end
 
 -- Open refinement UI
@@ -168,17 +221,19 @@ function M.open(opts)
   }
 
   if cfg.ui.icons then
-    table.insert(content, "📊 Contrast:    [I]ncrease  [O]riginal  [D]ecrease")
-    table.insert(content, "🌡️  Temperature: [W]armer   [O]riginal  [C]ooler")
-    table.insert(content, "🎨 Saturation:  [M]ore      [O]riginal  [L]ess")
-    table.insert(content, "💡 Brightness:  [B]righter  [O]riginal  [J]darker")
+    table.insert(content, "📊 Contrast:    [I]ncrease  [D]ecrease")
+    table.insert(content, "🌡️  Temperature: [W]armer   [C]ooler")
+    table.insert(content, "🎨 Saturation:  [M]ore      [L]ess")
+    table.insert(content, "💡 Brightness:  [B]righter  [J]darker")
   else
-    table.insert(content, "Contrast:    [I]ncrease  [O]riginal  [D]ecrease")
-    table.insert(content, "Temperature: [W]armer   [O]riginal  [C]ooler")
-    table.insert(content, "Saturation:  [M]ore      [O]riginal  [L]ess")
-    table.insert(content, "Brightness:  [B]righter  [O]riginal  [J]darker")
+    table.insert(content, "Contrast:    [I]ncrease  [D]ecrease")
+    table.insert(content, "Temperature: [W]armer   [C]ooler")
+    table.insert(content, "Saturation:  [M]ore      [L]ess")
+    table.insert(content, "Brightness:  [B]righter  [J]darker")
   end
 
+  table.insert(content, "")
+  table.insert(content, "[Ctrl+O] Restore completely original theme")
   table.insert(content, "")
   table.insert(content, "Or describe specific changes:")
   table.insert(content, "")
@@ -282,25 +337,14 @@ function M.open(opts)
     apply_adjustment("brightness", "darker")
   end, key_opts)
 
-  vim.keymap.set("n", "o", function()
+  vim.keymap.set("n", "<C-o>", function()
     apply_original_theme()
   end, key_opts)
 
-  vim.keymap.set("n", "O", function()
-    apply_original_theme()
-  end, key_opts)
-
-  -- Custom description input
+  -- Close refinement window
   vim.keymap.set("n", cfg.keymaps.confirm, function()
     vim.api.nvim_win_close(win, true)
     vim.api.nvim_buf_delete(buf, { force = true })
-    require("hexwitch.ui.telescope.input").show_simple_input({
-      on_submit = function(input)
-        if input and input ~= "" then
-          apply_custom_refinement(input)
-        end
-      end
-    })
   end, key_opts)
 
   -- Reset to original
@@ -380,6 +424,14 @@ function M.apply_custom_refinement(description)
   -- Update current theme to the refined version
   current_theme = refined_theme
 
+  -- Reset adjustment tracking after custom refinement
+  applied_adjustments = {
+    contrast = nil,
+    temperature = nil,
+    saturation = nil,
+    brightness = nil
+  }
+
   -- Add to undo stack
   state.add_to_undo_stack(refined_theme, "refinement")
 
@@ -391,30 +443,21 @@ function M.apply_custom_refinement(description)
   end, 1000)
 end
 
--- Show save options for refined theme
-local function show_save_options()
-  local theme_name = current_theme and current_theme.name or "refined_theme"
-
-  logger.info("ui.refinement", "show_save_options", "Showing save options for refined theme",
-    { theme_name = theme_name })
-
-  require("hexwitch.ui.telescope.input").show_save_dialog(theme_name, function(name)
-    if name and name ~= "" then
-      -- Create a copy of current theme with the new name
-      local theme_to_save = vim.deepcopy(current_theme)
-      theme_to_save.name = name
-
-      -- Save the theme
-      require("hexwitch").save_theme(theme_to_save)
-      vim.notify("Theme '" .. name .. "' saved successfully! 💾", vim.log.levels.INFO)
-    end
-  end)
-end
 
 -- Set current theme for refinement
 ---@param theme_data table Theme data
 function M.set_current_theme(theme_data)
   current_theme = theme_data
+  original_theme = vim.deepcopy(theme_data)
+
+  -- Reset adjustment tracking for new theme
+  applied_adjustments = {
+    contrast = nil,
+    temperature = nil,
+    saturation = nil,
+    brightness = nil
+  }
+
   logger.debug("ui.refinement", "set_current_theme", "Set current theme for refinement",
     { theme_name = theme_data.name })
 end

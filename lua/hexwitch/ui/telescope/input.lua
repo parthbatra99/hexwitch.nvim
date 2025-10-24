@@ -195,8 +195,27 @@ function M.show_save_dialog(default_name, on_save, opts)
   logger.info("ui.telescope.input", "show_save_dialog", "Showing save theme dialog",
     { default_name = default_name })
 
+  -- Sanitize the default theme name to match validation requirements
+  -- Convert spaces and invalid characters to underscores/hyphens
+  local sanitized_name = default_name
+    :gsub("%s+", "_")  -- Replace spaces with underscores
+    :gsub("[^%w_%-]", "-")  -- Replace other invalid chars with hyphens
+    :gsub("%-+", "_")  -- Replace multiple hyphens with single underscore
+    :gsub("^[%-_]+", "")  -- Remove leading underscores/hyphens
+    :gsub("[%-_]+$", "")  -- Remove trailing underscores/hyphens
+    :lower()  -- Convert to lowercase for consistency
+
+  -- If sanitization changed the name significantly, use a fallback
+  if sanitized_name == "" then
+    sanitized_name = "custom_theme"
+  end
+
+  -- Update default_name to the sanitized version
+  default_name = sanitized_name
+
   pickers.new(opts, {
-    prompt_title = "💾 Save Current Theme",
+    prompt_title = "💾 Save Current Theme (letters, numbers, _, - only)",
+    default_text = default_name,
     finder = finders.new_table({
       results = {},
       entry_maker = function(input)
@@ -209,9 +228,6 @@ function M.show_save_dialog(default_name, on_save, opts)
     }),
     sorter = conf.generic_sorter(opts),
     attach_mappings = function(prompt_bufnr, map)
-      -- Set default value
-      vim.api.nvim_buf_set_lines(prompt_bufnr, 0, -1, false, { default_name })
-      vim.api.nvim_win_set_cursor(0, { 1, #default_name })
 
       actions.select_default:replace(function()
         local name = action_state.get_current_line():gsub("^%s+", ""):gsub("%s+$", "")

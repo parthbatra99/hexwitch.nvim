@@ -273,7 +273,7 @@ function M.show_success(message, theme_name, theme_data, opts)
 
   -- Add actions
   local actions_list = {
-    { name = "Love it! 💖", value = "love", icon = "❤️", desc = "Mark as favorite" },
+    { name = "Love it!", value = "love", icon = "❤️", desc = "Mark as favorite" },
     { name = "Tweak it", value = "tweak", icon = "🔧", desc = "Refine the theme" },
     { name = "Save Theme", value = "save", icon = "💾", desc = "Save to collection" },
     { name = "Create Variant", value = "variant", icon = "🎭", desc = "Generate similar theme" },

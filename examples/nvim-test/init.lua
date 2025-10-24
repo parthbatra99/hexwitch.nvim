@@ -42,8 +42,8 @@ local plugin_spec = {
       themes_dir = vim.fn.stdpath("data") .. "/hexwitch-test/themes",
 
       -- AI Configuration (keys read from env)
-      ai_provider = "openai", -- or "openrouter"
-      model = "gpt-4o-mini",
+      ai_provider = "openrouter", -- or "openrouter"
+      model = "google/gemini-2.5-flash", -- for openrouter
 
       -- Performance
       timeout = 30000,

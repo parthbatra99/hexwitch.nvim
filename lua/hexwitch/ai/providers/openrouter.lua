@@ -196,12 +196,55 @@ function M:generate(user_input, callback)
       end
 
       local content = parsed.choices[1].message.content
-      local colorscheme_ok, colorscheme = pcall(vim.json.decode, content)
 
-      if not colorscheme_ok then
-        local error_msg = "Failed to parse colorscheme JSON: " .. tostring(colorscheme)
+      -- Helper function to extract JSON from content
+      local function extract_json(text)
+        if not text or type(text) ~= "string" then
+          return nil
+        end
+
+        -- Try parsing directly as JSON first
+        local ok, decoded = pcall(vim.json.decode, text)
+        if ok then
+          return decoded
+        end
+
+        -- Extract JSON from markdown code blocks
+        local json_block = text:match("```json%s*(.-)%s*```")
+        if json_block then
+          local ok, decoded = pcall(vim.json.decode, json_block)
+          if ok then
+            return decoded
+          end
+        end
+
+        -- Extract JSON from generic code blocks
+        local code_block = text:match("```%s*(.-)%s*```")
+        if code_block then
+          local ok, decoded = pcall(vim.json.decode, code_block)
+          if ok then
+            return decoded
+          end
+        end
+
+        -- Try to find JSON-like object in the text
+        local json_obj = text:match("{.-}")
+        if json_obj then
+          local ok, decoded = pcall(vim.json.decode, json_obj)
+          if ok then
+            return decoded
+          end
+        end
+
+        return nil
+      end
+
+      local colorscheme = extract_json(content)
+      if not colorscheme then
+        local error_msg = "Failed to parse colorscheme JSON: Expected value but found invalid token at character 1"
         logger.error("ai.providers.openrouter", "generate", error_msg, {
-          content = content and content:sub(1, 200) or nil,
+          content = content and content:sub(1, 500) or nil,
+          content_length = content and #content or 0,
         })
         callback(nil, error_msg)
         return
