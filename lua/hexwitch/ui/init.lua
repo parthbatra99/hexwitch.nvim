@@ -37,11 +37,6 @@ function M.prompt()
   telescope.input.show_examples()
 end
 
--- Show simple input prompt
-function M.simple_prompt()
-  logger.info("ui.init", "simple_prompt", "Opening simple input prompt")
-  get_telescope().input.show_simple_input()
-end
 
 -- Show quick actions menu
 function M.quick_actions()

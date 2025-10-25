@@ -1,37 +1,30 @@
 # hexwitch.nvim
 
-AI-powered colorscheme generator for Neovim.
+<p align="center">
+  <img src="./hexwitch-logo.png" alt="Hexwitch Logo" width="200" />
+</p>
 
-<img src="./hexwitch-logo.png" alt="Hexwitch Logo" width="200" />
+<p align="center">
+  AI-powered colorscheme generator for Neovim.
+</p>
 
-hexwitch.nvim leverages OpenAI or OpenRouter models to generate custom colorschemes for Neovim from natural language prompts. Describe your desired theme, and Hexwitch will brew and apply a cohesive palette with one command.
-
-## Features
-
-- AI-Powered Generation: Create custom colorschemes using natural language descriptions
-- Flexible Configuration: Choose AI provider, model, creativity level, and more
-- Persistent Storage: Save and load generated themes locally
-- Telescope Integration: Browse history and saved themes, quick actions
-- Comprehensive Coverage: Syntax highlighting, LSP diagnostics, and terminal colors
-- Health Checks: `:checkhealth hexwitch` validates your setup
+Ever wanted to create a Neovim colorscheme just by describing it? Now you can. `hexwitch.nvim` uses OpenAI's models to generate and apply a colorscheme from a simple text prompt.
 
 ## Requirements
 
 - Neovim ≥ 0.9.0
-- `curl` (for HTTP requests)
-- An API key for your chosen provider:
-  - OpenAI: set `OPENAI_API_KEY`
-  - OpenRouter: set `OPENROUTER_API_KEY`
-- [`plenary.nvim`](https://github.com/nvim-lua/plenary.nvim)
-- [`telescope.nvim`](https://github.com/nvim-telescope/telescope.nvim)
+- `curl`
+- An [OpenAI API key](https://platform.openai.com/api-keys)
+- `plenary.nvim`
+- `telescope.nvim`
 
 ## Installation
 
-### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
+Use your favorite plugin manager. Here is an example with `lazy.nvim`:
 
 ```lua
 {
-  "hexwitch/hexwitch.nvim",
+  "parthbatra99/hexwitch.nvim",
   dependencies = {
     "nvim-lua/plenary.nvim",
     "nvim-telescope/telescope.nvim",
@@ -42,406 +35,119 @@ hexwitch.nvim leverages OpenAI or OpenRouter models to generate custom colorsche
 }
 ```
 
-### Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
+## Getting Started
 
-```lua
-use {
-  "hexwitch/hexwitch.nvim",
-  requires = {
-    "nvim-lua/plenary.nvim",
-    "nvim-telescope/telescope.nvim",
-  },
-  config = function()
-    require("hexwitch").setup()
-  end,
-}
-```
+1.  **Set your API key:** The plugin needs an API key for your chosen AI provider. Set it as an environment variable.
 
-### Using [vim-plug](https://github.com/junegunn/vim-plug)
+    ```bash
+    # For OpenAI
+    export OPENAI_API_KEY="sk-..."
 
-```vim
-Plug 'hexwitch/hexwitch.nvim'
-Plug 'nvim-lua/plenary.nvim'
-Plug 'nvim-telescope/telescope.nvim'
+    # For OpenRouter
+    export OPENROUTER_API_KEY="sk-or-..."
+    ```
+    *Note: Never commit your API key to a public repository.*
 
-lua << EOF
-require("hexwitch").setup()
-EOF
-```
+2.  **Generate a theme:** Use the `:Hexwitch` command with a description of the theme you want.
+
+    ```vim
+    :Hexwitch a dark, high-contrast theme with solarized accents
+    ```
+
+    And that's it! Hexwitch will generate the colors and apply them.
 
 ## Configuration
 
-hexwitch.nvim comes with sensible defaults; pass only the options you need:
+You can customize the plugin by passing a table to the `setup()` function. Here are the defaults:
 
 ```lua
 require("hexwitch").setup({
-  -- Provider & auth
-  ai_provider = "openai",              -- "openai", "openrouter", or "custom"
-  api_key = nil,                       -- defaults to env (OPENAI_API_KEY/OPENROUTER_API_KEY)
-  fallback_provider = "openrouter",    -- optional fallback
-
-  -- Model behavior
-  model = "gpt-4o-mini",
-  temperature = 0.7,                    -- 0.0–2.0
-  timeout = 30000,                      -- ms
-
-  -- UI & storage
-  ui_mode = "input",                   -- "input" or "telescope"
-  save_themes = true,                   -- persist generated themes
-  themes_dir = vim.fn.stdpath("data") .. "/hexwitch",
-  max_history = 50,
-  auto_save_history = true,
-  contrast_threshold = 4.5,
-
-  debug = false,
+  ai_provider = "openai",           -- "openai", "openrouter", or "custom"
+  model = "gpt-4o-mini",           -- AI model to use
+  temperature = 0.7,               -- 0.0–2.0. Higher means more creative/random palettes
+  timeout = 30000,                 -- API timeout in milliseconds
+  save_themes = true,              -- Save generated themes to disk
+  themes_dir = vim.fn.stdpath("data") .. "/hexwitch",  -- Directory for saved themes
+  max_history = 50,                -- Maximum history entries
+  auto_save_history = true,        -- Save generation history
+  contrast_threshold = 4.5,        -- Minimum WCAG contrast ratio
+  debug = false,                   -- Enable debug logging
 })
 ```
 
-### Configuration Options
+## Commands
 
-| Option             | Type      | Default                             | Description                                     |
-|--------------------|-----------|-------------------------------------|-------------------------------------------------|
-| `ai_provider`      | `string`  | `"openai"`                          | Primary AI provider (`openai`, `openrouter`, `custom`) |
-| `api_key`          | `string`  | Provider env var                    | Uses `OPENAI_API_KEY` or `OPENROUTER_API_KEY`  |
-| `fallback_provider`| `string`  | `"openrouter"`                      | Secondary provider if primary creation fails   |
-| `model`            | `string`  | `"gpt-4o-mini"`                     | Model identifier for the active provider       |
-| `temperature`      | `number`  | `0.7`                                | Creativity (0.0–2.0; higher = wilder palettes) |
-| `timeout`          | `number`  | `30000`                              | Request timeout in milliseconds                |
-| `ui_mode`          | `string`  | `"input"`                           | Prompt style (`input` or `telescope`)          |
-| `save_themes`      | `boolean` | `true`                               | Automatically write generated themes to disk   |
-| `themes_dir`       | `string`  | `vim.fn.stdpath("data") .. "/hexwitch"` | Directory used for stored themes         |
-| `max_history`      | `number`  | `50`                                 | Maximum stored generation entries              |
-| `auto_save_history`| `boolean` | `true`                               | Persist generation history between sessions    |
-| `contrast_threshold`| `number` | `4.5`                                | Minimum contrast when evaluating themes        |
-| `debug`            | `boolean` | `false`                              | Emit verbose logging to `:messages`            |
+- `:Hexwitch [prompt]` - Generate a theme from a text description.
+- `:Hexwitch quick` - Generate a variation of the current theme.
+- `:Hexwitch random` - Generate a random theme.
+- `:Hexwitch refine [changes]` - Tweak the colors of the current theme.
+- `:Hexwitch browse` - Browse saved themes using Telescope.
+- `:Hexwitch history` - View your generation history.
+- `:Hexwitch save <name>` - Save the current theme.
+- `:Hexwitch load <name>` - Load a saved theme.
+- `:Hexwitch undo` / `:Hexwitch redo` - Undo or redo theme changes.
 
-Note: Hexwitch also respects `HEXWITCH_API_KEY` as a generic fallback if a provider-specific env var is not set.
+## Debugging
 
-## Usage
+If you encounter issues, try these steps:
 
-### Basic Usage
+1. **Enable debug mode**:
+   ```lua
+   require("hexwitch").setup({ debug = true })
+   ```
 
-The simplest way to use Hexwitch is with the `:Hexwitch` command:
+2. **Common issues**:
+   - **API key**: Ensure your `OPENAI_API_KEY` or `OPENROUTER_API_KEY` is set
+   - **Network**: Check internet connection and API status
+   - **Theme fails**: Verify `curl` is installed and API key is valid
 
-```vim
-:Hexwitch a dark theme with purple accents and warm colors
-```
+3. **Basic checks**:
+   ```vim
+   :checkhealth hexwitch  " Check plugin health
+   :lua print(vim.env.OPENAI_API_KEY and "API key found" or "API key missing")
+   ```
 
-### Local Test Profile
+4. **Reset storage**: Themes are saved locally at:
+   ```bash
+   # Default location
+   ~/.local/share/nvim/hexwitch/
 
-Use the provided example to try Hexwitch in an isolated Neovim profile without touching your main config:
+   # Delete to reset all saved themes and history
+   rm -rf ~/.local/share/nvim/hexwitch/
+   ```
 
-1) Run Neovim with a temporary app name
+5. **Get help**: Check debug output with `:messages` and report issues with debug logs.
 
-```
-NVIM_APPNAME=hexwitch-test nvim -u examples/nvim-test/init.lua
-```
+## Telescope UI
 
-2) (Optional) Test against a local checkout without installing
+Hexwitch provides a built-in telescope interface for browsing saved themes, presets, and your generation history. The plugin automatically uses telescope for all UI interactions.
 
-```
-HEXWITCH_PLUGIN_DIR=/absolute/path/to/hexwitch.nvim \
-NVIM_APPNAME=hexwitch-test nvim -u examples/nvim-test/init.lua
-```
+## Test Drive
 
-Notes
-- Set your provider key via env (`OPENAI_API_KEY` or `OPENROUTER_API_KEY`).
-- The example enables the Telescope UI and adds handy test mappings:
-  - `<leader>hw` prompt, `<leader>hs` status, `<leader>hl` logs
-  - `<leader>hb` browse themes, `<leader>hh` history, `<leader>hq` quick actions
-  - `<leader>hp` presets, `<leader>hu` undo, `<leader>hr` redo
- 
+Want to try Hexwitch without affecting your main Neovim config? There's an example `init.lua` you can use for an isolated test environment.
 
-### Commands
+1.  Make sure your `OPENAI_API_KEY` is set.
+2.  Run Neovim with the following command:
 
-- `:Hexwitch [description]` — generate and apply a theme from text. With no args, opens the prompt UI.
-- `:Hexwitch quick` — generate a quick variation of the last theme.
-- `:Hexwitch random` — surprise theme with creative colors.
-- `:Hexwitch refine [changes]` — refine the current theme; with no args, opens refinement UI.
-- `:Hexwitch save <name>` / `:Hexwitch load <name>` / `:Hexwitch delete <name>` — manage saved themes.
-- `:Hexwitch list` or `:Hexwitch browse` — browse saved themes.
-- `:Hexwitch history` / `:Hexwitch clear-history` — view or clear generation history.
-- `:Hexwitch undo` / `:Hexwitch redo` — theme undo/redo.
-- `:Hexwitch export <name>` / `:Hexwitch import` — copy theme JSON to/from clipboard.
-- `:Hexwitch status` / `:Hexwitch providers` — status and provider info.
-- `:Hexwitch test [provider]` — test AI connectivity for current or specific provider.
+    ```bash
+    NVIM_APPNAME=hexwitch-test nvim -u examples/nvim-test/init.lua
+    ```
 
-### Programmatic API
+This starts Neovim with a temporary configuration that loads only Hexwitch and its dependencies. The example config also sets up some handy keymaps for you:
 
-```lua
-local hexwitch = require("hexwitch")
+-   `<leader>hw`: Open the Hexwitch prompt
+-   `<leader>hb`: Browse saved themes
+-   `<leader>hh`: View generation history
+-   `<leader>hq`: Open the quick actions menu
+-   `<leader>hu`: Undo last theme change
+-   `<leader>hr`: Redo theme change
 
--- Generate and apply a theme
-hexwitch.prompt()
-
--- Generate a theme with specific description
-hexwitch.generate("a calming blue theme with high contrast")
-
--- Save the current theme
-hexwitch.save("my-custom-theme")
-
--- Load a saved theme
-hexwitch.load("my-custom-theme")
-
--- List all saved themes
-local themes = hexwitch.list_themes()
-
--- Open quick actions menu (Telescope)
-require("hexwitch.ui").quick_actions()
-```
-
-### Keymaps (optional)
-
-```lua
--- Map leader+h to open the Hexwitch prompt
-vim.keymap.set("n", "<leader>h", "<Plug>(HexwitchPrompt)")
-```
-
-### Example Theme Descriptions
-
-Here are some example descriptions to get you started:
-
-```vim
-"Dark theme with purple accents and good contrast for coding"
-"Light theme inspired by autumn colors, easy on the eyes"
-"High contrast theme optimized for programming in low light"
-"Monochromatic theme with subtle blue highlights"
-"Retro terminal theme with green phosphor colors"
-"Theme inspired by the ocean at sunset with warm and cool tones"
-"Minimalist theme with just enough color for syntax highlighting"
-```
-
-### Telescope Integration
-
-Hexwitch uses Telescope for all UI. With `ui_mode = "telescope"`, you get an examples picker and quick actions:
-
-- Generate new theme, browse presets, or pick random
-- Browse saved themes and generation history
-- Undo/redo, view status, and show recent logs
-
-Open the quick actions menu via:
-
-```lua
-require("hexwitch.ui").quick_actions()
-```
-
-## Advanced Configuration
-
-### Custom Model Configuration
-
-```lua
-require("hexwitch").setup({
-  model = "gpt-4-turbo-preview",
-  temperature = 0.9, -- More creative themes
-  timeout = 60000,   -- Longer timeout for complex themes
-})
-```
-
-### Theme Storage Management
-
-```lua
--- Custom themes directory
-require("hexwitch").setup({
-  save_themes = true,
-  themes_dir = vim.fn.expand("~/.config/nvim/themes"),
-})
-
--- Manual theme management
-local hexwitch = require("hexwitch")
-
--- Save current theme with custom name
-hexwitch.save("my-awesome-theme")
-
--- Load a specific theme
-hexwitch.load("my-awesome-theme")
-
--- Delete a theme
-hexwitch.delete("my-awesome-theme")
-
--- List all saved themes
-local themes = hexwitch.list_themes()
-for _, theme in ipairs(themes) do
-  print(theme.name, theme.description)
-end
-```
-
-### 🔒 Security Considerations
-
-hexwitch.nvim takes security seriously and implements several safeguards to protect your system. However, please review the following security guidelines:
-
-### API Key Security
-
-⚠️ **Never commit API keys to version control**
-
-- **Recommended:** Use environment variables instead of configuration files
-```bash
-export OPENAI_API_KEY="sk-your-key-here"
-export OPENROUTER_API_KEY="sk-or-v1-your-key-here"
-```
-
-- **If using config files:** Ensure they're not tracked by git
-```lua
--- Add to .gitignore
-echo ".env" >> .gitignore
-echo "lua/private/" >> .gitignore
-```
-
-- **API Key Rotation:** Regularly rotate your API keys and monitor usage
-
-### Theme Security
-
-The plugin validates all theme data before application:
-
-- **Input Validation:** Theme names are sanitized to prevent path traversal attacks
-- **Theme Validation:** All colors must be valid hex format (`#RRGGBB`)
-- **Clipboard Security:** Imported themes are validated before application
-
-### Network Security
-
-- **HTTPS Only:** All API communications use HTTPS encryption
-- **Certificate Validation:** SSL certificates are validated automatically
-- **No Data Persistence:** Sensitive data is not stored in logs after validation
-
-### Debug Mode Security
-
-⚠️ **Debug mode may log sensitive information**
-
-When debug mode is enabled, API keys and request data may be logged temporarily:
-```lua
-require("hexwitch").setup({
-  debug = true  -- ⚠️ May log API keys in development
-})
-```
-
-- **Log Files:** Debug logs are stored in `~/.local/share/nvim/hexwitch/logs/`
-- **Log Cleanup:** Regularly clean up old log files
-- **Production:** Keep debug mode disabled in production
-
-### File System Security
-
-- **Theme Directory:** Themes are stored in a sandboxed directory under `~/.local/share/nvim/hexwitch/`
-- **Path Validation:** All file operations are validated to prevent directory traversal
-- **Permission Checks:** The plugin checks file permissions before operations
-
-### Security Best Practices
-
-1. **Use Environment Variables** for API keys instead of configuration files
-2. **Keep Debug Mode Disabled** in production environments
-3. **Review Theme Content** before importing from untrusted sources
-4. **Monitor API Usage** for unusual activity
-5. **Regular Updates** to get the latest security fixes
-6. **Secure Configuration Files** with proper file permissions
-
-### Reporting Security Issues
-
-If you discover a security vulnerability, please report it responsibly:
-
-- **Do not** create public issues for security vulnerabilities
-- **Email:** security at hexwitch project (email available at [ batra.blog ]( batra.blog ))
-- **Include:** Steps to reproduce, expected vs actual behavior
-- **Response:** Security issues are typically addressed within 48 hours
-
-## Debug Mode
-
-Enable debug mode to troubleshoot issues:
-
-```lua
-require("hexwitch").setup({
-  debug = true
-})
-```
-
-Debug information will be logged to `:messages` and can help identify API issues, network problems, or theme generation errors.
-
-## Health Check
-
-Verify your setup with the built-in health check:
-
-```vim
-:checkhealth hexwitch
-```
-
-This checks:
-- API key configuration for current/fallback providers
-- Required dependencies (plenary.nvim, telescope.nvim)
-- Theme storage directory permissions
-- Basic system utilities like `curl`
-
-## Theme Structure
-
-Generated themes include comprehensive color definitions for:
-
-- Editor UI: Background, foreground, cursor, selection
-- Syntax Highlighting: All major language constructs
-- LSP Diagnostics: Error, warning, info, hint highlights
-- TreeSitter: Enhanced syntax parsing highlights
-- Git Signs: Added, modified, removed indicators
-- Telescope: Customized interface colors
-- WhichKey: Key binding hints (if installed)
-- Terminal: ANSI color mapping for integrated terminals
-
-## Troubleshooting
-
-### Common Issues
-
-API Key Issues
-```vim
-" Check if API key is set
-:echo $OPENAI_API_KEY
-
-" Set API key temporarily (for testing)
-:let $OPENAI_API_KEY = "sk-your-key-here"
-```
-
-Network Issues
-```vim
-" Test network connectivity
-:!curl -I https://api.openai.com/v1/models
-
-" Check timeout settings
-:lua print(require("hexwitch.config").get().timeout)
-```
-
-Theme Storage Issues
-```vim
-" Check themes directory permissions
-:!ls -la ~/.local/share/nvim/hexwitch
-
-" Create directory manually
-:!mkdir -p ~/.local/share/nvim/hexwitch
-```
-
-### Debug Commands
-
-```vim
-" View debug logs
-:HexwitchLogs
-
-" Show provider status
-:HexwitchProviders
-
-" Test API connectivity (current or specific provider)
-:Hexwitch test
-:Hexwitch test openrouter
-```
+*Tip: If you're developing the plugin locally, you can use your local version by setting the `HEXWITCH_PLUGIN_DIR` environment variable.*
 
 ## Contributing
 
-Contributions are welcome! Feel free to open issues and PRs with ideas, bug reports, or improvements. If you’re planning a larger change, please open an issue first to discuss the approach.
+This is a personal side project, but feel free to open an issue or a pull request if you have ideas or find a bug.
 
 ## License
 
-MIT License.
-
-## Acknowledgments
-
-- [OpenAI](https://openai.com/) for the powerful GPT models
-- [plenary.nvim](https://github.com/nvim-lua/plenary.nvim) for utility functions
-- [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) for the fuzzy finder
-- The Neovim community for inspiration and feedback
-
----
-
-<p align="center">
-  Made with ❤️ for the Neovim community
-</p>
+MIT

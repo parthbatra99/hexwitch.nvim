@@ -345,7 +345,7 @@ describe("hexwitch workflow tests", function()
         { model = 123 }, -- invalid type
         { temperature = 1.5 }, -- out of range
         { timeout = -1000 }, -- negative
-        { ui_mode = "invalid" } -- invalid option
+        { ai_provider = "invalid" } -- invalid option
       }
 
       for _, invalid_config in ipairs(invalid_configs) do

@@ -8,17 +8,17 @@ describe("hexwitch.config", function()
 
   it("has default configuration", function()
     assert.is_not_nil(config.get())
-    assert.equals("input", config.get().ui_mode)
+    assert.equals("openai", config.get().ai_provider)
   end)
 
   it("merges user configuration", function()
     local success = config.setup({
-      ui_mode = "telescope",
+      ai_provider = "openrouter",
       temperature = 1.5,
     })
 
     assert.is_true(success)
-    assert.equals("telescope", config.get().ui_mode)
+    assert.equals("openrouter", config.get().ai_provider)
     assert.equals(1.5, config.get().temperature)
   end)
 
@@ -32,9 +32,9 @@ describe("hexwitch.config", function()
     assert.is_true(err:find("temperature") ~= nil)
   end)
 
-  it("validates ui_mode", function()
+  it("validates ai_provider", function()
     local success, err = config.setup({
-      ui_mode = "invalid",
+      ai_provider = "invalid",
     })
 
     assert.is_false(success)

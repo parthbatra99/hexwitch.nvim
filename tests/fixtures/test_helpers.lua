@@ -61,7 +61,6 @@ M.setup_test_config = function(overrides)
     model = "gpt-4o-2024-08-06",
     temperature = 0.7,
     timeout = 30000,
-    ui_mode = "input",
     save_themes = true,
     themes_dir = "/tmp/nvim-test-themes",
     debug = false

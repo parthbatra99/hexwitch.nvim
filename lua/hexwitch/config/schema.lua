@@ -5,12 +5,10 @@ local M = {}
 ---@class hexwitch.UserConfig
 ---@field ai_provider? "openai"|"openrouter"|"custom" AI provider to use (default: "openai")
 ---@field api_key? string API key (defaults to provider-specific env var)
----@field fallback_provider? "openai"|"openrouter" Fallback if primary fails (default: "openrouter")
 ---@field openai_api_key? string OpenAI API key (defaults to OPENAI_API_KEY env var) [DEPRECATED use api_key]
 ---@field model? string AI model to use (default: "gpt-4o-2024-08-06")
 ---@field temperature? number Creativity level 0-2 (default: 0.7)
 ---@field timeout? number API timeout in ms (default: 30000)
----@field ui_mode? "input"|"telescope" Input method (default: "input")
 ---@field save_themes? boolean Enable theme saving (default: true)
 ---@field themes_dir? string Directory for saved themes
 ---@field max_history? number Maximum history entries (default: 50)
@@ -26,11 +24,9 @@ local M = {}
 ---@class hexwitch.InternalConfig
 ---@field ai_provider "openai"|"openrouter"|"custom"
 ---@field api_key string
----@field fallback_provider "openai"|"openrouter"
 ---@field model string
 ---@field temperature number
 ---@field timeout number
----@field ui_mode "input"|"telescope"
 ---@field save_themes boolean
 ---@field themes_dir string
 ---@field max_history number
@@ -60,11 +56,9 @@ local M = {}
 M.defaults = {
   ai_provider = "openai",
   api_key = vim.env.OPENAI_API_KEY or vim.env.HEXWITCH_API_KEY or "",
-  fallback_provider = "openrouter",
   model = "gpt-4o-mini",
   temperature = 0.7,
   timeout = 30000,
-  ui_mode = "input",
   save_themes = true,
   themes_dir = vim.fn.stdpath("data") .. "/hexwitch",
   max_history = 50,

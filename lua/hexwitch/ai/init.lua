@@ -9,52 +9,22 @@ local function get_providers()
   return require("hexwitch.ai.providers")
 end
 
--- Lazy-load OpenAI provider (backward compatibility)
-local function get_openai_provider()
-  return require("hexwitch.ai.openai")
-end
-
--- Create and configure AI provider with fallback support
+-- Create and configure AI provider
 ---@return table|nil provider Configured provider instance
 ---@return string|nil error Error message
 local function create_provider()
   local cfg = config.get()
   local providers = get_providers()
 
-  -- Try primary provider first
   logger.debug("ai.init", "create_provider",
-    string.format("Attempting to create provider: %s", cfg.ai_provider))
+    string.format("Creating provider: %s", cfg.ai_provider))
 
   local provider, error = providers.create(cfg)
   if provider then
     return provider, nil
   end
 
-  -- If primary failed and fallback is configured, try fallback
-  if cfg.fallback_provider and cfg.fallback_provider ~= cfg.ai_provider then
-    logger.info("ai.init", "create_provider",
-      string.format("Primary provider failed, trying fallback: %s", cfg.fallback_provider))
-
-    local fallback_config = vim.tbl_deep_extend("force", cfg, {
-      ai_provider = cfg.fallback_provider,
-    })
-
-    provider, error = providers.create(fallback_config)
-    if provider then
-      logger.info("ai.init", "create_provider",
-        string.format("Successfully created fallback provider: %s", cfg.fallback_provider))
-      return provider, nil
-    end
-  end
-
-  -- If all else fails, try legacy OpenAI provider
-  logger.warn("ai.init", "create_provider", "All providers failed, trying legacy OpenAI")
-  local openai_provider = get_openai_provider()
-  if openai_provider and openai_provider.generate then
-    return openai_provider, nil
-  end
-
-  return nil, error or "No available AI providers"
+  return nil, error or "Failed to create AI provider"
 end
 
 -- Generate theme using configured AI provider
@@ -138,19 +108,13 @@ function M.get_provider_info()
   local cfg = config.get()
   local providers = get_providers()
 
-  local primary_provider = providers.get(cfg.ai_provider)
-  local fallback_provider = providers.get(cfg.fallback_provider)
+  local provider = providers.get(cfg.ai_provider)
 
   return {
-    primary = {
+    provider = {
       name = cfg.ai_provider,
-      available = primary_provider ~= nil,
-      info = primary_provider and primary_provider:get_info() or nil,
-    },
-    fallback = {
-      name = cfg.fallback_provider,
-      available = fallback_provider ~= nil,
-      info = fallback_provider and fallback_provider:get_info() or nil,
+      available = provider ~= nil,
+      info = provider and provider:get_info() or nil,
     },
     model = cfg.model,
     temperature = cfg.temperature,

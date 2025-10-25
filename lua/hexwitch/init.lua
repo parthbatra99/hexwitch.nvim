@@ -31,13 +31,7 @@ end
 ---Prompt user for theme description
 function M.prompt()
   local ui = get_ui()
-  local cfg = config.get()
-
-  if cfg.ui_mode == "telescope" then
-    ui.prompt()
-  else
-    ui.simple_prompt()
-  end
+  ui.prompt()
 end
 
 ---Generate and apply theme from user input

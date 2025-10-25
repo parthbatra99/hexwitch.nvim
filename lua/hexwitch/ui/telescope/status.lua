@@ -54,11 +54,11 @@ function M.show_status(opts)
       category = "AI Configuration",
       items = {
         {
-          name = "Primary Provider",
-          value = "primary_provider",
-          description = ai_info.primary.name,
-          icon = ai_info.primary.available and "✓" or "✗",
-          action = ai_info.primary.available and "change_provider" or "configure_provider",
+          name = "AI Provider",
+          value = "provider",
+          description = ai_info.provider.name,
+          icon = ai_info.provider.available and "✓" or "✗",
+          action = ai_info.provider.available and "change_provider" or "configure_provider",
         },
         {
           name = "Model",
@@ -66,13 +66,6 @@ function M.show_status(opts)
           description = cfg.model,
           icon = "M",
           action = "change_model",
-        },
-        {
-          name = "Fallback Provider",
-          value = "fallback_provider",
-          description = ai_info.fallback.name,
-          icon = ai_info.fallback.available and "✓" or "✗",
-          action = "configure_fallback",
         },
       }
     },
@@ -134,13 +127,6 @@ function M.show_status(opts)
     {
       category = "Settings",
       items = {
-        {
-          name = "UI Mode",
-          value = "ui_mode",
-          description = cfg.ui_mode,
-          icon = "U",
-          action = "change_ui_mode",
-        },
         {
           name = "Debug Mode",
           value = "debug_mode",
@@ -244,7 +230,7 @@ function M.handle_status_action(item)
   logger.info("ui.telescope.status", "handle_status_action", "Executing status action",
     { action = item.action, value = item.value })
 
-  if item.action == "change_provider" or item.action == "configure_provider" or item.action == "configure_fallback" then
+  if item.action == "change_provider" or item.action == "configure_provider" then
     vim.notify("Configure providers in your setup file", vim.log.levels.INFO)
   elseif item.action == "change_model" then
     M.show_model_selection()
@@ -261,8 +247,6 @@ function M.handle_status_action(item)
     M.show_undo_stack()
   elseif item.action == "manage_redo" then
     M.show_redo_stack()
-  elseif item.action == "change_ui_mode" then
-    M.change_ui_mode()
   elseif item.action == "toggle_debug" then
     M.toggle_debug_mode()
   end
@@ -277,14 +261,14 @@ function M.show_model_selection(opts)
   local ai_info = require("hexwitch.ai").get_provider_info()
 
   local models = {}
-  if ai_info.primary.name == "OpenAI" then
+  if ai_info.provider.name == "OpenAI" then
     models = {
       "gpt-4o",
       "gpt-4o-mini",
       "gpt-4",
       "gpt-3.5-turbo",
     }
-  elseif ai_info.primary.name == "OpenRouter" then
+  elseif ai_info.provider.name == "OpenRouter" then
     models = {
       "anthropic/claude-3.5-sonnet",
       "anthropic/claude-3-haiku",

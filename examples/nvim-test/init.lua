@@ -72,7 +72,7 @@ local local_dir = vim.env.HEXWITCH_PLUGIN_DIR
 if local_dir and local_dir ~= "" then
   plugin_spec.dir = local_dir
 else
-  plugin_spec[1] = "hexwitch/hexwitch.nvim"
+  plugin_spec[1] = "parthbatra99/hexwitch.nvim"
 end
 
 require("lazy").setup({ plugin_spec })

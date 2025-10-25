@@ -1,80 +1,4 @@
 describe("hexwitch.ui", function()
-  describe("input module", function()
-    -- Since the input module is currently a placeholder, these tests
-    -- verify the expected interface and behavior that should be implemented
-
-    it("should have input module available", function()
-      local has_input, input = pcall(require, "hexwitch.ui.input")
-      assert.is_true(has_input)
-      assert.is_not_nil(input)
-    end)
-
-    it("should define expected input functions", function()
-      local input = require("hexwitch.ui.input")
-
-      -- These functions should exist when the module is fully implemented
-      local expected_functions = {
-        "get_input",
-        "create_input_buffer",
-        "close_input_buffer",
-        "setup_input_mappings"
-      }
-
-      for _, func_name in ipairs(expected_functions) do
-        local func = input[func_name]
-        -- For now, functions may be nil (not implemented)
-        -- When implemented, they should be of type 'function'
-        if func ~= nil then
-          assert.equals("function", type(func), func_name .. " should be a function")
-        end
-      end
-    end)
-
-    it("should handle input buffer creation", function()
-      local input = require("hexwitch.ui.input")
-
-      -- Test if create_input_buffer exists and works
-      if input.create_input_buffer then
-        local buffer = input.create_input_buffer()
-        assert.is_not_nil(buffer)
-        assert.is_true(vim.api.nvim_buf_is_valid(buffer))
-      else
-        -- Function not yet implemented - this is expected
-        assert.is_nil(input.create_input_buffer)
-      end
-    end)
-
-    it("should handle user input validation", function()
-      -- Test input validation scenarios that should be handled
-      local test_inputs = {
-        "", -- Empty input
-        "   ", -- Whitespace only
-        "a", -- Too short
-        "a" .. string.rep("very long description ", 100), -- Too long
-        "valid description with reasonable length", -- Valid
-        "theme with special chars: !@#$%^&*()", -- Special characters
-        "multi-line\ndescription\nshould work", -- Multi-line input
-      }
-
-      -- This test validates the expected behavior for input validation
-      -- When the input module is fully implemented, it should handle these cases
-      for _, input_text in ipairs(test_inputs) do
-        -- Input should be sanitized or validated appropriately
-        local sanitized = input_text:gsub("^%s+", ""):gsub("%s+$", "")
-        assert.is_not_nil(sanitized)
-
-        -- Length validation (reasonable limits)
-        -- Very long inputs should be handled (truncated or rejected)
-        if #sanitized > 1000 then
-          -- This represents a case where input would need truncation
-          -- For now, just verify the input is not empty
-          assert.is_true(#sanitized > 0, "Input should have some content")
-        else
-          assert.is_true(#sanitized <= 1000, "Input should have reasonable length limit")
-        end
-      end
-    end)
-  end)
 
   describe("telescope module", function()
     it("should have telescope module available", function()
@@ -137,47 +61,13 @@ describe("hexwitch.ui", function()
   end)
 
   describe("UI integration", function()
-    it("should handle UI mode configuration", function()
-      local config = require("hexwitch.config")
-
-      -- Test UI mode configuration
-      local ui_modes = { "input", "telescope" }
-
-      for _, mode in ipairs(ui_modes) do
-        config.setup({ ui_mode = mode })
-        local current_config = config.get()
-        assert.equals(mode, current_config.ui_mode)
-      end
-    end)
-
-    it("should fallback when preferred UI mode is unavailable", function()
-      -- Test fallback behavior when telescope is not available
-      local config = require("hexwitch.config")
-
-      -- Set to telescope mode
-      config.setup({ ui_mode = "telescope" })
-
-      -- Check if telescope is actually available
-      local has_telescope, _ = pcall(require, "telescope")
-
-      if not has_telescope then
-        -- Should fallback to input mode
-        -- This would be handled in the main module
-        assert.is_true(true, "Should fallback to input mode when telescope unavailable")
-      else
-        assert.is_true(true, "Telescope available - should use telescope mode")
-      end
-    end)
-
     it("should handle UI initialization errors", function()
       -- Test that UI initialization errors are handled gracefully
       local ui_init_success = pcall(function()
         -- Try to initialize UI components
-        local input = require("hexwitch.ui.input")
         local telescope = require("hexwitch.ui.telescope")
 
-        -- These should not throw errors even if not fully implemented
-        assert.is_not_nil(input)
+        -- This should not throw errors even if not fully implemented
         assert.is_not_nil(telescope)
       end)
 

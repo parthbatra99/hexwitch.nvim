@@ -14,11 +14,9 @@ local function validate(cfg)
   local ok, err = validate_utils.validate_path("vim.g.hexwitch", {
     ai_provider = { cfg.ai_provider, "string" },
     api_key = { cfg.api_key, "string" },
-    fallback_provider = { cfg.fallback_provider, "string" },
     model = { cfg.model, "string" },
     temperature = { cfg.temperature, "number" },
     timeout = { cfg.timeout, "number" },
-    ui_mode = { cfg.ui_mode, "string" },
     save_themes = { cfg.save_themes, "boolean" },
     themes_dir = { cfg.themes_dir, "string" },
     max_history = { cfg.max_history, "number" },
@@ -35,10 +33,6 @@ local function validate(cfg)
   -- Additional custom validations
   if cfg.temperature < 0 or cfg.temperature > 2 then
     return false, "temperature must be between 0 and 2"
-  end
-
-  if not vim.tbl_contains({ "input", "telescope" }, cfg.ui_mode) then
-    return false, "ui_mode must be 'input' or 'telescope'"
   end
 
   if not vim.tbl_contains({ "openai", "openrouter", "custom" }, cfg.ai_provider) then
