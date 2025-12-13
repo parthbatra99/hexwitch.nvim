@@ -99,6 +99,30 @@ M.high_contrast_theme = {
   }
 }
 
+---Low contrast theme (for accessibility testing)
+M.low_contrast_theme = {
+  name = "low-contrast-theme",
+  description = "A theme with low contrast for testing",
+  colors = {
+    bg = "#303030",
+    fg = "#a0a0a0",
+    bg_sidebar = "#2a2a2a",
+    bg_float = "#353535",
+    bg_statusline = "#2d2d2d",
+    red = "#a07070",
+    orange = "#a08060",
+    yellow = "#a09050",
+    green = "#70a070",
+    cyan = "#60a0a0",
+    blue = "#6080a0",
+    purple = "#8070a0",
+    magenta = "#a06090",
+    comment = "#606060",
+    selection = "#3a3a3a",
+    cursor = "#a0a0a0"
+  }
+}
+
 ---Monochromatic theme
 M.monochromatic_theme = {
   name = "monochromatic-theme",

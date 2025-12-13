@@ -128,7 +128,7 @@ M.malformed_responses = {
   missing_choices = {
     status = 200,
     body = vim.json.encode({
-      no_choices_here: []
+      no_choices_here = {}
     })
   },
 
