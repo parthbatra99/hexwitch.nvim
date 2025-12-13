@@ -4,6 +4,9 @@ local logger = require("hexwitch.utils.logger")
 
 local M = {}
 
+-- Smart refinement module
+M.smart_refine = require("hexwitch.ai.smart_refine")
+
 -- Lazy-load provider registry
 local function get_providers()
   return require("hexwitch.ai.providers")
