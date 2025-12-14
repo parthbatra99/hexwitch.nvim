@@ -379,4 +379,97 @@ function M.show_confirmation(message, on_confirm, opts)
   }):find()
 end
 
+-- Show refinement input dialog with examples
+---@param on_refine function Callback when refinement description is provided
+---@param opts table Options
+function M.show_refinement_input(on_refine, opts)
+  opts = opts or {}
+
+  logger.info("ui.telescope.input", "show_refinement_input", "Showing refinement input dialog")
+
+  -- Refinement-specific examples
+  local examples = {
+    "Make the colors more pastel and soft",
+    "Increase contrast for better readability",
+    "Make it warmer, more yellow/orange tones",
+    "Add more vibrant accent colors",
+    "Reduce saturation for a more muted look",
+    "Make background darker and keep accents bright",
+    "Convert to monochrome with high contrast",
+    "Softer colors, easier on the eyes",
+    "More professional, business-friendly colors",
+    "Increase red tones for warmer feel",
+  }
+
+  pickers.new(opts, {
+    prompt_title = "Describe Theme Refinements",
+    finder = finders.new_table({
+      results = {},
+      entry_maker = function(input)
+        return {
+          value = input,
+          display = input,
+          ordinal = input,
+        }
+      end,
+    }),
+    sorter = conf.generic_sorter(opts),
+    attach_mappings = function(prompt_bufnr, map)
+      actions.select_default:replace(function()
+        local prompt = action_state.get_current_line()
+        actions.close(prompt_bufnr)
+
+        if prompt and prompt ~= "" then
+          logger.info("ui.telescope.input", "show_refinement_input",
+            "Applying refinement from user input", { input = prompt })
+          if on_refine then
+            on_refine(prompt)
+          end
+        else
+          vim.notify("Refinement description cannot be empty", vim.log.levels.WARN)
+        end
+      end)
+
+      -- Add example selection with tab
+      map("i", "<Tab>", function()
+        local current_examples = {}
+        for _, example in ipairs(examples) do
+          table.insert(current_examples, {
+            value = example,
+            display = "💡 " .. example,
+            ordinal = example,
+          })
+        end
+
+        -- Show examples picker
+        pickers.new(opts, {
+          prompt_title = "Refinement Examples",
+          finder = finders.new_table({
+            results = current_examples,
+          }),
+          sorter = conf.generic_sorter(opts),
+          attach_mappings = function(example_bufnr, map)
+            actions.select_default:replace(function()
+              local selection = action_state.get_selected_entry()
+              actions.close(example_bufnr)
+              actions.close(prompt_bufnr)
+
+              if selection then
+                logger.info("ui.telescope.input", "show_refinement_input",
+                  "Selected refinement example", { example = selection.value })
+                if on_refine then
+                  on_refine(selection.value)
+                end
+              end
+            end)
+            return true
+          end,
+        }):find()
+      end)
+
+      return true
+    end,
+  }):find()
+end
+
 return M

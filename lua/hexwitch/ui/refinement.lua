@@ -334,10 +334,15 @@ function M.open(opts)
     apply_original_theme()
   end, key_opts)
 
-  -- Close refinement window
+  -- Apply custom refinements
   vim.keymap.set("n", cfg.keymaps.confirm, function()
     vim.api.nvim_win_close(win, true)
     vim.api.nvim_buf_delete(buf, { force = true })
+
+    -- Show refinement input dialog
+    require("hexwitch.ui.telescope.input").show_refinement_input(function(description)
+      M.apply_custom_refinement(description)
+    end)
   end, key_opts)
 
   -- Reset to original
