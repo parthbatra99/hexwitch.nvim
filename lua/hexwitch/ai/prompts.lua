@@ -2,6 +2,42 @@ local color_utils = require("hexwitch.utils.color")
 
 local M = {}
 
+-- Single source of truth: the 16-color theme JSON schema used by the AI client
+-- and validated by the applier. Shared so the prompt and the request stay in sync.
+M.SCHEMA_NAME = "HexwitchThemeSchema"
+M.SCHEMA = {
+  type = "object",
+  properties = {
+    name = { type = "string", description = "Short theme name" },
+    description = { type = "string", description = "Theme description" },
+    colors = {
+      type = "object",
+      properties = {
+        bg = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        fg = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        bg_sidebar = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        bg_float = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        bg_statusline = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        red = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        orange = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        yellow = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        green = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        cyan = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        blue = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        purple = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        magenta = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        comment = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        selection = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+        cursor = { type = "string", pattern = "^#[0-9A-Fa-f]{6}$" },
+      },
+      required = { "bg", "fg", "bg_sidebar", "bg_float", "bg_statusline", "red", "orange", "yellow", "green", "cyan", "blue", "purple", "magenta", "comment", "selection", "cursor" },
+      additionalProperties = false,
+    },
+  },
+  required = { "name", "description", "colors" },
+  additionalProperties = false,
+}
+
 M.SYSTEM_PROMPT = [[You are an expert Neovim colorscheme designer with deep knowledge of:
 
 **Color Theory:**
@@ -230,6 +266,44 @@ Respond ONLY with valid JSON using this exact structure:
 }
 
 No explanations, extra fields, or trailing text.]], user_input, user_input)
+end
+
+---Build a theme refinement prompt. Asks the model to return a FULL new
+---colorscheme (same JSON schema) that is the current theme adjusted per `change`.
+---@param current_theme table Current colorscheme data ({name, description, colors})
+---@param change string Natural-language refinement request
+---@return string prompt
+function M.build_refinement_prompt(current_theme, change)
+  local colors = current_theme and current_theme.colors or {}
+  local current_json = vim.json.encode(colors)
+  local current_name = (current_theme and current_theme.name) or "current theme"
+
+  return string.format([[You previously generated the Neovim colorscheme "%s" with these colors:
+
+%s
+
+Now produce a REFINED version of that exact colorscheme applying this change:
+"%s"
+
+Rules:
+- Keep the same overall identity and mood of the original; only adjust per the request.
+- Preserve or improve accessibility: bg-to-fg contrast >= 7:1, all syntax colors >= 4.5:1 against bg.
+- Return a COMPLETE colorscheme (all 16 colors), not a diff. Any color you don't intend to change should stay the same as the original.
+- Give the refined theme a fresh short `name` and a one-line `description`.
+
+Respond ONLY with valid JSON using this exact structure:
+{
+  "name": "short_theme_name",
+  "description": "Concise description",
+  "colors": {
+    "bg": "#000000", "fg": "#000000", "bg_sidebar": "#000000", "bg_float": "#000000",
+    "bg_statusline": "#000000", "red": "#000000", "orange": "#000000", "yellow": "#000000",
+    "green": "#000000", "cyan": "#000000", "blue": "#000000", "purple": "#000000",
+    "magenta": "#000000", "comment": "#000000", "selection": "#000000", "cursor": "#000000"
+  }
+}
+
+No explanations, extra fields, or trailing text.]], current_name, current_json, change)
 end
 
 ---Preset prompts for Telescope picker

@@ -36,7 +36,8 @@ end
 
 ---Generate and apply theme from user input
 ---@param user_input string Theme description
-function M.generate(user_input)
+---@param callback? fun(data: table|nil, err: string|nil) Optional completion callback
+function M.generate(user_input, callback)
   if not user_input or user_input == "" then
     notify.warn("Theme description cannot be empty")
     return
@@ -46,7 +47,8 @@ function M.generate(user_input)
   notify.info("Generating your theme...")
   local loading_handle
   if ui and ui.show_loading then
-    loading_handle = ui.show_loading("Generating your theme...")
+    local ok, handle = pcall(ui.show_loading, "Generating your theme...")
+    if ok then loading_handle = handle end
   end
 
   local ai = get_ai()
@@ -56,10 +58,11 @@ function M.generate(user_input)
     end
     if err then
       if ui and ui.show_error then
-        ui.show_error("Failed to generate theme", err)
+        pcall(ui.show_error, "Failed to generate theme", err)
       else
         notify.error("Failed to generate theme: " .. err)
       end
+      if callback then callback(nil, err) end
       return
     end
 
@@ -67,15 +70,57 @@ function M.generate(user_input)
     theme.apply(colorscheme_data)
 
     local theme_name = colorscheme_data.name or "unnamed"
-    local ok_refine, refinement = pcall(require, "hexwitch.ui.refinement")
-    if ok_refine and refinement and refinement.set_current_theme then
-      refinement.set_current_theme(colorscheme_data)
-    end
     if ui and ui.show_success then
-      ui.show_success("[SUCCESS] Theme '" .. theme_name .. "' applied!", theme_name, colorscheme_data)
+      pcall(ui.show_success, "[SUCCESS] Theme '" .. theme_name .. "' applied!", theme_name, colorscheme_data)
     else
       notify.info("[SUCCESS] Theme '" .. theme_name .. "' applied!")
     end
+    if callback then callback(colorscheme_data, nil) end
+  end)
+end
+
+---Refine the currently applied theme via AI
+---@param change string Natural-language refinement request
+---@param callback? fun(data: table|nil, err: string|nil) Optional completion callback
+function M.refine(change, callback)
+  if not change or change == "" then
+    notify.warn("Refinement description cannot be empty")
+    return
+  end
+
+  local ui = get_ui()
+  notify.info("Refining your theme...")
+  local loading_handle
+  if ui and ui.show_loading then
+    local ok, handle = pcall(ui.show_loading, "Refining your theme...")
+    if ok then loading_handle = handle end
+  end
+
+  local ai = get_ai()
+  ai.refine(change, function(colorscheme_data, err)
+    if loading_handle and loading_handle.close then
+      loading_handle.close()
+    end
+    if err then
+      if ui and ui.show_error then
+        pcall(ui.show_error, "Failed to refine theme", err)
+      else
+        notify.error("Failed to refine theme: " .. err)
+      end
+      if callback then callback(nil, err) end
+      return
+    end
+
+    local theme = get_theme()
+    theme.apply(colorscheme_data)
+
+    local theme_name = colorscheme_data.name or "unnamed"
+    if ui and ui.show_success then
+      pcall(ui.show_success, "[SUCCESS] Theme '" .. theme_name .. "' refined!", theme_name, colorscheme_data)
+    else
+      notify.info("[SUCCESS] Theme '" .. theme_name .. "' refined!")
+    end
+    if callback then callback(colorscheme_data, nil) end
   end)
 end
 

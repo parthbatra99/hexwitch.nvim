@@ -1,7 +1,7 @@
-local openai = require("hexwitch.ai.openai")
+local client = require("hexwitch.ai.client")
 local config = require("hexwitch.config")
 
-describe("hexwitch.ai.openai", function()
+describe("hexwitch.ai.client", function()
   local original_config
 
   before_each(function()
@@ -10,7 +10,7 @@ describe("hexwitch.ai.openai", function()
 
     -- Reset config to defaults
     config.setup({
-      openai_api_key = "test-key",
+      api_key = "test-key",
       model = "gpt-4o-2024-08-06",
       temperature = 0.7,
       timeout = 30000,
@@ -32,29 +32,29 @@ describe("hexwitch.ai.openai", function()
 
   describe("generate", function()
     it("should return error when API key is not configured", function()
-      config.setup({ openai_api_key = nil })
+      config.setup({ api_key = "" })
 
       local result, error = nil, nil
-      openai.generate("test theme", function(res, err)
+      client.generate("test theme", function(res, err)
         result = res
         error = err
       end)
 
       assert.is_nil(result)
-      assert.matches("OpenAI API key not configured", error)
+      assert.matches("API key not configured", error)
     end)
 
     it("should return error when API key is empty", function()
-      config.setup({ openai_api_key = "" })
+      config.setup({ api_key = "" })
 
       local result, error = nil, nil
-      openai.generate("test theme", function(res, err)
+      client.generate("test theme", function(res, err)
         result = res
         error = err
       end)
 
       assert.is_nil(result)
-      assert.matches("OpenAI API key not configured", error)
+      assert.matches("API key not configured", error)
     end)
 
     it("should return error when plenary is not available", function()
@@ -62,13 +62,13 @@ describe("hexwitch.ai.openai", function()
       vim.g.hexwitch_test_plenary_unavailable = true
 
       local result, error = nil, nil
-      openai.generate("test theme", function(res, err)
+      client.generate("test theme", function(res, err)
         result = res
         error = err
       end)
 
       assert.is_nil(result)
-      assert.matches("plenary.nvim is required", error)
+      assert.matches("plenary.curl not available", error)
 
       -- Clear test override
       vim.g.hexwitch_test_plenary_unavailable = nil
@@ -85,7 +85,7 @@ describe("hexwitch.ai.openai", function()
           assert.equals("gpt-4o-2024-08-06", body.model)
           assert.equals(0.7, body.temperature)
           assert.equals("json_schema", body.response_format.type)
-          assert.equals("neovim_colorscheme", body.response_format.json_schema.name)
+          assert.equals("HexwitchThemeSchema", body.response_format.json_schema.name)
           assert.is_true(body.response_format.json_schema.strict)
 
           -- Verify messages structure
@@ -136,7 +136,7 @@ describe("hexwitch.ai.openai", function()
       package.loaded["plenary.curl"] = mock_curl
 
       local result, error = nil, nil
-      openai.generate("dark theme with purple accents", function(res, err)
+      client.generate("dark theme with purple accents", function(res, err)
         result = res
         error = err
       end)
@@ -171,13 +171,13 @@ describe("hexwitch.ai.openai", function()
       package.loaded["plenary.curl"] = mock_curl
 
       local result, error = nil, nil
-      openai.generate("test theme", function(res, err)
+      client.generate("test theme", function(res, err)
         result = res
         error = err
       end)
 
       assert.is_nil(result)
-      assert.matches("API request failed with status 401", error)
+      assert.matches("API error: 401", error)
       assert.matches("Invalid API key", error)
 
       package.loaded["plenary.curl"] = original_curl
@@ -198,7 +198,7 @@ describe("hexwitch.ai.openai", function()
       package.loaded["plenary.curl"] = mock_curl
 
       local result, error = nil, nil
-      openai.generate("test theme", function(res, err)
+      client.generate("test theme", function(res, err)
         result = res
         error = err
       end)
@@ -225,13 +225,13 @@ describe("hexwitch.ai.openai", function()
       package.loaded["plenary.curl"] = mock_curl
 
       local result, error = nil, nil
-      openai.generate("test theme", function(res, err)
+      client.generate("test theme", function(res, err)
         result = res
         error = err
       end)
 
       assert.is_nil(result)
-      assert.equals("No choices in API response", error)
+      assert.equals("Invalid response format from API", error)
 
       package.loaded["plenary.curl"] = original_curl
     end)
@@ -258,13 +258,13 @@ describe("hexwitch.ai.openai", function()
       package.loaded["plenary.curl"] = mock_curl
 
       local result, error = nil, nil
-      openai.generate("test theme", function(res, err)
+      client.generate("test theme", function(res, err)
         result = res
         error = err
       end)
 
       assert.is_nil(result)
-      assert.matches("Failed to parse colorscheme JSON", error)
+      assert.matches("Failed to parse theme data from response", error)
 
       package.loaded["plenary.curl"] = original_curl
     end)
@@ -283,7 +283,7 @@ describe("hexwitch.ai.openai", function()
       package.loaded["plenary.curl"] = mock_curl
 
       local result, error = nil, nil
-      openai.generate("test theme", function(res, err)
+      client.generate("test theme", function(res, err)
         result = res
         error = err
       end)
@@ -296,7 +296,7 @@ describe("hexwitch.ai.openai", function()
 
     it("should use custom configuration parameters", function()
       config.setup({
-        openai_api_key = "custom-key",
+        api_key = "custom-key",
         model = "gpt-4-turbo",
         temperature = 0.9,
         timeout = 60000
@@ -350,7 +350,7 @@ describe("hexwitch.ai.openai", function()
       package.loaded["plenary.curl"] = mock_curl
 
       local result, error = nil, nil
-      openai.generate("test theme", function(res, err)
+      client.generate("test theme", function(res, err)
         result = res
         error = err
       end)
@@ -419,7 +419,7 @@ describe("hexwitch.ai.openai", function()
       package.loaded["plenary.curl"] = mock_curl
 
       local result, error = nil, nil
-      openai.generate("test schema", function(res, err)
+      client.generate("test schema", function(res, err)
         result = res
         error = err
       end)

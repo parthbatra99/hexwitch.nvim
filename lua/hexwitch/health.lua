@@ -30,22 +30,18 @@ function M.check()
   local ai = require("hexwitch.ai")
   local state = require("hexwitch.storage.state")
 
-  -- Check AI provider configuration
+  -- Check AI endpoint configuration
   local provider_info = ai.get_provider_info()
-  if provider_info.primary.available then
-    health.ok(string.format("AI provider: %s configured", provider_info.primary.name))
+  health.info(string.format("Endpoint: %s (model: %s)", provider_info.base_url, provider_info.model))
+  if provider_info.available then
+    health.ok("AI endpoint configured and ready")
   else
-    health.warn(string.format("AI provider: %s not available", provider_info.primary.name), {
-      "Check API key configuration",
-      "Or change provider with: require('hexwitch').setup({ ai_provider = 'openrouter' })",
+    local client = require("hexwitch.ai.client")
+    local reason = not client.is_available() and "plenary.curl not found" or "API key not set"
+    health.warn("AI endpoint not available: " .. reason, {
+      "Set an API key: require('hexwitch').setup({ api_key = '...' }) or $OPENAI_API_KEY",
+      "Point at any OpenAI-compatible endpoint via `base_url` (OpenAI, OpenRouter, Ollama, LM Studio)",
     })
-  end
-
-  -- Check fallback provider
-  if provider_info.fallback.available then
-    health.ok(string.format("Fallback provider: %s available", provider_info.fallback.name))
-  else
-    health.info(string.format("Fallback provider: %s not available", provider_info.fallback.name))
   end
 
   -- Check state management

@@ -1,4 +1,5 @@
 local notify = require("hexwitch.utils.notify")
+local config = require("hexwitch.config")
 
 local M = {}
 
@@ -23,9 +24,9 @@ local function sanitize_theme_name(name)
   return sanitized
 end
 
--- Get the directory for storing themes
+-- Get the directory for storing themes (respects the configured themes_dir)
 local function get_theme_dir()
-  local config_dir = vim.fn.stdpath("data") .. "/hexwitch"
+  local config_dir = config.get().themes_dir
   vim.fn.mkdir(config_dir, "p")
   return config_dir
 end
@@ -93,70 +94,17 @@ function M.save(theme_name)
     return
   end
 
-  -- Get current colorscheme data
-  local colorscheme_data = {}
-
-  -- Try to get the colorscheme name
-  colorscheme_data.name = vim.g.colors_name or "unknown"
-  colorscheme_data.description = "Saved theme: " .. theme_name
-  colorscheme_data.colors = {}
-
-  -- Extract current highlight colors in the expected format
-  local normal_hl = vim.api.nvim_get_hl(0, { name = "Normal" })
-  local comment_hl = vim.api.nvim_get_hl(0, { name = "Comment" })
-  local string_hl = vim.api.nvim_get_hl(0, { name = "String" })
-  local keyword_hl = vim.api.nvim_get_hl(0, { name = "Keyword" })
-  local function_hl = vim.api.nvim_get_hl(0, { name = "Function" })
-  local constant_hl = vim.api.nvim_get_hl(0, { name = "Constant" })
-  local identifier_hl = vim.api.nvim_get_hl(0, { name = "Identifier" })
-  local type_hl = vim.api.nvim_get_hl(0, { name = "Type" })
-  local diagnostic_error_hl = vim.api.nvim_get_hl(0, { name = "DiagnosticError" })
-  local diagnostic_warn_hl = vim.api.nvim_get_hl(0, { name = "DiagnosticWarn" })
-  local diagnostic_info_hl = vim.api.nvim_get_hl(0, { name = "DiagnosticInfo" })
-  local diagnostic_hint_hl = vim.api.nvim_get_hl(0, { name = "DiagnosticHint" })
-  local visual_hl = vim.api.nvim_get_hl(0, { name = "Visual" })
-  local cursor_hl = vim.api.nvim_get_hl(0, { name = "Cursor" })
-
-  colorscheme_data.colors = {
-    fg = normal_hl.fg and string.format("#%06x", normal_hl.fg) or "#ffffff",
-    bg = normal_hl.bg and string.format("#%06x", normal_hl.bg) or "#000000",
-    bg_sidebar = normal_hl.bg and string.format("#%06x", normal_hl.bg) or "#000000",
-    bg_float = normal_hl.bg and string.format("#%06x", normal_hl.bg) or "#000000",
-    bg_statusline = normal_hl.bg and string.format("#%06x", normal_hl.bg) or "#000000",
-    red = diagnostic_error_hl.fg and string.format("#%06x", diagnostic_error_hl.fg) or "#ff0000",
-    orange = constant_hl.fg and string.format("#%06x", constant_hl.fg) or "#ff8800",
-    yellow = diagnostic_warn_hl.fg and string.format("#%06x", diagnostic_warn_hl.fg) or "#ffff00",
-    green = string_hl.fg and string.format("#%06x", string_hl.fg) or "#00ff00",
-    cyan = diagnostic_info_hl.fg and string.format("#%06x", diagnostic_info_hl.fg) or "#00ffff",
-    blue = function_hl.fg and string.format("#%06x", function_hl.fg) or "#0000ff",
-    purple = keyword_hl.fg and string.format("#%06x", keyword_hl.fg) or "#ff00ff",
-    magenta = constant_hl.fg and string.format("#%06x", constant_hl.fg) or "#ff00ff",
-    comment = comment_hl.fg and string.format("#%06x", comment_hl.fg) or "#888888",
-    selection = visual_hl.bg and string.format("#%06x", visual_hl.bg) or "#444444",
-    cursor = cursor_hl.bg and string.format("#%06x", cursor_hl.bg) or "#ffffff",
-  }
-
-  -- Add terminal colors if available
-  if vim.g.terminal_color_0 then
-    colorscheme_data.terminal = {
-      [0] = vim.g.terminal_color_0,
-      [1] = vim.g.terminal_color_1,
-      [2] = vim.g.terminal_color_2,
-      [3] = vim.g.terminal_color_3,
-      [4] = vim.g.terminal_color_4,
-      [5] = vim.g.terminal_color_5,
-      [6] = vim.g.terminal_color_6,
-      [7] = vim.g.terminal_color_7,
-      [8] = vim.g.terminal_color_8,
-      [9] = vim.g.terminal_color_9,
-      [10] = vim.g.terminal_color_10,
-      [11] = vim.g.terminal_color_11,
-      [12] = vim.g.terminal_color_12,
-      [13] = vim.g.terminal_color_13,
-      [14] = vim.g.terminal_color_14,
-      [15] = vim.g.terminal_color_15,
-    }
+  -- Persist the actually-applied theme (the real palette), not a lossy
+  -- re-derivation from highlight groups.
+  local state = require("hexwitch.storage.state")
+  local current = state.get_current_theme()
+  if not current then
+    notify.error("No theme is currently applied. Generate or load a theme first.")
+    return
   end
+
+  local colorscheme_data = vim.deepcopy(current)
+  colorscheme_data.saved_at = os.date("%Y-%m-%dT%H:%M:%SZ")
 
   local theme_path = get_theme_path(theme_name)
   if not theme_path then
@@ -232,7 +180,10 @@ function M.list()
 
   for _, file in ipairs(handle) do
     local theme_name = vim.fn.fnamemodify(file, ":t:r")
-    table.insert(themes, theme_name)
+    -- Skip the plugin's own state file, which shares this directory
+    if theme_name ~= "state" then
+      table.insert(themes, theme_name)
+    end
   end
 
   return themes

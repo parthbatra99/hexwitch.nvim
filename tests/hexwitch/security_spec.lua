@@ -210,8 +210,8 @@ describe("hexwitch security tests", function()
     it("should sanitize API keys in logs", function()
       -- This test would require mocking the logger to verify sanitization
       -- For now, we just verify the sanitize function exists
-      local openai = require("hexwitch.ai.providers.openai")
-      assert.is_function(openai.is_available, "OpenAI provider should have sanitize functions")
+      local client = require("hexwitch.ai.client")
+      assert.is_function(client.is_available, "AI client should expose an availability check")
     end)
   end)
 

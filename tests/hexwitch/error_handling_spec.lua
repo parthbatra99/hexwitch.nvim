@@ -1,6 +1,6 @@
 local hexwitch = require("hexwitch")
 local config = require("hexwitch.config")
-local openai = require("hexwitch.ai.openai")
+local client = require("hexwitch.ai.client")
 local applier = require("hexwitch.theme.applier")
 local storage = require("hexwitch.theme.storage")
 
@@ -12,7 +12,7 @@ local function test_ai_generate(user_input)
   vim.g.hexwitch_test_sync_mode = true
   vim.g.hexwitch_test_plenary_unavailable = false
 
-  openai.generate(user_input, function(res, err)
+  client.generate(user_input, function(res, err)
     result = res
     error = err
   end)
@@ -46,7 +46,7 @@ describe("hexwitch error handling and edge cases", function()
 
     -- Setup basic config
     config.setup({
-      openai_api_key = "test-key",
+      api_key = "test-key",
       model = "gpt-4o-2024-08-06",
       temperature = 0.7,
       timeout = 30000,
@@ -81,23 +81,23 @@ describe("hexwitch error handling and edge cases", function()
 
   describe("configuration errors", function()
     it("should handle missing API key", function()
-      config.setup({ openai_api_key = nil })
+      config.setup({ api_key = "" })
 
       local result, error = test_ai_generate("test theme")
 
       assert.is_nil(result)
       assert.is_not_nil(error)
-      assert.matches("OpenAI API key not configured", error)
+      assert.matches("API key not configured", error)
     end)
 
     it("should handle empty API key", function()
-      config.setup({ openai_api_key = "" })
+      config.setup({ api_key = "" })
 
       local result, error = test_ai_generate("test theme")
 
       assert.is_nil(result)
       assert.is_not_nil(error)
-      assert.matches("OpenAI API key not configured", error)
+      assert.matches("API key not configured", error)
     end)
 
     it("should handle invalid API key format", function()
@@ -110,7 +110,7 @@ describe("hexwitch error handling and edge cases", function()
       }
 
       for _, invalid_key in ipairs(invalid_keys) do
-        config.setup({ openai_api_key = invalid_key })
+        config.setup({ api_key = invalid_key })
 
         local mock_curl = {
           post = function(url, options)
@@ -130,7 +130,7 @@ describe("hexwitch error handling and edge cases", function()
         hexwitch.generate("test theme", function(result, error)
           assert.is_nil(result)
           assert.is_not_nil(error)
-          assert.matches("API request failed with status 401", error)
+          assert.matches("API error: 401", error)
           error_received = true
         end)
 
@@ -182,7 +182,7 @@ describe("hexwitch error handling and edge cases", function()
         local current_config = config.get()
         assert.is_not_nil(current_config)
         if current_config.temperature then
-          assert.is_true(current_config.temperature >= 0 and current_config.temperature <= 1)
+          assert.is_true(current_config.temperature >= 0 and current_config.temperature <= 2)
         end
       end
     end)
@@ -331,7 +331,7 @@ describe("hexwitch error handling and edge cases", function()
         hexwitch.generate("test theme", function(result, error)
           assert.is_nil(result)
           assert.is_not_nil(error)
-          assert.matches("API request failed with status " .. status_code, error)
+          assert.matches("API error: " .. status_code, error)
           error_received = true
         end)
 
@@ -591,25 +591,21 @@ describe("hexwitch error handling and edge cases", function()
 
   describe("dependency errors", function()
     it("should handle missing plenary dependency", function()
-      -- Temporarily remove plenary
-      local plenary_curl = package.loaded["plenary.curl"]
-      local plenary = package.loaded["plenary"]
-      package.loaded["plenary.curl"] = nil
-      package.loaded["plenary"] = nil
+      -- Simulate plenary.curl being unavailable via the test hook
+      vim.g.hexwitch_test_plenary_unavailable = true
 
       local error_received = false
       hexwitch.generate("test theme", function(result, error)
         assert.is_nil(result)
         assert.is_not_nil(error)
-        assert.matches("plenary.nvim is required", error)
+        assert.matches("plenary.curl not available", error)
         error_received = true
       end)
 
       assert.is_true(error_received)
 
-      -- Restore plenary
-      package.loaded["plenary.curl"] = plenary_curl
-      package.loaded["plenary"] = plenary
+      -- Restore
+      vim.g.hexwitch_test_plenary_unavailable = nil
     end)
 
     it("should handle missing vim functions", function()
@@ -730,7 +726,7 @@ describe("hexwitch error handling and edge cases", function()
     it("should handle deep recursion scenarios", function()
       -- Create deeply nested configuration
       local deep_config = {
-        openai_api_key = "test-key",
+        api_key = "test-key",
         nested = {}
       }
 

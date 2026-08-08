@@ -24,7 +24,8 @@ describe("hexwitch workflow tests", function()
 
     -- Setup test configuration
     config.setup({
-      openai_api_key = "test-key",
+      api_key = "test-key",
+      base_url = "https://api.openai.com/v1",
       model = "gpt-4o-2024-08-06",
       temperature = 0.7,
       timeout = 30000,
@@ -32,6 +33,10 @@ describe("hexwitch workflow tests", function()
       themes_dir = temp_dir .. "/themes",
       debug = true
     })
+
+    -- Run AI callbacks synchronously so test assertions hold immediately
+    vim.g.hexwitch_test_sync_mode = true
+    vim.g.hexwitch_test_plenary_unavailable = nil
 
     -- Create mock responses
     mock_openai_responses = {
@@ -101,6 +106,10 @@ describe("hexwitch workflow tests", function()
     for i = 0, 15 do
       vim.g["terminal_color_" .. i] = nil
     end
+
+    -- Clean up test flags
+    vim.g.hexwitch_test_sync_mode = nil
+    vim.g.hexwitch_test_plenary_unavailable = nil
   end)
 
   describe("complete user workflow", function()
@@ -175,7 +184,7 @@ describe("hexwitch workflow tests", function()
     end)
 
     it("should handle API key error workflow", function()
-      config.setup({ openai_api_key = nil })
+      config.setup({ api_key = "" })
 
       local mock_curl = {
         post = function(url, options)
@@ -190,7 +199,7 @@ describe("hexwitch workflow tests", function()
       hexwitch.generate("test theme", function(result, error)
         assert.is_nil(result)
         assert.is_not_nil(error)
-        assert.matches("OpenAI API key not configured", error)
+        assert.matches("API key not configured", error)
         error_received = true
       end)
 
@@ -213,7 +222,7 @@ describe("hexwitch workflow tests", function()
       hexwitch.generate("test theme", function(result, error)
         assert.is_nil(result)
         assert.is_not_nil(error)
-        assert.matches("API request failed with status 500", error)
+        assert.matches("API error: 500", error)
         error_received = true
       end)
 
@@ -309,13 +318,13 @@ describe("hexwitch workflow tests", function()
       assert.equals(0.9, updated_config.temperature)
       assert.is_false(updated_config.save_themes)
       assert.is_true(updated_config.debug)
-      assert.equals("test-key", updated_config.openai_api_key) -- Should preserve existing API key
+      assert.equals("test-key", updated_config.api_key) -- Should preserve existing API key
     end)
 
     it("should handle partial configuration updates", function()
       -- Start with full config
       config.setup({
-        openai_api_key = "initial-key",
+        api_key = "initial-key",
         model = "gpt-4o",
         temperature = 0.5,
         timeout = 60000,
@@ -331,7 +340,7 @@ describe("hexwitch workflow tests", function()
 
       local updated_config = config.get()
 
-      assert.equals("initial-key", updated_config.openai_api_key) -- Preserved
+      assert.equals("initial-key", updated_config.api_key) -- Preserved
       assert.equals("gpt-4-turbo", updated_config.model) -- Updated
       assert.equals(0.5, updated_config.temperature) -- Preserved
       assert.equals(60000, updated_config.timeout) -- Preserved
@@ -345,7 +354,7 @@ describe("hexwitch workflow tests", function()
         { model = 123 }, -- invalid type
         { temperature = 1.5 }, -- out of range
         { timeout = -1000 }, -- negative
-        { ai_provider = "invalid" } -- invalid option
+        { base_url = "not-a-valid-url" } -- invalid option
       }
 
       for _, invalid_config in ipairs(invalid_configs) do
@@ -365,22 +374,21 @@ describe("hexwitch workflow tests", function()
 
   describe("error handling workflow", function()
     it("should handle missing dependencies gracefully", function()
-      -- Temporarily remove plenary
-      local plenary = package.loaded["plenary.curl"]
-      package.loaded["plenary.curl"] = nil
+      -- Simulate plenary.curl being unavailable via the test hook
+      vim.g.hexwitch_test_plenary_unavailable = true
 
       local error_received = false
       hexwitch.generate("test theme", function(result, error)
         assert.is_nil(result)
         assert.is_not_nil(error)
-        assert.matches("plenary.nvim is required", error)
+        assert.matches("plenary.curl not available", error)
         error_received = true
       end)
 
       assert.is_true(error_received)
 
-      -- Restore plenary
-      package.loaded["plenary.curl"] = plenary
+      -- Restore
+      vim.g.hexwitch_test_plenary_unavailable = nil
     end)
 
     it("should handle invalid theme data from API", function()

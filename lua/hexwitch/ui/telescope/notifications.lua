@@ -378,7 +378,9 @@ function M.handle_success_action(action, theme_name, theme_data)
   if action == "love" then
     vim.notify("Theme loved!", vim.log.levels.INFO)
   elseif action == "tweak" then
-    require("hexwitch.ui.refinement").open()
+    require("hexwitch.ui.telescope.input").show_refinement_input(function(change)
+      require("hexwitch").refine(change)
+    end)
   elseif action == "save" then
     require("hexwitch.ui.telescope.input").show_save_dialog(theme_name, function(name)
       require("hexwitch").save(name)
@@ -503,15 +505,6 @@ function M.handle_error_action(action, message, error_details, opts)
     require("hexwitch.ui.telescope.status").show_status()
   elseif action == "debug" then
     logger.show_recent_logs()
-  elseif action == "test" then
-    vim.notify("Testing API connectivity...", vim.log.levels.INFO)
-    require("hexwitch.ai").test_connectivity(nil, function(success, result)
-      if success then
-        vim.notify("✓ " .. result, vim.log.levels.INFO)
-      else
-        vim.notify("✗ " .. result, vim.log.levels.ERROR)
-      end
-    end)
   elseif action == "help" then
     vim.notify("Opening documentation...", vim.log.levels.INFO)
     -- Open GitHub docs or help

@@ -1,5 +1,6 @@
 local applier = require("hexwitch.theme.applier")
 local storage = require("hexwitch.theme.storage")
+local config = require("hexwitch.config")
 
 describe("hexwitch.theme", function()
   local test_theme_data
@@ -41,6 +42,9 @@ describe("hexwitch.theme", function()
       end
       return "/tmp/nvim"
     end
+
+    -- Point storage at the temp directory (storage reads cfg.themes_dir)
+    config.setup({ themes_dir = temp_dir .. "/hexwitch" })
   end)
 
   after_each(function()
@@ -264,7 +268,7 @@ describe("hexwitch.theme", function()
         local saved_data = vim.json.decode(table.concat(content, "\n"))
 
         assert.equals("test-theme", saved_data.name)
-        assert.equals("Saved theme: saved-test-theme", saved_data.description)
+        assert.equals("A test theme for unit testing", saved_data.description)
         assert.is_not_nil(saved_data.colors)
       end)
 

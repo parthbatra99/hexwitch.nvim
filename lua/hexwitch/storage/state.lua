@@ -117,6 +117,37 @@ function M.get()
   return current_state
 end
 
+-- Currently applied theme holder (in-memory). Set by the applier on every
+-- apply (generate/refine/load/undo/redo/import), read by save() and refine().
+local current_theme = nil
+
+---Set the currently applied theme
+---@param theme_data table Colorscheme data
+function M.set_current_theme(theme_data)
+  if not current_state then
+    M.load()
+  end
+  current_theme = theme_data
+  if theme_data and theme_data.name then
+    current_state.session.current_theme_id = theme_data.name
+  end
+end
+
+---Get the currently applied theme, falling back to the top of the undo stack
+---@return table|nil theme_data
+function M.get_current_theme()
+  if current_theme then
+    return current_theme
+  end
+  if not current_state then
+    M.load()
+  end
+  if current_state.undo_stack and #current_state.undo_stack > 0 then
+    return current_state.undo_stack[#current_state.undo_stack].theme
+  end
+  return nil
+end
+
 -- Add theme to undo stack
 ---@param theme_data table Theme data
 ---@param source string Source of theme ("ai_generation", "saved_load", "refinement")

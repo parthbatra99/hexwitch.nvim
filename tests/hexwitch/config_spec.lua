@@ -8,17 +8,19 @@ describe("hexwitch.config", function()
 
   it("has default configuration", function()
     assert.is_not_nil(config.get())
-    assert.equals("openai", config.get().ai_provider)
+    assert.equals("https://api.openai.com/v1", config.get().base_url)
+    assert.equals("gpt-4o-mini", config.get().model)
+    assert.is_true(config.get().structured_output)
   end)
 
   it("merges user configuration", function()
     local success = config.setup({
-      ai_provider = "openrouter",
+      base_url = "https://openrouter.ai/api/v1",
       temperature = 1.5,
     })
 
     assert.is_true(success)
-    assert.equals("openrouter", config.get().ai_provider)
+    assert.equals("https://openrouter.ai/api/v1", config.get().base_url)
     assert.equals(1.5, config.get().temperature)
   end)
 
@@ -32,13 +34,13 @@ describe("hexwitch.config", function()
     assert.is_true(err:find("temperature") ~= nil)
   end)
 
-  it("validates ai_provider", function()
+  it("validates base_url", function()
     local success, err = config.setup({
-      ai_provider = "invalid",
+      base_url = "not-a-valid-url",
     })
 
     assert.is_false(success)
     assert.is_not_nil(err)
+    assert.is_true(err:find("base_url") ~= nil)
   end)
 end)
-

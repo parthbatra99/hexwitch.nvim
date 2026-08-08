@@ -1,4 +1,5 @@
 local notify = require("hexwitch.utils.notify")
+local state = require("hexwitch.storage.state")
 
 local M = {}
 
@@ -211,6 +212,21 @@ function M.apply(colorscheme_data)
   vim.g.terminal_color_13 = colors.purple
   vim.g.terminal_color_14 = colors.cyan
   vim.g.terminal_color_15 = colors.fg
+
+  -- Stamp the terminal color map onto the theme data so saved JSON round-trips
+  -- losslessly (the AI schema only returns the 16 named colors).
+  if not colorscheme_data.terminal then
+    colorscheme_data.terminal = {
+      [0] = colors.bg, [1] = colors.red, [2] = colors.green, [3] = colors.yellow,
+      [4] = colors.blue, [5] = colors.purple, [6] = colors.cyan, [7] = colors.fg,
+      [8] = colors.comment, [9] = colors.red, [10] = colors.green, [11] = colors.yellow,
+      [12] = colors.blue, [13] = colors.purple, [14] = colors.cyan, [15] = colors.fg,
+    }
+  end
+
+  -- Single chokepoint: every apply path tracks the live theme so save/refine
+  -- operate on the real palette.
+  state.set_current_theme(colorscheme_data)
 
   notify.debug("Theme applied successfully")
   return true

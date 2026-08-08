@@ -54,11 +54,11 @@ function M.show_status(opts)
       category = "AI Configuration",
       items = {
         {
-          name = "AI Provider",
+          name = "AI Endpoint",
           value = "provider",
-          description = ai_info.provider.name,
-          icon = ai_info.provider.available and "✓" or "✗",
-          action = ai_info.provider.available and "change_provider" or "configure_provider",
+          description = ai_info.base_url,
+          icon = ai_info.available and "✓" or "✗",
+          action = ai_info.available and "change_provider" or "configure_provider",
         },
         {
           name = "Model",
@@ -258,25 +258,19 @@ function M.show_model_selection(opts)
   opts = opts or {}
 
   local cfg = config.get()
-  local ai_info = require("hexwitch.ai").get_provider_info()
 
-  local models = {}
-  if ai_info.provider.name == "OpenAI" then
-    models = {
-      "gpt-4o",
-      "gpt-4o-mini",
-      "gpt-4",
-      "gpt-3.5-turbo",
-    }
-  elseif ai_info.provider.name == "OpenRouter" then
-    models = {
-      "anthropic/claude-3.5-sonnet",
-      "anthropic/claude-3-haiku",
-      "openai/gpt-4o",
-      "openai/gpt-4o-mini",
-      "google/gemini-pro",
-    }
-  end
+  -- A small, neutral set of model hints. The right model depends on the
+  -- configured base_url (OpenAI, OpenRouter, Ollama, ...); type your own.
+  local models = {
+    "gpt-4o-mini",
+    "gpt-4o",
+    "gpt-4.1-mini",
+    "gpt-4.1",
+    "anthropic/claude-3.5-sonnet",
+    "openai/gpt-4o",
+    "llama3",
+    "qwen2.5",
+  }
 
   local displayer = entry_display.create({
     separator = " ",

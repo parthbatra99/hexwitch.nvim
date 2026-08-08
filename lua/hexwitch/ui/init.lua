@@ -8,14 +8,6 @@ local function get_telescope()
   return require("hexwitch.ui.telescope")
 end
 
-local function get_refinement()
-  return require("hexwitch.ui.refinement")
-end
-
-local function get_sliders()
-  return require("hexwitch.ui.sliders")
-end
-
 -- Show theme generation prompt
 function M.prompt()
   logger.info("ui.init", "prompt", "Opening theme generation prompt")
@@ -58,24 +50,6 @@ end
 function M.show_history()
   logger.info("ui.init", "show_history", "Opening generation history")
   get_telescope().show_history()
-end
-
--- Open refinement interface
-function M.refine_theme()
-  logger.info("ui.init", "refine_theme", "Opening theme refinement")
-  get_refinement().open()
-end
-
--- Open sliders interface
-function M.open_sliders(theme)
-  logger.info("ui.init", "open_sliders", "Opening theme sliders")
-  return get_sliders().create_slider_window(theme)
-end
-
--- Apply slider adjustments
-function M.apply_slider_adjustments(theme, adjustments)
-  logger.info("ui.init", "apply_slider_adjustments", "Applying slider adjustments")
-  return get_sliders().apply_slider_adjustments(theme, adjustments)
 end
 
 -- Show loading state

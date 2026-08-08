@@ -57,8 +57,9 @@ M.setup_test_config = function(overrides)
   local original_config = vim.deepcopy(config.get())
 
   local test_config = vim.tbl_extend("force", {
-    openai_api_key = "test-api-key",
-    model = "gpt-4o-2024-08-06",
+    api_key = "test-api-key",
+    base_url = "https://api.openai.com/v1",
+    model = "gpt-4o-mini",
     temperature = 0.7,
     timeout = 30000,
     save_themes = true,

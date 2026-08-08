@@ -1,14 +1,14 @@
----@class hexwitch.Config
 ---User-facing configuration (all fields optional)
 local M = {}
 
 ---@class hexwitch.UserConfig
----@field ai_provider? "openai"|"openrouter"|"custom" AI provider to use (default: "openai")
----@field api_key? string API key (defaults to provider-specific env var)
----@field openai_api_key? string OpenAI API key (defaults to OPENAI_API_KEY env var) [DEPRECATED use api_key]
----@field model? string AI model to use (default: "gpt-4o-2024-08-06")
+---@field base_url? string OpenAI-compatible API base URL (default: "https://api.openai.com/v1")
+---@field api_key? string API key (defaults to $OPENAI_API_KEY or $HEXWITCH_API_KEY)
+---@field model? string AI model to use (default: "gpt-4o-mini")
 ---@field temperature? number Creativity level 0-2 (default: 0.7)
 ---@field timeout? number API timeout in ms (default: 30000)
+---@field structured_output? boolean Send a JSON schema to the endpoint (default: true; disable for endpoints without structured-output support)
+---@field max_tokens? number Optional max output tokens
 ---@field save_themes? boolean Enable theme saving (default: true)
 ---@field themes_dir? string Directory for saved themes
 ---@field max_history? number Maximum history entries (default: 50)
@@ -22,11 +22,13 @@ local M = {}
 ---@field on_error? function Callback on errors
 
 ---@class hexwitch.InternalConfig
----@field ai_provider "openai"|"openrouter"|"custom"
+---@field base_url string
 ---@field api_key string
 ---@field model string
 ---@field temperature number
 ---@field timeout number
+---@field structured_output boolean
+---@field max_tokens number|nil
 ---@field save_themes boolean
 ---@field themes_dir string
 ---@field max_history number
@@ -54,11 +56,13 @@ local M = {}
 ---Default configuration values
 ---@type hexwitch.InternalConfig
 M.defaults = {
-  ai_provider = "openai",
-  api_key = vim.env.OPENAI_API_KEY or vim.env.HEXWITCH_API_KEY or "",
+  base_url = "https://api.openai.com/v1",
+  api_key = "",
   model = "gpt-4o-mini",
   temperature = 0.7,
   timeout = 30000,
+  structured_output = true,
+  max_tokens = nil,
   save_themes = true,
   themes_dir = vim.fn.stdpath("data") .. "/hexwitch",
   max_history = 50,
@@ -83,4 +87,3 @@ M.defaults = {
 }
 
 return M
-

@@ -12,11 +12,12 @@ M.current = vim.deepcopy(schema.defaults)
 ---@return string|nil error_message
 local function validate(cfg)
   local ok, err = validate_utils.validate_path("vim.g.hexwitch", {
-    ai_provider = { cfg.ai_provider, "string" },
+    base_url = { cfg.base_url, "string" },
     api_key = { cfg.api_key, "string" },
     model = { cfg.model, "string" },
     temperature = { cfg.temperature, "number" },
     timeout = { cfg.timeout, "number" },
+    structured_output = { cfg.structured_output, "boolean" },
     save_themes = { cfg.save_themes, "boolean" },
     themes_dir = { cfg.themes_dir, "string" },
     max_history = { cfg.max_history, "number" },
@@ -30,13 +31,17 @@ local function validate(cfg)
     return false, err
   end
 
+  if cfg.max_tokens ~= nil and type(cfg.max_tokens) ~= "number" then
+    return false, "max_tokens must be a number"
+  end
+
   -- Additional custom validations
   if cfg.temperature < 0 or cfg.temperature > 2 then
     return false, "temperature must be between 0 and 2"
   end
 
-  if not vim.tbl_contains({ "openai", "openrouter", "custom" }, cfg.ai_provider) then
-    return false, "ai_provider must be 'openai', 'openrouter', or 'custom'"
+  if not cfg.base_url:match("^https?://") then
+    return false, "base_url must be a valid http(s) URL"
   end
 
   if cfg.max_history < 1 then
@@ -62,23 +67,14 @@ function M.setup(user_config)
   -- Support both table and function
   local config_table = type(user_config) == "function" and user_config() or user_config or {}
 
-  -- Handle backward compatibility: if deprecated openai_api_key is provided, use it
-  if config_table.openai_api_key and not config_table.api_key then
-    config_table.api_key = config_table.openai_api_key
-    config_table.ai_provider = config_table.ai_provider or "openai"
+  -- Resolve API key from environment only when neither the caller nor the
+  -- current config already provides one.
+  if config_table.api_key == nil and (M.current.api_key == nil or M.current.api_key == "") then
+    config_table.api_key = vim.env.OPENAI_API_KEY or vim.env.HEXWITCH_API_KEY or ""
   end
 
-  -- Set provider-specific API key defaults
-  if not config_table.api_key then
-    if config_table.ai_provider == "openai" then
-      config_table.api_key = vim.env.OPENAI_API_KEY or ""
-    elseif config_table.ai_provider == "openrouter" then
-      config_table.api_key = vim.env.OPENROUTER_API_KEY or ""
-    end
-  end
-
-  -- Merge with defaults into a candidate config
-  local new_config = vim.tbl_deep_extend("force", schema.defaults, config_table)
+  -- Merge over the current config so repeated setup() calls are incremental
+  local new_config = vim.tbl_deep_extend("force", M.current, config_table)
 
   -- Validate candidate config; only persist if valid
   local valid, err = validate(new_config)
@@ -104,4 +100,3 @@ function M.get()
 end
 
 return M
-

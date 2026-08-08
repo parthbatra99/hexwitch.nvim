@@ -537,7 +537,9 @@ function M.handle_quick_action(action)
   elseif action == "random" then
     require("hexwitch").generate("surprise me with creative colors")
   elseif action == "refine" then
-    require("hexwitch.ui.refinement").open()
+    require("hexwitch.ui.telescope.input").show_refinement_input(function(change)
+      require("hexwitch").refine(change)
+    end)
   elseif action == "undo" then
     require("hexwitch").undo()
   elseif action == "redo" then

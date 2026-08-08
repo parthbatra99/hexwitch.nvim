@@ -30,8 +30,6 @@ vim.api.nvim_create_user_command("Hexwitch", function(opts)
     commands.load_theme(remaining_args)
   elseif subcommand == "delete" then
     commands.delete_theme(remaining_args)
-  elseif subcommand == "list" then
-    commands.list_themes()
   elseif subcommand == "history" then
     commands.show_history()
   elseif subcommand == "clear" or subcommand == "clear-history" then
@@ -42,8 +40,6 @@ vim.api.nvim_create_user_command("Hexwitch", function(opts)
     commands.redo_theme()
   elseif subcommand == "refine" then
     commands.refine_theme(remaining_args)
-  elseif subcommand == "quick" then
-    commands.generate_quick()
   elseif subcommand == "random" then
     commands.generate_random()
   elseif subcommand == "browse" then
@@ -54,16 +50,10 @@ vim.api.nvim_create_user_command("Hexwitch", function(opts)
     commands.import_theme()
   elseif subcommand == "status" then
     commands.show_status()
-  elseif subcommand == "providers" then
-    commands.show_providers()
-  elseif subcommand == "test" then
-    commands.test_connectivity(remaining_args)
   elseif subcommand == "logs" then
     commands.show_logs()
   elseif subcommand == "help" then
     commands.show_help()
-  elseif subcommand == "set-provider" then
-    commands.set_provider(remaining_args[1])
   else
     -- Treat as theme description
     commands.generate(args)
@@ -75,23 +65,13 @@ end, {
     -- Subcommand completion
     if cmdline:match("^Hexwitch%s+%w*$") then
       local subcommands = {
-        "save", "load", "delete", "list", "history", "clear-history",
-        "undo", "redo", "refine", "quick", "random", "browse",
-        "export", "import", "status", "providers", "test", "logs", "help",
-        "set-provider"
+        "save", "load", "delete", "history", "clear-history",
+        "undo", "redo", "refine", "random", "browse",
+        "export", "import", "status", "logs", "help",
       }
       return vim.tbl_filter(function(cmd)
         return cmd:find(arg_lead) == 1
       end, subcommands)
-    end
-
-    -- Provider completion for set-provider
-    if cmdline:match("^Hexwitch%s+set%-provider%s+%w*$") then
-      local ai = require("hexwitch.ai")
-      local providers = ai.get_available_providers()
-      return vim.tbl_filter(function(provider)
-        return provider:find(arg_lead) == 1
-      end, providers)
     end
 
     -- Saved theme completion for 'load' subcommand
@@ -113,25 +93,10 @@ end, {
         return vim.fn.fnamemodify(path, ":t:r")
       end, themes)
     end
-
-    -- Provider completion for 'test' subcommand
-    if cmdline:match("^Hexwitch%s+test%s+%w*$") then
-      local ai = require("hexwitch.ai")
-      local providers = ai.get_available_providers()
-      return vim.tbl_filter(function(provider)
-        return provider:find(arg_lead) == 1
-      end, providers)
-    end
   end,
 })
 
 -- Additional convenience commands
-vim.api.nvim_create_user_command("HexwitchQuick", function()
-  commands.generate_quick()
-end, {
-  desc = "Generate quick variation of last theme"
-})
-
 vim.api.nvim_create_user_command("HexwitchRandom", function()
   commands.generate_random()
 end, {
@@ -197,10 +162,6 @@ end, {
 vim.keymap.set("n", "<Plug>(HexwitchPrompt)", function()
   require("hexwitch").prompt()
 end, { desc = "Hexwitch: Prompt for theme" })
-
-vim.keymap.set("n", "<Plug>(HexwitchQuick)", function()
-  commands.generate_quick()
-end, { desc = "Hexwitch: Quick theme variation" })
 
 vim.keymap.set("n", "<Plug>(HexwitchRandom)", function()
   commands.generate_random()
