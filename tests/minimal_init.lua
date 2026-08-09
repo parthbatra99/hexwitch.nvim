@@ -6,5 +6,8 @@ vim.opt.rtp:append(".")
 vim.opt.rtp:append(plenary_dir)
 vim.opt.rtp:append(telescope_dir)
 
+-- Allow `require("fixtures.xxx")` to resolve to tests/fixtures/xxx.lua
+package.path = package.path .. ";./tests/?.lua;./tests/?/init.lua"
+
 vim.cmd("runtime! plugin/plenary.vim")
 

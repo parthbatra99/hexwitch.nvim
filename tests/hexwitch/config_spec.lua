@@ -1,46 +1,95 @@
+local schema = require("hexwitch.config.schema")
+-- Use the shared module instance (do NOT reload it — reloading creates a second
+-- instance while other modules still hold the first, splitting the config state).
+local config = require("hexwitch.config")
+
 describe("hexwitch.config", function()
-  local config
-
   before_each(function()
-    package.loaded["hexwitch.config"] = nil
-    config = require("hexwitch.config")
+    -- Reset to pristine defaults on the shared instance
+    config.setup(vim.deepcopy(schema.defaults))
   end)
 
-  it("has default configuration", function()
-    assert.is_not_nil(config.get())
-    assert.equals("https://api.openai.com/v1", config.get().base_url)
-    assert.equals("gpt-4o-mini", config.get().model)
-    assert.is_true(config.get().structured_output)
+  describe("defaults", function()
+    it("ships sensible defaults", function()
+      local c = config.get()
+      assert.equals("https://api.openai.com/v1", c.base_url)
+      assert.equals("gpt-4o-mini", c.model)
+      assert.is_true(c.structured_output)
+      assert.is_nil(c.max_tokens)
+      assert.equals(0.7, c.temperature)
+      assert.is_true(c.save_themes)
+    end)
   end)
 
-  it("merges user configuration", function()
-    local success = config.setup({
-      base_url = "https://openrouter.ai/api/v1",
-      temperature = 1.5,
-    })
+  describe("setup / merge", function()
+    it("applies user overrides", function()
+      config.setup({ base_url = "https://openrouter.ai/api/v1", temperature = 1.2 })
+      local c = config.get()
+      assert.equals("https://openrouter.ai/api/v1", c.base_url)
+      assert.equals(1.2, c.temperature)
+    end)
 
-    assert.is_true(success)
-    assert.equals("https://openrouter.ai/api/v1", config.get().base_url)
-    assert.equals(1.5, config.get().temperature)
+    it("merges incrementally over the current config (repeated setup is additive)", function()
+      config.setup({ api_key = "first-key", model = "m1" })
+      config.setup({ temperature = 0.4 }) -- partial update
+      local c = config.get()
+      assert.equals("first-key", c.api_key) -- preserved
+      assert.equals("m1", c.model)          -- preserved
+      assert.equals(0.4, c.temperature)     -- updated
+    end)
+
+    it("resolves api_key from $OPENAI_API_KEY when none is set", function()
+      local original = vim.env.OPENAI_API_KEY
+      vim.env.OPENAI_API_KEY = "env-key-123"
+      config.setup({ api_key = nil })
+      assert.equals("env-key-123", config.get().api_key)
+      vim.env.OPENAI_API_KEY = original
+    end)
+
+    it("does NOT overwrite an explicit api_key with the env value", function()
+      local original = vim.env.OPENAI_API_KEY
+      vim.env.OPENAI_API_KEY = "env-key-123"
+      config.setup({ api_key = "explicit-key" })
+      assert.equals("explicit-key", config.get().api_key)
+      vim.env.OPENAI_API_KEY = original
+    end)
+
+    it("creates the themes directory when save_themes is true", function()
+      local dir = vim.fn.tempname() .. "/themes"
+      config.setup({ themes_dir = dir, save_themes = true })
+      assert.equals(1, vim.fn.isdirectory(dir))
+    end)
   end)
 
-  it("validates configuration", function()
-    local success, err = config.setup({
-      temperature = 5, -- Invalid: should be 0-2
-    })
+  describe("validation", function()
+    it("rejects a base_url that is not http(s)", function()
+      local ok, err = config.setup({ base_url = "ftp://nope" })
+      assert.is_false(ok)
+      assert.truthy(err:match("base_url"))
+    end)
 
-    assert.is_false(success)
-    assert.is_not_nil(err)
-    assert.is_true(err:find("temperature") ~= nil)
-  end)
+    it("rejects temperature out of range", function()
+      local ok, err = config.setup({ temperature = 5 })
+      assert.is_false(ok)
+      assert.truthy(err:match("temperature"))
+    end)
 
-  it("validates base_url", function()
-    local success, err = config.setup({
-      base_url = "not-a-valid-url",
-    })
+    it("rejects a non-number temperature", function()
+      local ok = config.setup({ temperature = "hot" })
+      assert.is_false(ok)
+    end)
 
-    assert.is_false(success)
-    assert.is_not_nil(err)
-    assert.is_true(err:find("base_url") ~= nil)
+    it("rejects a too-short timeout", function()
+      local ok, err = config.setup({ timeout = 10 })
+      assert.is_false(ok)
+      assert.truthy(err:match("timeout"))
+    end)
+
+    it("does not persist an invalid config (current config is unchanged)", function()
+      config.setup({ model = "good-model" })
+      local before = config.get().model
+      config.setup({ temperature = 99 }) -- invalid
+      assert.equals(before, config.get().model)
+    end)
   end)
 end)

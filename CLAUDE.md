@@ -107,43 +107,52 @@ nvim --headless --noplugin -u tests/minimal_init.lua \
 
 ```
 tests/
-├── minimal_init.lua           plenary + telescope on rtp
-├── fixtures/                  test_helpers, mock_responses, mock_themes
+├── minimal_init.lua           plenary + telescope on rtp; tests/ on package.path
+├── fixtures/
+│   └── helpers.lua            valid/refined themes, mock_curl, completion builders, setup_config, invalid_color_themes
 └── hexwitch/
-    ├── ai_spec.lua            client: payload, schema, error paths (mock plenary.curl)
-    ├── config_spec.lua        defaults, merge, base_url validation
-    ├── error_handling_spec.lua network/API/theme/storage/dependency edge cases
-    ├── security_spec.lua      path traversal, theme validation, clipboard import
-    ├── theme_spec.lua         apply + storage (save/load/list/delete round-trip)
-    ├── ui_spec.lua            telescope UI modules load + behave
-    └── workflow_spec.lua      end-to-end generate → save → load → delete
+    ├── client_spec.lua        unified client: payload, base_url URL, schema, structured_output toggle, error paths, refine request
+    ├── config_spec.lua        defaults, incremental merge, base_url validation, env fallback
+    ├── refine_spec.lua        AI refine flow: re-prompts with current theme, history, public callback forwarding
+    ├── applier_spec.lua       apply highlights/terminal colors, set_current_theme chokepoint, validation
+    ├── storage_spec.lua       real-palette round-trip, themes_dir, list excludes state.json, path traversal
+    ├── prompts_spec.lua       SCHEMA single-source, theme/refinement prompt builders, accessibility
+    ├── security_spec.lua      clipboard import, theme validation, command-injection guards
+    └── ui_spec.lua            telescope modules load, facade surface
 ```
 
-### Current status: 98 passing / 0 failing
+### Current status: 70 passing / 0 failing
 
-| Spec          | Tests | Covers |
-|---------------|-------|--------|
-| config        | 4     | defaults, incremental merge, base_url validation |
-| ai            | 11    | request payload, schema name, key/plenary/HTTP/parse errors |
-| theme         | 24    | apply, terminal colors, storage round-trip with the *real* palette |
-| ui            | 11    | telescope input/browser/status modules |
-| error_handling| 23    | network, malformed responses, storage, dependencies |
-| workflow      | 12    | full generate→save→load→delete, config updates |
-| security      | 13    | sanitization, path traversal, theme/clipboard validation |
+| Spec     | Tests | Covers |
+|----------|-------|--------|
+| client   | 19    | payload, base_url URL, schema, structured_output toggle, error/parse paths, refine request, is_available |
+| config   | 11    | defaults, incremental merge, base_url validation, env fallback |
+| refine   | 8     | ai.generate/refine, public generate/refine callback forwarding, get_provider_info |
+| storage  | 7     | real-palette round-trip, themes_dir, list excludes state.json, path traversal |
+| applier  | 6     | apply highlights + terminal colors, set_current_theme chokepoint, color validation |
+| security | 6     | clipboard import, theme validation, system-command guards |
+| prompts  | 6     | SCHEMA shape, theme/refinement prompt builders, accessibility, presets |
+| ui       | 7     | telescope modules load, facade surface, removed-sliders absent |
 
 ### Test conventions
 
-- **Mock `plenary.curl`** for any AI test (`package.loaded["plenary.curl"] = {post = ...}`).
-  The client honors `vim.g.hexwitch_test_sync_mode = true` to run the response
-  handler inline so busted can assert synchronously, and
-  `vim.g.hexwitch_test_plenary_unavailable = true` to simulate a missing dependency.
-- **`hexwitch.generate`/`refine` accept an optional callback** `fun(data, err)`
-  — use it to assert results without the success UI.
-- **Storage tests set `themes_dir`** explicitly (storage reads `cfg.themes_dir`,
-  not `stdpath`). Note that `state.json` shares `themes_dir`; `storage.list`
-  excludes it so it never appears as a theme.
-- `$OPENAI_API_KEY` in your shell will be picked up as the default key — tests
-  that need the "no key" path pass `api_key = ""` explicitly.
+- **Shared helpers** live in `tests/fixtures/helpers.lua`, required as
+  `require("fixtures.helpers")` (`tests/` is on `package.path` via `minimal_init`).
+  Use `helpers.mock_curl(responder)`, `helpers.completion(theme)`,
+  `helpers.setup_config(opts)`, `helpers.valid_theme`.
+- **AI tests set `vim.g.hexwitch_test_sync_mode = true`** so the client runs its
+  response handler inline (busted can assert synchronously).
+  `vim.g.hexwitch_test_plenary_unavailable = true` simulates a missing dependency.
+- **Never reload `hexwitch.config` in a test** (`package.loaded[...] = nil`) —
+  other modules hold the original instance and you get split-brain. Reset state
+  via `config.setup(vim.deepcopy(schema.defaults))` on the shared instance.
+- **`config.setup()` is incremental** (merges over current); `api_key` is only
+  resolved from `$OPENAI_API_KEY`/`$HEXWITCH_API_KEY` when neither the call nor
+  the current config provides one. `helpers.setup_config` passes an explicit key
+  so tests don't leak the real env key.
+- **The applier validates colors, not `name`.** `storage.load()` returns nothing
+  — assert its side effects (`vim.g.colors_name`, highlights). `state.json`
+  shares `themes_dir`; `storage.list` excludes it.
 
 ## CI
 
