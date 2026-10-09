@@ -10,32 +10,39 @@ describe("hexwitch.config", function()
   end)
 
   describe("defaults", function()
-    it("ships sensible defaults", function()
+    it("ships a minimal, sensible default set", function()
       local c = config.get()
       assert.equals("https://api.openai.com/v1", c.base_url)
       assert.equals("gpt-4o-mini", c.model)
-      assert.is_true(c.structured_output)
       assert.is_nil(c.max_tokens)
-      assert.equals(0.7, c.temperature)
       assert.is_true(c.save_themes)
+      assert.equals(50, c.max_history)
+    end)
+
+    it("no longer exposes locked options (temperature/timeout/structured_output/contrast_threshold)", function()
+      local c = config.get()
+      assert.is_nil(c.temperature)
+      assert.is_nil(c.timeout)
+      assert.is_nil(c.structured_output)
+      assert.is_nil(c.contrast_threshold)
     end)
   end)
 
   describe("setup / merge", function()
     it("applies user overrides", function()
-      config.setup({ base_url = "https://openrouter.ai/api/v1", temperature = 1.2 })
+      config.setup({ base_url = "https://openrouter.ai/api/v1", max_history = 10 })
       local c = config.get()
       assert.equals("https://openrouter.ai/api/v1", c.base_url)
-      assert.equals(1.2, c.temperature)
+      assert.equals(10, c.max_history)
     end)
 
     it("merges incrementally over the current config (repeated setup is additive)", function()
       config.setup({ api_key = "first-key", model = "m1" })
-      config.setup({ temperature = 0.4 }) -- partial update
+      config.setup({ save_themes = false }) -- partial update
       local c = config.get()
       assert.equals("first-key", c.api_key) -- preserved
       assert.equals("m1", c.model)          -- preserved
-      assert.equals(0.4, c.temperature)     -- updated
+      assert.is_false(c.save_themes)        -- updated
     end)
 
     it("resolves api_key from $OPENAI_API_KEY when none is set", function()
@@ -68,28 +75,15 @@ describe("hexwitch.config", function()
       assert.truthy(err:match("base_url"))
     end)
 
-    it("rejects temperature out of range", function()
-      local ok, err = config.setup({ temperature = 5 })
+    it("rejects a non-number model", function()
+      local ok = config.setup({ model = 123 })
       assert.is_false(ok)
-      assert.truthy(err:match("temperature"))
-    end)
-
-    it("rejects a non-number temperature", function()
-      local ok = config.setup({ temperature = "hot" })
-      assert.is_false(ok)
-    end)
-
-    it("rejects a too-short timeout", function()
-      local ok, err = config.setup({ timeout = 10 })
-      assert.is_false(ok)
-      assert.truthy(err:match("timeout"))
     end)
 
     it("does not persist an invalid config (current config is unchanged)", function()
       config.setup({ model = "good-model" })
-      local before = config.get().model
-      config.setup({ temperature = 99 }) -- invalid
-      assert.equals(before, config.get().model)
+      config.setup({ base_url = "not-a-url" }) -- invalid
+      assert.equals("good-model", config.get().model)
     end)
   end)
 end)

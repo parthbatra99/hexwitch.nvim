@@ -59,16 +59,16 @@ require("hexwitch").setup({
   base_url = "https://api.openai.com/v1",  -- any OpenAI-compatible endpoint
   api_key  = nil,                          -- falls back to $OPENAI_API_KEY / $HEXWITCH_API_KEY
   model    = "gpt-4o-mini",
-  temperature       = 0.7,                 -- 0.0–2.0
-  timeout           = 30000,               -- ms
-  structured_output = true,                -- false for endpoints without JSON-schema support
   -- max_tokens = 1024,                    -- optional
-  save_themes       = true,
-  themes_dir        = vim.fn.stdpath("data") .. "/hexwitch",
-  contrast_threshold = 4.5,
+  save_themes = true,
+  themes_dir  = vim.fn.stdpath("data") .. "/hexwitch",
   debug = false,
 })
 ```
+
+Generation settings are locked to opinionated defaults (not configurable):
+`temperature = 1` (reasoning-model friendly), a 30 s timeout, and JSON-schema
+structured output always on — so the endpoint must support structured outputs.
 
 ### Pointing at other providers
 
@@ -80,12 +80,11 @@ require("hexwitch").setup({
   model    = "anthropic/claude-3.5-sonnet",
 })
 
--- Local Ollama (no key; disable structured output if the model can't do JSON schema)
+-- Local Ollama (no key; needs a model that supports JSON-schema structured output)
 require("hexwitch").setup({
   base_url = "http://localhost:11434/v1",
   api_key  = "ollama",
   model    = "llama3",
-  structured_output = false,
 })
 ```
 
@@ -99,9 +98,8 @@ require("hexwitch").setup({
 | `:Hexwitch save [name]` / `:Hexwitch load [name]` | Save / load themes |
 | `:Hexwitch browse` | Browse saved themes (Telescope) |
 | `:Hexwitch history` | View generation history |
-| `:Hexwitch undo` / `:Hexwitch redo` | Step through theme changes |
 | `:Hexwitch export [name]` / `:Hexwitch import` | Clipboard JSON export/import |
-| `:Hexwitch status` / `:Hexwitch logs` / `:Hexwitch help` | Diagnostics |
+| `:Hexwitch status` / `:Hexwitch help` | Diagnostics |
 
 Standalone commands (`:HexwitchRefine`, `:HexwitchRandom`, `:HexwitchBrowse`, …)
 and `<Plug>(Hexwitch*)` mappings are also provided.

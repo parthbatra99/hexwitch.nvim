@@ -23,8 +23,6 @@ local default_state = {
     frequency = "manual",
     last_prompted_at = nil,
   },
-  undo_stack = {},
-  redo_stack = {},
   history = {
     entries = {},
     total_generated = 0,
@@ -73,7 +71,7 @@ function M.load()
   current_state.session.started_at = os.date("%Y-%m-%dT%H:%M:%SZ")
 
   logger.info("storage.state", "load", "State loaded successfully",
-    { history_entries = #current_state.history.entries, undo_stack_size = #current_state.undo_stack })
+    { history_entries = #current_state.history.entries })
 
   return current_state
 end
@@ -118,7 +116,7 @@ function M.get()
 end
 
 -- Currently applied theme holder (in-memory). Set by the applier on every
--- apply (generate/refine/load/undo/redo/import), read by save() and refine().
+-- apply (generate/refine/load/import), read by save() and refine().
 local current_theme = nil
 
 ---Set the currently applied theme
@@ -133,107 +131,10 @@ function M.set_current_theme(theme_data)
   end
 end
 
----Get the currently applied theme, falling back to the top of the undo stack
+---Get the currently applied theme
 ---@return table|nil theme_data
 function M.get_current_theme()
-  if current_theme then
-    return current_theme
-  end
-  if not current_state then
-    M.load()
-  end
-  if current_state.undo_stack and #current_state.undo_stack > 0 then
-    return current_state.undo_stack[#current_state.undo_stack].theme
-  end
-  return nil
-end
-
--- Add theme to undo stack
----@param theme_data table Theme data
----@param source string Source of theme ("ai_generation", "saved_load", "refinement")
-function M.add_to_undo_stack(theme_data, source)
-  if not current_state then
-    M.load()
-  end
-
-  local theme_entry = {
-    id = "theme_" .. os.time(),
-    theme = theme_data,
-    applied_at = os.date("%Y-%m-%dT%H:%M:%SZ"),
-    source = source,
-  }
-
-  table.insert(current_state.undo_stack, theme_entry)
-
-  -- Limit undo stack size
-  local max_undo = 20
-  if #current_state.undo_stack > max_undo then
-    table.remove(current_state.undo_stack, 1)
-  end
-
-  -- Clear redo stack when new action is performed
-  current_state.redo_stack = {}
-
-  -- Update current theme
-  current_state.session.current_theme_id = theme_entry.id
-
-  logger.debug("storage.state", "add_to_undo_stack", "Theme added to undo stack",
-    { theme_id = theme_entry.id, source = source, stack_size = #current_state.undo_stack })
-
-  M.save()
-  return theme_entry.id
-end
-
--- Pop from undo stack
----@return table|nil theme_data Theme data if available
-function M.undo()
-  if not current_state then
-    M.load()
-  end
-
-  if #current_state.undo_stack <= 1 then
-    logger.info("storage.state", "undo", "Nothing to undo")
-    return nil
-  end
-
-  -- Remove current theme from undo stack and add to redo stack
-  local current_theme = table.remove(current_state.undo_stack)
-  table.insert(current_state.redo_stack, current_theme)
-
-  -- Get previous theme
-  local previous_theme = current_state.undo_stack[#current_state.undo_stack]
-  current_state.session.current_theme_id = previous_theme.id
-
-  logger.info("storage.state", "undo", "Undo performed",
-    { theme_id = previous_theme.id, undo_stack_size = #current_state.undo_stack })
-
-  M.save()
-  return previous_theme.theme
-end
-
--- Redo action
----@return table|nil theme_data Theme data if available
-function M.redo()
-  if not current_state then
-    M.load()
-  end
-
-  if #current_state.redo_stack == 0 then
-    logger.info("storage.state", "redo", "Nothing to redo")
-    return nil
-  end
-
-  -- Get theme from redo stack
-  local theme_to_redo = table.remove(current_state.redo_stack)
-  table.insert(current_state.undo_stack, theme_to_redo)
-
-  current_state.session.current_theme_id = theme_to_redo.id
-
-  logger.info("storage.state", "redo", "Redo performed",
-    { theme_id = theme_to_redo.id, redo_stack_size = #current_state.redo_stack })
-
-  M.save()
-  return theme_to_redo.theme
+  return current_theme
 end
 
 -- Add entry to generation history
@@ -356,19 +257,6 @@ function M.clear_history()
   logger.info("storage.state", "clear_history", "History cleared")
 
   M.save()
-end
-
--- Get undo/redo stack sizes
----@return table sizes Stack sizes
-function M.get_stack_sizes()
-  if not current_state then
-    M.load()
-  end
-
-  return {
-    undo = #current_state.undo_stack,
-    redo = #current_state.redo_stack,
-  }
 end
 
 -- Update autoprompt configuration (used by status UI)

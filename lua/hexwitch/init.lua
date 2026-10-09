@@ -167,16 +167,4 @@ function M.delete(theme_name)
   storage.delete(theme_name)
 end
 
----Undo last theme change
-function M.undo()
-  local undo_mod = require("hexwitch.undo")
-  undo_mod.undo()
-end
-
----Redo theme change
-function M.redo()
-  local undo_mod = require("hexwitch.undo")
-  undo_mod.redo()
-end
-
 return M

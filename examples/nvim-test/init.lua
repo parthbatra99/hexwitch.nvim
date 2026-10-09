@@ -46,19 +46,13 @@ local plugin_spec = {
       base_url = vim.env.HEXWITCH_BASE_URL or "https://openrouter.ai/api/v1",
       api_key = vim.env.OPENROUTER_API_KEY or vim.env.OPENAI_API_KEY or vim.env.HEXWITCH_API_KEY,
       model = vim.env.HEXWITCH_MODEL or "google/gemini-2.5-flash",
-      structured_output = false, -- OpenRouter/gemini: prompt-driven JSON is most reliable
-
-      -- Performance
-      timeout = 30000,
-      temperature = 0.7,
-      contrast_threshold = 4.5,
+      -- temperature, timeout, structured output are locked plugin defaults
     })
 
     -- Handy test keymaps
     vim.keymap.set("n", "<leader>hw", ":Hexwitch<CR>", { desc = "Hexwitch prompt" })
     vim.keymap.set("n", "<leader>hf", ":HexwitchRefine<CR>", { desc = "Refine current theme" })
     vim.keymap.set("n", "<leader>hs", ":HexwitchStatus<CR>", { desc = "Hexwitch status" })
-    vim.keymap.set("n", "<leader>hl", ":HexwitchLogs<CR>", { desc = "Hexwitch logs" })
     vim.keymap.set("n", "<leader>hb", ":HexwitchBrowse<CR>", { desc = "Browse saved themes" })
     vim.keymap.set("n", "<leader>hh", ":HexwitchHistory<CR>", { desc = "View generation history" })
     vim.keymap.set("n", "<leader>hq", function()
@@ -67,8 +61,6 @@ local plugin_spec = {
     vim.keymap.set("n", "<leader>hp", function()
       require("hexwitch.ui.telescope").browse_presets()
     end, { desc = "Browse preset themes" })
-    vim.keymap.set("n", "<leader>hu", ":HexwitchUndo<CR>", { desc = "Undo last theme" })
-    vim.keymap.set("n", "<leader>hr", ":HexwitchRedo<CR>", { desc = "Redo theme" })
   end,
 }
 

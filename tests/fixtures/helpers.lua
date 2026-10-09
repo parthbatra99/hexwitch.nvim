@@ -126,7 +126,6 @@ function M.setup_config(opts)
     api_key = "test-key",
     base_url = "https://api.openai.com/v1",
     model = "gpt-4o-mini",
-    temperature = 0.7,
     themes_dir = opts.themes_dir or M.temp_dir(),
     save_themes = true,
   }, opts))

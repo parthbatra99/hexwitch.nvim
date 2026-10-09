@@ -24,7 +24,7 @@ describe("hexwitch.ai.client", function()
 
       local body = captured[1].body
       assert.equals("gpt-4o-mini", body.model)
-      assert.equals(0.7, body.temperature)
+      assert.equals(1.0, body.temperature) -- locked (reasoning-model friendly)
       assert.equals(2, #body.messages)
       assert.equals("system", body.messages[1].role)
       assert.equals("user", body.messages[2].role)
@@ -40,7 +40,7 @@ describe("hexwitch.ai.client", function()
       restore()
     end)
 
-    it("sends the JSON schema when structured_output is true (default)", function()
+    it("always sends the JSON schema (structured output is locked on)", function()
       local captured, restore = helpers.mock_curl(function() return helpers.completion(helpers.valid_theme) end)
       client.generate("x", function() end)
       local rf = captured[1].body.response_format
@@ -50,14 +50,6 @@ describe("hexwitch.ai.client", function()
       -- schema is the real 16-color one (compared by value: the body was JSON-encoded)
       assert.equals("^#[0-9A-Fa-f]{6}$", rf.json_schema.schema.properties.colors.properties.bg.pattern)
       assert.equals(16, #rf.json_schema.schema.properties.colors.required)
-      restore()
-    end)
-
-    it("omits response_format when structured_output is false", function()
-      helpers.setup_config({ structured_output = false })
-      local captured, restore = helpers.mock_curl(function() return helpers.completion(helpers.valid_theme) end)
-      client.generate("x", function() end)
-      assert.is_nil(captured[1].body.response_format)
       restore()
     end)
 

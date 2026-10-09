@@ -45,7 +45,6 @@ function M.show_status(opts)
   local cfg = config.get()
   local ai_info = require("hexwitch.ai").get_provider_info()
   local stats = require("hexwitch.storage.state").get_stats()
-  local stack_sizes = require("hexwitch.storage.state").get_stack_sizes()
 
   -- Create status sections with actions
   local status_items = {
@@ -106,20 +105,6 @@ function M.show_status(opts)
           description = cfg.themes_dir,
           icon = "D",
           action = "open_themes_dir",
-        },
-        {
-          name = "Undo Stack",
-          value = "undo_stack",
-          description = string.format("%d items", stack_sizes.undo),
-          icon = "↶",
-          action = "manage_undo",
-        },
-        {
-          name = "Redo Stack",
-          value = "redo_stack",
-          description = string.format("%d items", stack_sizes.redo),
-          icon = "↷",
-          action = "manage_redo",
         },
       }
     },
@@ -243,10 +228,6 @@ function M.handle_status_action(item)
   elseif item.action == "open_themes_dir" then
     local cfg = config.get()
     system_utils.open_path(cfg.themes_dir)
-  elseif item.action == "manage_undo" then
-    M.show_undo_stack()
-  elseif item.action == "manage_redo" then
-    M.show_redo_stack()
   elseif item.action == "toggle_debug" then
     M.toggle_debug_mode()
   end
@@ -447,134 +428,6 @@ function M.toggle_debug_mode()
   local status = new_debug and "enabled" or "disabled"
   vim.notify(string.format("Debug mode %s\nAdd this to your config: require('hexwitch').setup({ debug = %s })",
     status, tostring(new_debug)), vim.log.levels.INFO)
-end
-
--- Show undo stack
----@param opts table Options
-function M.show_undo_stack(opts)
-  opts = opts or {}
-
-  local state = require("hexwitch.storage.state")
-  local current_state = state.get()
-  local undo_stack = current_state.undo_stack
-
-  if #undo_stack == 0 then
-    vim.notify("No themes in undo stack", vim.log.levels.INFO)
-    return
-  end
-
-  local displayer = entry_display.create({
-    separator = " ",
-    items = {
-      { width = 4 }, -- icon
-      { width = 20 }, -- theme name
-      { remaining = true }, -- timestamp
-    },
-  })
-
-  pickers.new(opts, {
-    prompt_title = "Undo Stack",
-    finder = finders.new_table({
-      results = undo_stack,
-      entry_maker = function(item, index)
-        return {
-          value = index,
-          display = function()
-            local timestamp = parse_iso8601(item.applied_at)
-            local date_str = timestamp and os.date("%Y-%m-%d %H:%M", timestamp) or "N/A"
-            return displayer({
-              { "[UNDO]", "Special" },
-              { item.theme.name or "unnamed", "Function" },
-              { date_str, "String" },
-            })
-          end,
-          ordinal = (item.theme.name or "") .. " " .. (item.applied_at or ""),
-          item = item,
-        }
-      end,
-    }),
-    sorter = conf.generic_sorter(opts),
-    attach_mappings = function(prompt_bufnr, map)
-      actions.select_default:replace(function()
-        local selection = action_state.get_selected_entry()
-        actions.close(prompt_bufnr)
-
-        if selection then
-          -- Undo specific number of times
-          for _ = 1, selection.value do
-            require("hexwitch").undo()
-          end
-          vim.notify(string.format("Undid %d theme(s)", selection.value), vim.log.levels.INFO)
-        end
-      end)
-
-      return true
-    end,
-  }):find()
-end
-
--- Show redo stack
----@param opts table Options
-function M.show_redo_stack(opts)
-  opts = opts or {}
-
-  local state = require("hexwitch.storage.state")
-  local current_state = state.get()
-  local redo_stack = current_state.redo_stack
-
-  if #redo_stack == 0 then
-    vim.notify("No themes in redo stack", vim.log.levels.INFO)
-    return
-  end
-
-  local displayer = entry_display.create({
-    separator = " ",
-    items = {
-      { width = 4 }, -- icon
-      { width = 20 }, -- theme name
-      { remaining = true }, -- timestamp
-    },
-  })
-
-  pickers.new(opts, {
-    prompt_title = "Redo Stack",
-    finder = finders.new_table({
-      results = redo_stack,
-      entry_maker = function(item, index)
-        return {
-          value = index,
-          display = function()
-            local timestamp = parse_iso8601(item.applied_at)
-            local date_str = timestamp and os.date("%Y-%m-%d %H:%M", timestamp) or "N/A"
-            return displayer({
-              { "[REDO]", "Special" },
-              { item.theme.name or "unnamed", "Function" },
-              { date_str, "String" },
-            })
-          end,
-          ordinal = (item.theme.name or "") .. " " .. (item.applied_at or ""),
-          item = item,
-        }
-      end,
-    }),
-    sorter = conf.generic_sorter(opts),
-    attach_mappings = function(prompt_bufnr, map)
-      actions.select_default:replace(function()
-        local selection = action_state.get_selected_entry()
-        actions.close(prompt_bufnr)
-
-        if selection then
-          -- Redo specific number of times
-          for _ = 1, selection.value do
-            require("hexwitch").redo()
-          end
-          vim.notify(string.format("Redid %d theme(s)", selection.value), vim.log.levels.INFO)
-        end
-      end)
-
-      return true
-    end,
-  }):find()
 end
 
 -- Refresh status (placeholder for now)

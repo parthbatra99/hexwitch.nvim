@@ -122,8 +122,6 @@ function M.get_provider_info()
   return {
     base_url = cfg.base_url,
     model = cfg.model,
-    temperature = cfg.temperature,
-    timeout = cfg.timeout,
     available = client.is_available() and cfg.api_key ~= "",
   }
 end

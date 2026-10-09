@@ -48,8 +48,6 @@ function M.check()
   local ok, current_state = pcall(state.get)
   if ok and current_state then
     health.ok("State management initialized")
-    local stack_sizes = state.get_stack_sizes()
-    health.info(string.format("Undo stack: %d items, Redo stack: %d items", stack_sizes.undo, stack_sizes.redo))
   else
     health.error("State management failed to initialize")
   end

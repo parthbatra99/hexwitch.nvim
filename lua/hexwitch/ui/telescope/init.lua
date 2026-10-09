@@ -435,8 +435,6 @@ function M.quick_actions(opts)
       actions = {
         { name = "Browse Saved Themes", value = "browse", icon = "B", description = "View your themes" },
         { name = "View Generation History", value = "history", icon = "H", description = "Past generations" },
-        { name = "Undo Last Theme", value = "undo", icon = "↶", description = "Go back one theme" },
-        { name = "Redo Theme", value = "redo", icon = "↷", description = "Restore undone theme" },
       }
     },
     {
@@ -444,7 +442,6 @@ function M.quick_actions(opts)
       icon = "S",
       actions = {
         { name = "Plugin Status", value = "status", icon = "⚙", description = "Check system status" },
-        { name = "Show Debug Logs", value = "logs", icon = "L", description = "View recent logs" },
       }
     },
   }
@@ -540,12 +537,6 @@ function M.handle_quick_action(action)
     require("hexwitch.ui.telescope.input").show_refinement_input(function(change)
       require("hexwitch").refine(change)
     end)
-  elseif action == "undo" then
-    require("hexwitch").undo()
-  elseif action == "redo" then
-    require("hexwitch").redo()
-  elseif action == "logs" then
-    logger.show_recent_logs()
   elseif action == "status" then
     status_module.show_status()
   else

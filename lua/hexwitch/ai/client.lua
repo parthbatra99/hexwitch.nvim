@@ -5,6 +5,10 @@ local config = require("hexwitch.config")
 
 local M = {}
 
+-- Locked request defaults (not user-configurable — kept simple/opinionated).
+local REQUEST_TEMPERATURE = 1.0 -- reasoning models want temperature = 1
+local REQUEST_TIMEOUT = 30000 -- ms
+
 -- Sanitize sensitive data for logging
 local function sanitize_log_data(data)
   if not data then return nil end
@@ -222,24 +226,22 @@ local function request(messages, callback)
   local body = {
     model = cfg.model,
     messages = messages,
-    temperature = cfg.temperature,
-  }
-  if cfg.max_tokens then
-    body.max_tokens = cfg.max_tokens
-  end
-  if cfg.structured_output then
-    body.response_format = {
+    temperature = REQUEST_TEMPERATURE,
+    response_format = {
       type = "json_schema",
       json_schema = {
         name = prompts.SCHEMA_NAME,
         schema = prompts.SCHEMA,
         strict = true,
       },
-    }
+    },
+  }
+  if cfg.max_tokens then
+    body.max_tokens = cfg.max_tokens
   end
 
   logger.debug("ai.client", "request",
-    string.format("POST %s model=%s temp=%.1f structured=%s", url, cfg.model, cfg.temperature, tostring(cfg.structured_output)),
+    string.format("POST %s model=%s", url, cfg.model),
     sanitize_log_data({ base_url = cfg.base_url, model = cfg.model }))
 
   curl.post(url, {
@@ -248,7 +250,7 @@ local function request(messages, callback)
       ["Authorization"] = "Bearer " .. cfg.api_key,
     },
     body = vim.json.encode(body),
-    timeout = cfg.timeout,
+    timeout = REQUEST_TIMEOUT,
     callback = function(response)
       -- In test sync mode run the handler inline so busted can assert synchronously
       if vim.g.hexwitch_test_sync_mode then

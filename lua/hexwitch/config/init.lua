@@ -15,14 +15,10 @@ local function validate(cfg)
     base_url = { cfg.base_url, "string" },
     api_key = { cfg.api_key, "string" },
     model = { cfg.model, "string" },
-    temperature = { cfg.temperature, "number" },
-    timeout = { cfg.timeout, "number" },
-    structured_output = { cfg.structured_output, "boolean" },
     save_themes = { cfg.save_themes, "boolean" },
     themes_dir = { cfg.themes_dir, "string" },
     max_history = { cfg.max_history, "number" },
     auto_save_history = { cfg.auto_save_history, "boolean" },
-    contrast_threshold = { cfg.contrast_threshold, "number" },
     debug = { cfg.debug, "boolean" },
     ui = { cfg.ui, "table" },
   })
@@ -35,25 +31,12 @@ local function validate(cfg)
     return false, "max_tokens must be a number"
   end
 
-  -- Additional custom validations
-  if cfg.temperature < 0 or cfg.temperature > 2 then
-    return false, "temperature must be between 0 and 2"
-  end
-
   if not cfg.base_url:match("^https?://") then
     return false, "base_url must be a valid http(s) URL"
   end
 
   if cfg.max_history < 1 then
     return false, "max_history must be at least 1"
-  end
-
-  if cfg.contrast_threshold < 1 or cfg.contrast_threshold > 21 then
-    return false, "contrast_threshold must be between 1 and 21"
-  end
-
-  if cfg.timeout < 1000 then
-    return false, "timeout must be at least 1000ms"
   end
 
   return true, nil

@@ -109,28 +109,10 @@ function M.clear_history()
   vim.notify("Generation history cleared", vim.log.levels.INFO)
 end
 
--- Undo last theme
-function M.undo_theme()
-  logger.info("commands", "undo_theme", "Undoing last theme")
-  require("hexwitch").undo()
-end
-
--- Redo theme
-function M.redo_theme()
-  logger.info("commands", "redo_theme", "Redoing theme")
-  require("hexwitch").redo()
-end
-
 -- Show plugin status
 function M.show_status()
   logger.info("commands", "show_status", "Showing plugin status")
   require("hexwitch.ui.telescope").show_status()
-end
-
--- Show debug logs
-function M.show_logs()
-  logger.info("commands", "show_logs", "Showing debug logs")
-  logger.show_recent_logs()
 end
 
 -- Utility commands
@@ -210,21 +192,17 @@ function M.show_help()
     "  :Hexwitch export <name>     Copy a saved theme to the clipboard",
     "  :Hexwitch import            Apply a theme from the clipboard",
     "",
-    "History & undo:",
+    "History:",
     "  :Hexwitch history           Show generation history",
     "  :Hexwitch clear-history     Clear history",
-    "  :Hexwitch undo              Undo last theme",
-    "  :Hexwitch redo              Redo theme",
     "",
     "Diagnostics:",
     "  :Hexwitch status            Show plugin status",
-    "  :Hexwitch logs              Show debug logs",
     "  :Hexwitch help              Show this help",
     "",
     "Configure your AI endpoint in setup():",
     "  OpenAI:      { base_url = 'https://api.openai.com/v1' }",
     "  OpenRouter:  { base_url = 'https://openrouter.ai/api/v1' }",
-    "  Ollama:      { base_url = 'http://localhost:11434/v1', structured_output = false }",
     "",
     "For more information, see :help hexwitch",
   }

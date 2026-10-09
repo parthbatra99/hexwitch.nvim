@@ -278,7 +278,6 @@ function M.show_success(message, theme_name, theme_data, opts)
     { name = "Tweak it", value = "tweak", icon = "✏", desc = "Refine the theme" },
     { name = "Save Theme", value = "save", icon = "💾", desc = "Save to collection" },
     { name = "Create Variant", value = "variant", icon = "⊕", desc = "Generate similar theme" },
-    { name = "Undo", value = "undo", icon = "↶", desc = "Revert to previous" },
     { name = "Close", value = "close", icon = "✕", desc = "Dismiss" },
   }
 
@@ -393,8 +392,6 @@ function M.handle_success_action(action, theme_name, theme_data)
     else
       require("hexwitch").generate("Create a variant of the current theme")
     end
-  elseif action == "undo" then
-    require("hexwitch").undo()
   elseif action == "close" then
     -- Just close
   end

@@ -34,10 +34,6 @@ vim.api.nvim_create_user_command("Hexwitch", function(opts)
     commands.show_history()
   elseif subcommand == "clear" or subcommand == "clear-history" then
     commands.clear_history()
-  elseif subcommand == "undo" then
-    commands.undo_theme()
-  elseif subcommand == "redo" then
-    commands.redo_theme()
   elseif subcommand == "refine" then
     commands.refine_theme(remaining_args)
   elseif subcommand == "random" then
@@ -50,8 +46,6 @@ vim.api.nvim_create_user_command("Hexwitch", function(opts)
     commands.import_theme()
   elseif subcommand == "status" then
     commands.show_status()
-  elseif subcommand == "logs" then
-    commands.show_logs()
   elseif subcommand == "help" then
     commands.show_help()
   else
@@ -66,8 +60,8 @@ end, {
     if cmdline:match("^Hexwitch%s+%w*$") then
       local subcommands = {
         "save", "load", "delete", "history", "clear-history",
-        "undo", "redo", "refine", "random", "browse",
-        "export", "import", "status", "logs", "help",
+        "refine", "random", "browse",
+        "export", "import", "status", "help",
       }
       return vim.tbl_filter(function(cmd)
         return cmd:find(arg_lead) == 1
@@ -116,18 +110,6 @@ end, {
   desc = "Show generation history"
 })
 
-vim.api.nvim_create_user_command("HexwitchUndo", function()
-  commands.undo_theme()
-end, {
-  desc = "Undo last theme change"
-})
-
-vim.api.nvim_create_user_command("HexwitchRedo", function()
-  commands.redo_theme()
-end, {
-  desc = "Redo theme change"
-})
-
 vim.api.nvim_create_user_command("HexwitchClearHistory", function()
   commands.clear_history()
 end, {
@@ -144,12 +126,6 @@ vim.api.nvim_create_user_command("HexwitchStatus", function()
   commands.show_status()
 end, {
   desc = "Show plugin status"
-})
-
-vim.api.nvim_create_user_command("HexwitchLogs", function()
-  commands.show_logs()
-end, {
-  desc = "Show debug logs"
 })
 
 vim.api.nvim_create_user_command("HexwitchHelp", function()
@@ -179,19 +155,7 @@ vim.keymap.set("n", "<Plug>(HexwitchHistory)", function()
   commands.show_history()
 end, { desc = "Hexwitch: Show history" })
 
-vim.keymap.set("n", "<Plug>(HexwitchUndo)", function()
-  commands.undo_theme()
-end, { desc = "Hexwitch: Undo theme" })
-
-vim.keymap.set("n", "<Plug>(HexwitchRedo)", function()
-  commands.redo_theme()
-end, { desc = "Hexwitch: Redo theme" })
-
 vim.keymap.set("n", "<Plug>(HexwitchStatus)", function()
   commands.show_status()
 end, { desc = "Hexwitch: Show status" })
-
-vim.keymap.set("n", "<Plug>(HexwitchLogs)", function()
-  commands.show_logs()
-end, { desc = "Hexwitch: Show logs" })
 

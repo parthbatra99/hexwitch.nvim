@@ -11,10 +11,9 @@ the AI for both generation **and** iteration.
 
 ```
 lua/hexwitch/
-├── init.lua                 Public API: setup/generate/refine/save/load/undo/redo
+├── init.lua                 Public API: setup/generate/refine/save/load
 ├── commands.lua             :Hexwitch subcommand handlers
 ├── health.lua               :checkhealth hexwitch
-├── undo.lua                 Undo/redo (routes through theme.apply)
 ├── config/
 │   ├── init.lua             Validate + merge config (incremental over current)
 │   └── schema.lua           Defaults + typed config (base_url, api_key, …)
@@ -26,7 +25,7 @@ lua/hexwitch/
 │   ├── init.lua             Thin facade
 │   ├── applier.lua          Validate + nvim_set_hl loop + terminal colors; tracks current theme
 │   └── storage.lua          Save/load/list/delete themes as JSON (respects themes_dir)
-├── storage/state.lua        History, undo/redo stacks, current-theme holder, stats
+├── storage/state.lua        History, current-theme holder, stats
 ├── ui/
 │   ├── init.lua             UI facade
 │   └── telescope/           Prompt, browser, status, notifications (telescope is the only UI)
@@ -39,15 +38,16 @@ lua/hexwitch/
 - **One client, configurable `base_url`.** `ai/client.lua` POSTs to
   `base_url .. "/chat/completions"`. Default `https://api.openai.com/v1`.
   Point it at OpenRouter (`https://openrouter.ai/api/v1`), Ollama
-  (`http://localhost:11434/v1`), LM Studio, etc. Set `structured_output = false`
-  for endpoints that don't support JSON-schema structured output — the client
-  then falls back to prompt-driven JSON + `extract_json`.
+  (`http://localhost:11434/v1`), LM Studio, etc. — the endpoint must support
+  JSON-schema structured output (always on). Request settings are locked,
+  opinionated defaults: `temperature = 1` (reasoning-model friendly) and a
+  30 s timeout.
 - **Refinement is AI-driven.** `:Hexwitch refine <change>` re-prompts the model
   with the *current theme + the change* (`prompts.build_refinement_prompt`). There
   is no local color-math tweak UI. The AI owns generation and iteration.
 - **The applier is the single chokepoint for the "current theme".**
   `theme/applier.lua` calls `state.set_current_theme(data)` at the end of every
-  `apply()`, so generate / refine / load / undo / redo / import all keep the live
+  `apply()`, so generate / refine / load / import all keep the live
   theme tracked. `storage.save()` serializes that real palette (it no longer
   re-derives colors from highlight groups).
 - **Single source of truth for the schema.** `prompts.SCHEMA` / `SCHEMA_NAME`
@@ -57,31 +57,31 @@ lua/hexwitch/
 
 ```lua
 require("hexwitch").setup({
-  base_url = "https://api.openai.com/v1",  -- any OpenAI-compatible endpoint
-  api_key  = nil,                          -- defaults to $OPENAI_API_KEY / $HEXWITCH_API_KEY
-  model    = "gpt-4o-mini",
-  temperature    = 0.7,
-  timeout        = 30000,                  -- ms
-  structured_output = true,                -- false for endpoints w/o JSON-schema support
-  -- max_tokens = 1024,                    -- optional
-  save_themes    = true,
-  themes_dir     = vim.fn.stdpath("data") .. "/hexwitch",
-  contrast_threshold = 4.5,
+  base_url   = "https://api.openai.com/v1", -- any OpenAI-compatible endpoint
+  api_key    = nil,                         -- defaults to $OPENAI_API_KEY / $HEXWITCH_API_KEY
+  model      = "gpt-4o-mini",
+  -- max_tokens = 1024,                     -- optional
+  save_themes = true,
+  themes_dir  = vim.fn.stdpath("data") .. "/hexwitch",
   debug = false,
 })
 ```
 
 `ai_provider` / `openai_api_key` (pre-simplification) are gone — `base_url` and
-`api_key` replace them. `config.setup()` merges incrementally over the current
-config, so repeated calls are additive.
+`api_key` replace them. `temperature`, `timeout`, `structured_output`, and
+`contrast_threshold` were removed from the config surface entirely: they are
+locked defaults in `ai/client.lua` (`REQUEST_TEMPERATURE = 1`,
+`REQUEST_TIMEOUT = 30000`, JSON schema always sent). `config.setup()` merges
+incrementally over the current config, so repeated calls are additive.
 
 ## Commands
 
 Umbrella: `:Hexwitch [description]` generates; subcommands: `refine`, `random`,
 `save`, `load`, `browse`, `delete`, `export`, `import`, `history`,
-`clear-history`, `undo`, `redo`, `status`, `logs`, `help`. Standalone
-convenience commands (`:HexwitchRefine`, `:HexwitchRandom`, `:HexwitchBrowse`,
-…`) also exist.
+`clear-history`, `status`, `help`. Standalone convenience commands
+(`:HexwitchRefine`, `:HexwitchRandom`, `:HexwitchBrowse`, …) also exist.
+Undo/redo and the `logs` viewer were removed — undo never worked (the stack was
+never pushed) and neither fits the generate→apply→refine flow.
 
 ## Testing
 
@@ -111,7 +111,7 @@ tests/
 ├── fixtures/
 │   └── helpers.lua            valid/refined themes, mock_curl, completion builders, setup_config, invalid_color_themes
 └── hexwitch/
-    ├── client_spec.lua        unified client: payload, base_url URL, schema, structured_output toggle, error paths, refine request
+    ├── client_spec.lua        unified client: payload, base_url URL, always-on schema, error paths, refine request
     ├── config_spec.lua        defaults, incremental merge, base_url validation, env fallback
     ├── refine_spec.lua        AI refine flow: re-prompts with current theme, history, public callback forwarding
     ├── applier_spec.lua       apply highlights/terminal colors, set_current_theme chokepoint, validation
@@ -121,12 +121,12 @@ tests/
     └── ui_spec.lua            telescope modules load, facade surface
 ```
 
-### Current status: 70 passing / 0 failing
+### Current status: 68 passing / 0 failing
 
 | Spec     | Tests | Covers |
 |----------|-------|--------|
-| client   | 19    | payload, base_url URL, schema, structured_output toggle, error/parse paths, refine request, is_available |
-| config   | 11    | defaults, incremental merge, base_url validation, env fallback |
+| client   | 18    | payload, base_url URL, always-on schema, error/parse paths, refine request, is_available |
+| config   | 10    | defaults (+ locked options absent), incremental merge, base_url validation, env fallback |
 | refine   | 8     | ai.generate/refine, public generate/refine callback forwarding, get_provider_info |
 | storage  | 7     | real-palette round-trip, themes_dir, list excludes state.json, path traversal |
 | applier  | 6     | apply highlights + terminal colors, set_current_theme chokepoint, color validation |
