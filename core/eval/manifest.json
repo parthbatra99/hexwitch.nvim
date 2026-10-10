@@ -1,0 +1,58 @@
+{
+  "cases": [
+    {
+      "file": "themes/gruvbox-dark-medium.json",
+      "expect": {
+        "appearance": "dark",
+        "primary_contrast": 10.75,
+        "comment_contrast": 4.02,
+        "syntax_roles": 7
+      }
+    },
+    {
+      "file": "themes/tokyo-night.json",
+      "expect": {
+        "appearance": "dark",
+        "primary_contrast": 8.1,
+        "comment_contrast": 2.76,
+        "syntax_roles": 7
+      }
+    },
+    {
+      "file": "themes/catppuccin-mocha.json",
+      "expect": {
+        "appearance": "dark",
+        "primary_contrast": 11.34,
+        "comment_contrast": 5.81,
+        "syntax_roles": 7
+      }
+    },
+    {
+      "file": "themes/dracula.json",
+      "expect": {
+        "appearance": "dark",
+        "primary_contrast": 13.36,
+        "comment_contrast": 3.03,
+        "syntax_roles": 7
+      }
+    },
+    {
+      "file": "themes/solarized-dark.json",
+      "expect": {
+        "appearance": "dark",
+        "primary_contrast": 4.75,
+        "comment_contrast": 2.79,
+        "syntax_roles": 5
+      }
+    },
+    {
+      "file": "themes/nord.json",
+      "expect": {
+        "appearance": "dark",
+        "primary_contrast": 9.25,
+        "comment_contrast": 2.44,
+        "syntax_roles": 6
+      }
+    }
+  ]
+}

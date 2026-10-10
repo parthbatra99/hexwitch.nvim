@@ -1,0 +1,21 @@
+{
+  "name": "Catppuccin Mocha",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#1e1e2e",
+    "editor.foreground": "#cdd6f4",
+    "sideBar.background": "#181825",
+    "editorWidget.background": "#11111b",
+    "editorError.foreground": "#f38ba8",
+    "editorWarning.foreground": "#f9e2af"
+  },
+  "tokenColors": [
+    { "scope": "comment", "settings": { "foreground": "#9399b2", "fontStyle": "italic" } },
+    { "scope": ["keyword", "keyword.control"], "settings": { "foreground": "#cba6f7" } },
+    { "scope": "string", "settings": { "foreground": "#a6e3a1" } },
+    { "scope": ["entity.name.function", "support.function"], "settings": { "foreground": "#89b4fa" } },
+    { "scope": ["entity.name.type", "entity.name.class"], "settings": { "foreground": "#f9e2af" } },
+    { "scope": "constant.numeric", "settings": { "foreground": "#fab387" } },
+    { "scope": "variable", "settings": { "foreground": "#cdd6f4" } }
+  ]
+}

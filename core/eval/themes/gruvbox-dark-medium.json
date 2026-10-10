@@ -1,0 +1,22 @@
+{
+  "name": "Gruvbox Dark Medium",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#282828",
+    "editor.foreground": "#ebdbb2",
+    "sideBar.background": "#1d2021",
+    "editorWidget.background": "#3c3836",
+    "editor.lineHighlightBackground": "#32302f",
+    "editorError.foreground": "#fb4934",
+    "editorWarning.foreground": "#fabd2f"
+  },
+  "tokenColors": [
+    { "scope": "comment", "settings": { "foreground": "#928374", "fontStyle": "italic" } },
+    { "scope": ["keyword", "keyword.control", "keyword.control.import"], "settings": { "foreground": "#fb4934" } },
+    { "scope": "string", "settings": { "foreground": "#b8bb26" } },
+    { "scope": ["entity.name.function", "support.function"], "settings": { "foreground": "#b8bb26", "fontStyle": "bold" } },
+    { "scope": ["entity.name.type", "entity.name.class"], "settings": { "foreground": "#fabd2f" } },
+    { "scope": ["constant"], "settings": { "foreground": "#d3869b" } },
+    { "scope": "variable", "settings": { "foreground": "#83a598" } }
+  ]
+}
