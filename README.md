@@ -45,7 +45,12 @@ Three rules the engine does not break:
   OKLCH: lightness/chroma/hue shifts, minimal-lightness contrast solves)
   with minimal diff and honest revision reports; Neovim colorscheme
   emission with degradation reports; headless-Neovim round-trip tests.
-- **M3 — interpretation bridge + thin Neovim UI (next).**
+- **M3 — interpretation bridge (done, plugin pending):** natural language
+  -> validated edit specs. The model emits a flat action list under a
+  strict schema (enforced server-side *and* client-side) and never picks
+  colors; everything between model output and colorscheme is
+  deterministic and offline-testable. Thin Neovim plugin is the
+  remaining piece.
 - **M4 — portability proof (VS Code adapter).**
 - **M5 — image references, candidate sets, lineage.**
 
@@ -77,6 +82,14 @@ cargo run -q -p hexwitch-cli -- revise eval/themes/gruvbox-dark-medium.json \
   --out revised.json --emit-nvim colors/hexwitch-gruvbox-focus.lua
 # darker base, readable comments, protected syntax — minimal diff, with a
 # per-role report of every color that moved
+
+# with an API key (OPENAI_API_KEY or OPENROUTER_API_KEY):
+hexwitch interpret eval/themes/gruvbox-dark-medium.json \
+  "darker background and readable comments, keep the syntax colors" \
+  --out spec.json
+# shows the model's notes, writes a validated edit spec; then revise as
+# above. --dry-run prints the exact prompt; --from-llm validates a saved
+# model response offline.
 ```
 
 ## The old Neovim plugin

@@ -99,6 +99,33 @@ enum Command {
         #[arg(long)]
         report: bool,
     },
+    /// Interpret a natural-language request as an edit spec (LLM bridge).
+    /// The model never picks colors; it emits actions that are validated
+    /// hard and translated deterministically.
+    Interpret {
+        /// Path to a theme .json file (IR or VS Code format).
+        path: std::path::PathBuf,
+        /// The request, e.g. "darker background, readable comments, keep
+        /// the syntax colors". Required unless --from-llm is given.
+        prompt: Option<String>,
+        /// Print the exact prompt that would be sent and exit (no network).
+        #[arg(long)]
+        dry_run: bool,
+        /// Offline mode: validate a saved model response instead of
+        /// calling a provider.
+        #[arg(long)]
+        from_llm: Option<std::path::PathBuf>,
+        /// Write the validated edit spec here (IR EditSpec JSON).
+        #[arg(short, long)]
+        out: Option<std::path::PathBuf>,
+        /// Provider: `openai` or `openrouter` (default: whichever key is
+        /// set, OPENAI_API_KEY / OPENROUTER_API_KEY).
+        #[arg(long)]
+        provider: Option<String>,
+        /// Model name (default gpt-4o-mini / openai/gpt-4o-mini).
+        #[arg(short, long)]
+        model: Option<String>,
+    },
 }
 
 #[derive(clap::ValueEnum, Clone, Copy)]
@@ -330,6 +357,231 @@ fn run(command: Command) -> Result<(), String> {
                 None => println!("{revised_json}"),
             }
         }
+        Command::Interpret {
+            path,
+            prompt,
+            dry_run,
+            from_llm,
+            out,
+            provider,
+            model,
+        } => {
+            use hexwitch_core::interpret as interp;
+
+            let theme_json = std::fs::read_to_string(&path)
+                .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+            let theme =
+                hexwitch_core::ingest::load_theme(&theme_json).map_err(|e| e.to_string())?;
+
+            // Offline validation path: no network, no prompt needed.
+            if let Some(response_path) = from_llm {
+                let raw = std::fs::read_to_string(&response_path)
+                    .map_err(|e| format!("cannot read {}: {e}", response_path.display()))?;
+                let llm =
+                    interp::parse_model_output(&raw).map_err(|e| format!("model output: {e}"))?;
+                let spec = interp::llm_spec_to_edit_spec(&llm)
+                    .map_err(|e| format!("invalid spec: {e}"))?;
+                if let Some(notes) = &llm.notes {
+                    eprintln!("notes: {notes}");
+                }
+                write_spec(&spec, out)?;
+                return Ok(());
+            }
+
+            let prompt = prompt.ok_or("a PROMPT is required (or use --from-llm)")?;
+            let system = interp::system_prompt();
+            let user = interp::user_prompt(&theme, &prompt);
+
+            if dry_run {
+                println!("--- system ---\n{system}\n--- user ---\n{user}");
+                return Ok(());
+            }
+
+            let (endpoint, api_key, default_model) = pick_provider(provider.as_deref())?;
+            let model = model.unwrap_or_else(|| default_model.to_string());
+
+            let spec = call_provider(endpoint, &api_key, &model, &system, &user)
+                .map_err(|e| e.to_string())?;
+            write_spec(&spec, out)?;
+        }
     }
     Ok(())
+}
+
+fn write_spec(
+    spec: &hexwitch_core::revise::EditSpec,
+    out: Option<std::path::PathBuf>,
+) -> Result<(), String> {
+    let json = serde_json::to_string_pretty(spec).map_err(|e| e.to_string())?;
+    match out {
+        Some(p) => {
+            std::fs::write(&p, json).map_err(|e| format!("cannot write {}: {e}", p.display()))?;
+            eprintln!("edit spec written to {}", p.display());
+        }
+        None => println!("{json}"),
+    }
+    Ok(())
+}
+
+const OPENAI_ENDPOINT: &str = "https://api.openai.com/v1/chat/completions";
+const OPENROUTER_ENDPOINT: &str = "https://openrouter.ai/api/v1/chat/completions";
+
+fn pick_provider(flag: Option<&str>) -> Result<(&'static str, String, &'static str), String> {
+    let openai_key = std::env::var("OPENAI_API_KEY")
+        .ok()
+        .filter(|k| !k.is_empty());
+    let openrouter_key = std::env::var("OPENROUTER_API_KEY")
+        .ok()
+        .filter(|k| !k.is_empty());
+    match flag {
+        Some("openai") => {
+            let k = openai_key.ok_or("OPENAI_API_KEY is not set")?;
+            Ok((OPENAI_ENDPOINT, k, "gpt-4o-mini"))
+        }
+        Some("openrouter") => {
+            let k = openrouter_key.ok_or("OPENROUTER_API_KEY is not set")?;
+            Ok((OPENROUTER_ENDPOINT, k, "openai/gpt-4o-mini"))
+        }
+        Some(other) => Err(format!("unknown provider {other:?} (openai | openrouter)")),
+        None => match (openai_key, openrouter_key) {
+            (Some(k), _) => Ok((OPENAI_ENDPOINT, k, "gpt-4o-mini")),
+            (None, Some(k)) => Ok((OPENROUTER_ENDPOINT, k, "openai/gpt-4o-mini")),
+            (None, None) => Err(
+                "no provider key found: set OPENAI_API_KEY or OPENROUTER_API_KEY, or pass --provider"
+                    .to_string(),
+            ),
+        },
+    }
+}
+
+/// Call the provider via curl (no async runtime dependency). The API key
+/// lives in a 0600 header file, never in argv. One retry on validation
+/// failure, with the validation error shown to the model.
+fn call_provider(
+    endpoint: &str,
+    api_key: &str,
+    model: &str,
+    system: &str,
+    user: &str,
+) -> Result<hexwitch_core::revise::EditSpec, String> {
+    use hexwitch_core::interpret as interp;
+
+    let mut messages = vec![
+        serde_json::json!({ "role": "system", "content": system }),
+        serde_json::json!({ "role": "user", "content": user }),
+    ];
+
+    let tmp = std::env::temp_dir().join(format!("hexwitch-interpret-{}", std::process::id()));
+    std::fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
+    let header_path = tmp.join("headers");
+    let payload_path = tmp.join("payload.json");
+    let response_path = tmp.join("response.json");
+
+    // Header file keeps the key out of argv (`ps` visibility).
+    std::fs::write(
+        &header_path,
+        format!("Content-Type: application/json\nAuthorization: Bearer {api_key}"),
+    )
+    .map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&header_path, std::fs::Permissions::from_mode(0o600));
+    }
+
+    let cleanup = || {
+        let _ = std::fs::remove_file(&header_path);
+        let _ = std::fs::remove_file(&payload_path);
+        let _ = std::fs::remove_file(&response_path);
+        let _ = std::fs::remove_dir(&tmp);
+    };
+
+    let result = (|| -> Result<hexwitch_core::revise::EditSpec, String> {
+        for attempt in 1..=2 {
+            let payload = serde_json::json!({
+                "model": model,
+                "temperature": 0,
+                "messages": messages,
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": interp::response_schema(),
+                },
+            });
+            std::fs::write(&payload_path, payload.to_string()).map_err(|e| e.to_string())?;
+            let _ = std::fs::remove_file(&response_path);
+
+            let status = std::process::Command::new("curl")
+                .arg("-sS")
+                .arg("-m")
+                .arg("120")
+                .arg("-X")
+                .arg("POST")
+                .arg(endpoint)
+                .arg("-H")
+                .arg(format!("@{}", header_path.display()))
+                .arg("--data-binary")
+                .arg(format!("@{}", payload_path.display()))
+                .arg("-o")
+                .arg(response_path.display().to_string())
+                .arg("-w")
+                .arg("%{http_code}")
+                .output()
+                .map_err(|e| format!("cannot run curl: {e} (is it installed?)"))?;
+            let code = String::from_utf8_lossy(&status.stdout).trim().to_string();
+            let body = std::fs::read_to_string(&response_path).unwrap_or_default();
+            if !code.starts_with('2') {
+                return Err(format!(
+                    "provider returned HTTP {code}: {}",
+                    truncate(&body, 400)
+                ));
+            }
+
+            let content = serde_json::from_str::<serde_json::Value>(&body)
+                .ok()
+                .and_then(|v| {
+                    v.pointer("/choices/0/message/content")
+                        .and_then(|c| c.as_str())
+                        .map(str::to_string)
+                })
+                .ok_or_else(|| {
+                    format!("no message content in response: {}", truncate(&body, 400))
+                })?;
+
+            match interp::parse_model_output(&content)
+                .and_then(|llm| interp::llm_spec_to_edit_spec(&llm).map(|spec| (llm, spec)))
+            {
+                Ok((llm, spec)) => {
+                    if let Some(notes) = &llm.notes {
+                        eprintln!("notes: {notes}");
+                    }
+                    return Ok(spec);
+                }
+                Err(e) if attempt == 1 => {
+                    eprintln!("attempt 1 failed validation ({e}); asking the model to correct it");
+                    messages.push(serde_json::json!({ "role": "assistant", "content": content }));
+                    messages.push(serde_json::json!({
+                        "role": "user",
+                        "content": format!("Your output failed validation: {e}. Return a corrected JSON that matches the schema exactly.")
+                    }));
+                }
+                Err(e) => {
+                    return Err(format!(
+                        "model output invalid after retry: {e}\nraw output: {content}"
+                    ))
+                }
+            }
+        }
+        unreachable!("loop returns in both branches")
+    })();
+
+    cleanup();
+    result
+}
+
+fn truncate(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else {
+        format!("{}...", &s[..max])
+    }
 }

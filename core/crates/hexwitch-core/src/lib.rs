@@ -15,6 +15,7 @@ pub mod color;
 pub mod emit;
 pub mod eval;
 pub mod ingest;
+pub mod interpret;
 pub mod ir;
 pub mod revise;
 
