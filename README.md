@@ -1,153 +1,83 @@
-# hexwitch.nvim
+# hexwitch
 
-<p align="center">
-  <img src="./hexwitch-logo.png" alt="Hexwitch Logo" width="200" />
-</p>
+**A theme engine, not a theme.** Hexwitch turns something you love — an
+existing theme, a wallpaper, a description — into a coherent, readable
+editor environment, and keeps it recognizable as *the thing you loved*
+while you refine it.
 
-<p align="center">
-  AI-powered colorscheme generator for Neovim.
-</p>
+Most theme generators hand you a pile of hex codes. Hexwitch treats a
+theme as a system of relationships (surfaces, hierarchy, syntax roles,
+interaction states) and compiles that system into concrete editors:
 
-Ever wanted to create a Neovim colorscheme just by describing it? Now you can. `hexwitch.nvim` uses OpenAI's models to generate and apply a colorscheme from a simple text prompt.
-
-## Requirements
-
-- Neovim ≥ 0.9.0
-- `curl`
-- An [OpenAI API key](https://platform.openai.com/api-keys)
-- `plenary.nvim`
-- `telescope.nvim`
-
-## Installation
-
-Use your favorite plugin manager. Here is an example with `lazy.nvim`:
-
-```lua
-{
-  "parthbatra99/hexwitch.nvim",
-  dependencies = {
-    "nvim-lua/plenary.nvim",
-    "nvim-telescope/telescope.nvim",
-  },
-  config = function()
-    require("hexwitch").setup()
-  end,
-}
+```
+reference (theme / image / description)
+   → interpret   intent + protected choices   ("keep the background, warm the accents")
+   → revise      constraint-guided, minimal-diff color work in OKLCH
+   → validate    rendered scenes: selections, diffs, diagnostics, overlays
+   → emit        Neovim / VS Code / Zed artifacts
 ```
 
-## Getting Started
+Three rules the engine does not break:
 
-1.  **Set your API key:** The plugin needs an API key for your chosen AI provider. Set it as an environment variable.
+1. **The LLM never picks colors.** Interpretation turns language into a
+   structured, reviewable edit spec. Color computation is deterministic.
+2. **The IR is the product.** One canonical role graph
+   (`syntax.keyword`, `diagnostic.error.virtual_text`, …) that all
+   adapters lower into editor-native highlighting.
+3. **Emit is not the last step.** What gets validated is what the adapter
+   actually outputs — after fallbacks, quantization, and alpha compositing.
 
-    ```bash
-    # For OpenAI
-    export OPENAI_API_KEY="sk-..."
+## Repository layout
 
-    # For OpenRouter
-    export OPENROUTER_API_KEY="sk-or-..."
-    ```
-    *Note: Never commit your API key to a public repository.*
+| Path | What it is |
+|---|---|
+| `core/` | Rust workspace: the engine (color science, IR, analysis, revision, validation, emission) |
+| `adapters/nvim/` | Neovim frontend (legacy Lua plugin, being replaced by a thin client of the engine) |
 
-2.  **Generate a theme:** Use the `:Hexwitch` command with a description of the theme you want.
+## Status
 
-    ```vim
-    :Hexwitch a dark, high-contrast theme with solarized accents
-    ```
+- **M0 — foundations (in progress):** color science (sRGB/OKLab/OKLCH, WCAG
+  contrast, gamut mapping, compositing) and IR v0, with tests.
+- **M1 — ingest + analyze:** import real themes, compute identity
+  fingerprints (contrast ladders, hue/chroma budgets).
+- **M2 — revise + emit:** edit specs with protected roles; first Neovim
+  colorscheme emission.
+- **M3 — interpretation bridge + thin Neovim UI.**
+- **M4 — portability proof (VS Code adapter).**
+- **M5 — image references, candidate sets, lineage.**
 
-    And that's it! Hexwitch will generate the colors and apply them.
+## Using the CLI (M0)
 
-## Configuration
+```sh
+cd core
+cargo run -p hexwitch-cli -- contrast #ebdbb2 #282828
+# #ebdbb2 on #282828: 10.75:1  (AAA)
 
-You can customize the plugin by passing a table to the `setup()` function. Here are the defaults:
+cargo run -p hexwitch-cli -- convert #fb4934
+# oklch(0.65250 0.18319 27.95)
 
-```lua
-require("hexwitch").setup({
-  ai_provider = "openai",           -- "openai", "openrouter", or "custom"
-  model = "gpt-4o-mini",           -- AI model to use
-  temperature = 0.7,               -- 0.0–2.0. Higher means more creative/random palettes
-  timeout = 30000,                 -- API timeout in milliseconds
-  save_themes = true,              -- Save generated themes to disk
-  themes_dir = vim.fn.stdpath("data") .. "/hexwitch",  -- Directory for saved themes
-  max_history = 50,                -- Maximum history entries
-  auto_save_history = true,        -- Save generation history
-  contrast_threshold = 4.5,        -- Minimum WCAG contrast ratio
-  debug = false,                   -- Enable debug logging
-})
+cargo run -p hexwitch-cli -- map 0.7 0.4 29
+# chroma reduction keeps the hue, drops saturation to reach sRGB
 ```
 
-## Commands
+## The old Neovim plugin
 
-- `:Hexwitch [prompt]` - Generate a theme from a text description.
-- `:Hexwitch quick` - Generate a variation of the current theme.
-- `:Hexwitch random` - Generate a random theme.
-- `:Hexwitch refine [changes]` - Tweak the colors of the current theme.
-- `:Hexwitch browse` - Browse saved themes using Telescope.
-- `:Hexwitch history` - View your generation history.
-- `:Hexwitch save <name>` - Save the current theme.
-- `:Hexwitch load <name>` - Load a saved theme.
-- `:Hexwitch undo` / `:Hexwitch redo` - Undo or redo theme changes.
+The original Lua plugin (LLM-prompt → 16 hex colors) lives under
+`adapters/nvim/` unchanged for now. It will shrink into a thin frontend —
+pick a reference, write a prompt, preview, iterate — as M3 lands.
 
-## Debugging
+## Design notes
 
-If you encounter issues, try these steps:
+Foundational decisions came from a review of perception/readability
+research (display polarity, syntax-highlighting comprehension studies,
+WCAG), the design systems of Solarized/Gruvbox/Nord/Catppuccin/Dracula/
+Tokyo Night, and the highlighting mechanisms of the three target editors.
+Two honest conclusions shaped the engine:
 
-1. **Enable debug mode**:
-   ```lua
-   require("hexwitch").setup({ debug = true })
-   ```
-
-2. **Common issues**:
-   - **API key**: Ensure your `OPENAI_API_KEY` or `OPENROUTER_API_KEY` is set
-   - **Network**: Check internet connection and API status
-   - **Theme fails**: Verify `curl` is installed and API key is valid
-
-3. **Basic checks**:
-   ```vim
-   :checkhealth hexwitch  " Check plugin health
-   :lua print(vim.env.OPENAI_API_KEY and "API key found" or "API key missing")
-   ```
-
-4. **Reset storage**: Themes are saved locally at:
-   ```bash
-   # Default location
-   ~/.local/share/nvim/hexwitch/
-
-   # Delete to reset all saved themes and history
-   rm -rf ~/.local/share/nvim/hexwitch/
-   ```
-
-5. **Get help**: Check debug output with `:messages` and report issues with debug logs.
-
-## Telescope UI
-
-Hexwitch provides a built-in telescope interface for browsing saved themes, presets, and your generation history. The plugin automatically uses telescope for all UI interactions.
-
-## Test Drive
-
-Want to try Hexwitch without affecting your main Neovim config? There's an example `init.lua` you can use for an isolated test environment.
-
-1.  Make sure your `OPENAI_API_KEY` is set.
-2.  Run Neovim with the following command:
-
-    ```bash
-    NVIM_APPNAME=hexwitch-test nvim -u examples/nvim-test/init.lua
-    ```
-
-This starts Neovim with a temporary configuration that loads only Hexwitch and its dependencies. The example config also sets up some handy keymaps for you:
-
--   `<leader>hw`: Open the Hexwitch prompt
--   `<leader>hb`: Browse saved themes
--   `<leader>hh`: View generation history
--   `<leader>hq`: Open the quick actions menu
--   `<leader>hu`: Undo last theme change
--   `<leader>hr`: Redo theme change
-
-*Tip: If you're developing the plugin locally, you can use your local version by setting the `HEXWITCH_PLUGIN_DIR` environment variable.*
-
-## Contributing
-
-This is a personal side project, but feel free to open an issue or a pull request if you have ideas or find a bug.
-
-## License
-
-MIT
+- There is no scientifically established "best theme" — so the engine
+  optimizes for *intent fidelity* and *dependability*, and treats
+  readability constraints as explicit, measurable floors rather than
+  taste.
+- Famous themes disagree on almost everything except structure — so the
+  IR models structure (roles, hierarchy, provenance) and leaves the
+  aesthetic choices to you.

@@ -113,3 +113,6 @@ devconfig/
 VISION.md
 PRD-*.md
 todo.md
+
+# Rust (core engine)
+core/target/
