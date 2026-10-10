@@ -21,7 +21,17 @@ reset, not unspecified. Clearing a property does not clear its opacity or lock.
 `generated`, `derived`, or `user`, and optional reference. Legacy `provenance`
 remains for v0 compatibility and is deprecated for new protection writes.
 
-`modifiers` is a list of `{role, modifiers, language?, style}`; relationships are
+`strikethrough` is an independent optional bool property; new rules can keep both
+underline and strike. Legacy `underline:"strikethrough"` remains accepted.
+
+`modifiers` is a list of `{role, modifiers, language?, style, token_type?, priority?}`.
+Optional token_type retains class/interface/method distinctions; priority records
+source order (default 0). Empty modifier sets express unmodified type/language
+rules. Standard semantic rule scores are type +100, modifier +100 each, language
++10; ties resolve later priority/list order per property. Enablement is retained
+under `extensions["vscode.semanticHighlighting"]`; unknown enablement is qualified.
+Older engines may reject additive fields; check capabilities.ir_features before
+writing them. Relationships are
 `{from,to,kind}` where kind is `inherits`, `surface`, `association`, or
 `lower_prominence`. Both endpoints must exist; inheritance cycles are invalid.
 `extensions` is an explicit namespaced JSON passthrough map. Preservation does
@@ -44,7 +54,9 @@ not imply that another editor can execute those source semantics.
 
 `--machine revise` detects v1 by required `version:1`, `actions`. Legacy
 `protect`/`changes` specs remain accepted but are not property-exact.
-An action target is `{roles:[validated selectors], property:"bg_opacity"}`.
+An action target is `{roles:[validated selectors], property:"bg_opacity",
+include_semantic?:false}`. Setting include_semantic true also targets all existing
+semantic override styles; locks/refusals and reports retain their rule identity.
 Selectors are exact present roles, `*`, known namespace prefixes, and known
 kind prefixes; arbitrary strings ending in `.*` do not validate.
 
@@ -58,7 +70,7 @@ Operations: `lock` (scope `request` or `persistent`), `unlock`, `set_color`,
   "actions":[
     {"op":"lock","target":{"roles":["surface.base"],"property":"bg"}},
     {"op":"set_number","target":{"roles":["surface.base"],"property":"bg_opacity"},"value":1},
-    {"op":"set_bool","target":{"roles":["syntax.*"],"property":"italic"},"value":false}
+    {"op":"set_bool","target":{"roles":["*"],"property":"italic","include_semantic":true},"value":false}
   ]
 }
 ```

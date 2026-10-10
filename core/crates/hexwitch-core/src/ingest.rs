@@ -8,7 +8,8 @@
 //! Deliberate limits: selected workbench mappings and a restricted dotted
 //! selector/ancestor grammar, not full TextMate. Source rules and opacity are
 //! preserved; unsupported semantics are recorded in import losses.
-//! `semanticTokenColors` is retained but not yet mapped to portable modifiers.
+//! Explicit standard semantic rules are preserved separately and resolved per
+//! property; extension type hierarchies/defaults still require editor context.
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -17,7 +18,7 @@ use thiserror::Error;
 
 use crate::color::Srgb;
 use crate::ir::role::{Role, Surface, TextRole};
-use crate::ir::style::{Style, UnderlineStyle};
+use crate::ir::style::Style;
 use crate::ir::theme::{Appearance, Theme};
 use crate::IR_VERSION;
 
@@ -52,6 +53,7 @@ enum ScopeSpec {
 }
 
 #[derive(Debug, Deserialize, Default, Clone)]
+#[serde(deny_unknown_fields)]
 struct TokenSettings {
     #[serde(default)]
     foreground: Option<String>,
@@ -62,15 +64,7 @@ struct TokenSettings {
 }
 
 fn parse_hex_maybe_alpha(s: &str) -> Result<Srgb, String> {
-    let h = s.strip_prefix('#').unwrap_or(s);
-    if h.len() == 8 {
-        if !h.is_ascii() || !h.bytes().all(|b| b.is_ascii_hexdigit()) {
-            return Err("invalid hex color".into());
-        }
-        Srgb::from_hex(&h[..6]).map_err(|e| e.to_string())
-    } else {
-        Srgb::from_hex(&format!("#{h}")).map_err(|e| e.to_string())
-    }
+    crate::semantic::parse_color(s).map(|(rgb, _)| rgb)
 }
 
 /// Ordered selector -> role table lives in [`scope_rules`]. First rule
@@ -87,6 +81,7 @@ fn simple_selector(selector: &str) -> bool {
     selector.is_empty()
         || selector.split_whitespace().all(|part| {
             !part.is_empty()
+                && part != "-"
                 && part.split('.').all(|segment| {
                     !segment.is_empty()
                         && segment
@@ -126,15 +121,27 @@ fn ingest_token_colors(
     // alternatives and ordered ancestor stacks. This is not full TextMate.
     let mut rules: Vec<(String, &TokenSettings, usize)> = vec![];
     let mut representatives: BTreeMap<Role, (String, usize)> = BTreeMap::new();
+    let mut represented_stacks: BTreeMap<Role, std::collections::BTreeSet<String>> =
+        BTreeMap::new();
     for (order, entry) in token_colors.iter().enumerate() {
+        // Validate even unmapped/shadowed rules; malformed input is not a silent loss.
+        for value in [&entry.settings.foreground, &entry.settings.background]
+            .into_iter()
+            .flatten()
+        {
+            crate::semantic::parse_color(value).map_err(IngestError::InvalidSource)?;
+        }
+        if let Some(style) = &entry.settings.font_style {
+            crate::semantic::font_style(style).map_err(IngestError::InvalidSource)?;
+        }
         let scopes = match &entry.scope {
-            ScopeSpec::None => vec![String::new()],
+            ScopeSpec::None => continue,
             ScopeSpec::One(s) => vec![s.clone()],
             ScopeSpec::Many(v) => v.clone(),
         };
         for scope in scopes {
             for selector in scope.split(',').map(str::trim) {
-                if !simple_selector(selector) {
+                if selector.is_empty() || !simple_selector(selector) {
                     continue;
                 }
                 rules.push((selector.to_string(), &entry.settings, order));
@@ -144,6 +151,10 @@ fn ingest_token_colors(
                     .filter(|(sel, _)| selector_matches(sel, leaf))
                     .max_by_key(|(sel, _)| depth(sel));
                 if let Some((_, role)) = best {
+                    represented_stacks
+                        .entry(role.clone())
+                        .or_default()
+                        .insert(selector.to_string());
                     let replace =
                         representatives
                             .get(&role)
@@ -161,13 +172,25 @@ fn ingest_token_colors(
             }
         }
     }
+    let representative_losses: Vec<_> = representatives.iter().filter_map(|(role,(selected,_))| {
+        let stacks = represented_stacks.get(role)?;
+        (stacks.len()>1).then(||serde_json::json!({"property":role.to_string(),"reason":"multiple source scope stacks collapse to one representative portable role","selected":selected,"source_stacks":stacks}))
+    }).collect();
+    theme.extensions.insert(
+        "hexwitch.import.scope-losses.v1".into(),
+        serde_json::json!(representative_losses),
+    );
     for (role, (scope, _)) in representatives {
         let mut applicable: Vec<_> = rules
             .iter()
             .filter(|(selector, _, _)| stack_matches(selector, &scope))
             .collect();
         applicable.sort_by_key(|(selector, _, order)| {
-            (selector.split_whitespace().count(), depth(selector), *order)
+            (
+                selector.split_whitespace().count(),
+                selector.split_whitespace().last().unwrap_or("").len(),
+                *order,
+            )
         });
         let mut settings = TokenSettings::default();
         for (_, rule, _) in applicable {
@@ -198,20 +221,21 @@ fn ingest_token_colors(
                 })?,
             );
         }
-        let alpha = |value: &str| {
-            value
-                .strip_prefix('#')
-                .filter(|h| h.len() == 8 && h.is_ascii())
-                .and_then(|h| u8::from_str_radix(&h[6..], 16).ok())
-                .map(|a| a as f64 / 255.0)
-        };
-        style.fg_opacity = settings.foreground.as_deref().and_then(alpha);
-        style.bg_opacity = settings.background.as_deref().and_then(alpha);
+        if let Some(value) = &settings.foreground {
+            style.fg_opacity = crate::semantic::parse_color(value)
+                .map_err(IngestError::InvalidSource)?
+                .1;
+        }
+        if let Some(value) = &settings.background {
+            style.bg_opacity = crate::semantic::parse_color(value)
+                .map_err(IngestError::InvalidSource)?
+                .1;
+        }
         style.source = Some(crate::ir::SourceInfo {
             origin: crate::ir::Origin::Imported,
             reference: Some(scope.clone()),
         });
-        apply_font_style(&mut style, settings.font_style.as_deref());
+        apply_font_style(&mut style, settings.font_style.as_deref())?;
         if style.fg.is_some()
             || style.bg.is_some()
             || style.bold.is_some()
@@ -224,28 +248,20 @@ fn ingest_token_colors(
     Ok(())
 }
 
-fn apply_font_style(style: &mut Style, font_style: Option<&str>) {
-    let Some(fs) = font_style else { return };
-    // A specified fontStyle replaces the typography family, including empty resets.
-    style.bold = Some(false);
-    style.italic = Some(false);
-    style.underline = None;
-    style.states.insert(
+fn apply_font_style(style: &mut Style, font_style: Option<&str>) -> Result<(), IngestError> {
+    let Some(fs) = font_style else {
+        return Ok(());
+    };
+    let typography = crate::semantic::font_style(fs).map_err(IngestError::InvalidSource)?;
+    for p in [
+        crate::ir::Property::Bold,
+        crate::ir::Property::Italic,
         crate::ir::Property::Underline,
-        crate::ir::PropertyState::Clear,
-    );
-    for token in fs.split_whitespace() {
-        match token {
-            "bold" => style.bold = Some(true),
-            "italic" => style.italic = Some(true),
-            "underline" => style.underline = Some(UnderlineStyle::Single),
-            "strikethrough" => style.underline = Some(UnderlineStyle::Strikethrough),
-            _ => {}
-        }
+        crate::ir::Property::Strikethrough,
+    ] {
+        style.copy_property_from(&typography, p);
     }
-    if style.underline.is_some() {
-        style.states.remove(&crate::ir::Property::Underline);
-    }
+    Ok(())
 }
 
 fn scope_rules() -> Vec<(&'static str, Role)> {
@@ -294,6 +310,115 @@ fn scope_rules() -> Vec<(&'static str, Role)> {
 
 fn workbench_role(key: &str) -> Option<(Role, bool)> {
     use crate::ir::role::{DiagnosticKind, DiagnosticPart, DiffKind, DiffPart, InteractionRole};
+    if let Some(slot) = [
+        "Black",
+        "Red",
+        "Green",
+        "Yellow",
+        "Blue",
+        "Magenta",
+        "Cyan",
+        "White",
+        "BrightBlack",
+        "BrightRed",
+        "BrightGreen",
+        "BrightYellow",
+        "BrightBlue",
+        "BrightMagenta",
+        "BrightCyan",
+        "BrightWhite",
+    ]
+    .iter()
+    .position(|name| key == format!("terminal.ansi{name}"))
+    {
+        return Some((Role::Terminal(slot as u8), false));
+    }
+    let additional = match key {
+        "editor.selectionForeground" => {
+            Some((Role::Interaction(InteractionRole::Selection), false))
+        }
+        "editor.inactiveSelectionBackground" => {
+            Some((Role::Interaction(InteractionRole::SelectionInactive), true))
+        }
+        "editor.findMatchBackground" => {
+            Some((Role::Interaction(InteractionRole::SearchCurrent), true))
+        }
+        "editor.findMatchForeground" => {
+            Some((Role::Interaction(InteractionRole::SearchCurrent), false))
+        }
+        "editor.findMatchHighlightBackground" => {
+            Some((Role::Interaction(InteractionRole::Search), true))
+        }
+        "editor.findMatchHighlightForeground" => {
+            Some((Role::Interaction(InteractionRole::Search), false))
+        }
+        "editorCursor.foreground" => Some((Role::Interaction(InteractionRole::Cursor), false)),
+        "editorGutter.background" => Some((Role::Surface(Surface::Gutter), true)),
+        "editorGutter.deletedBackground" => Some((
+            Role::Diff {
+                kind: DiffKind::Removed,
+                part: DiffPart::Gutter,
+            },
+            false,
+        )),
+        "diffEditor.insertedLineBackground" => Some((
+            Role::Diff {
+                kind: DiffKind::Added,
+                part: DiffPart::LineBg,
+            },
+            true,
+        )),
+        "diffEditor.removedLineBackground" => Some((
+            Role::Diff {
+                kind: DiffKind::Removed,
+                part: DiffPart::LineBg,
+            },
+            true,
+        )),
+        "diffEditor.insertedTextBackground" => Some((
+            Role::Diff {
+                kind: DiffKind::Added,
+                part: DiffPart::Text,
+            },
+            true,
+        )),
+        "diffEditor.removedTextBackground" => Some((
+            Role::Diff {
+                kind: DiffKind::Removed,
+                part: DiffPart::Text,
+            },
+            true,
+        )),
+        "terminal.foreground" => Some((Role::Other("terminal-default".into()), false)),
+        "terminal.background" => Some((Role::Other("terminal-default".into()), true)),
+        "list.activeSelectionForeground" => {
+            Some((Role::Other("completion-selection".into()), false))
+        }
+        "list.activeSelectionBackground" => {
+            Some((Role::Other("completion-selection".into()), true))
+        }
+        "editorSuggestWidget.foreground" => Some((Role::Other("completion-menu".into()), false)),
+        "editorSuggestWidget.background" => Some((Role::Other("completion-menu".into()), true)),
+        "editorSuggestWidget.selectedForeground" => {
+            Some((Role::Other("completion-selection".into()), false))
+        }
+        "editorSuggestWidget.selectedBackground" => {
+            Some((Role::Other("completion-selection".into()), true))
+        }
+        "statusBar.foreground" => Some((Role::Surface(Surface::Statusline), false)),
+        "statusBar.background" => Some((Role::Surface(Surface::Statusline), true)),
+        "editorHint.foreground" => Some((
+            Role::Diagnostic {
+                kind: DiagnosticKind::Hint,
+                part: DiagnosticPart::Text,
+            },
+            false,
+        )),
+        _ => None,
+    };
+    if additional.is_some() {
+        return additional;
+    }
     // (key, role, is_background_slot)
     let table: &[(&str, Role, bool)] = &[
         ("editor.background", Role::Surface(Surface::Base), true),
@@ -375,17 +500,35 @@ fn workbench_role(key: &str) -> Option<(Role, bool)> {
 /// revise, and emit, so revisions round-trip through IR files.
 pub fn load_theme(json: &str) -> Result<Theme, IngestError> {
     let v = crate::jsonc::parse(json).map_err(IngestError::InvalidSource)?;
+    if v.get("hexwitchSemanticLayers").is_some() {
+        return Err(IngestError::InvalidSource(
+            "reserved internal include field".into(),
+        ));
+    }
+    load_resolved_theme(v)
+}
+
+pub(crate) fn load_resolved_theme(v: Value) -> Result<Theme, IngestError> {
     let is_ir = v.get("meta").is_some() && v.get("styles").is_some();
     if is_ir {
         Theme::from_json_str(&v.to_string()).map_err(IngestError::Json)
     } else {
-        ingest_vscode_json(json)
+        ingest_vscode_value(v)
     }
 }
 
 /// Ingest a VS Code theme JSON document into the IR.
 pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
     let root = crate::jsonc::parse(json).map_err(IngestError::InvalidSource)?;
+    if root.get("hexwitchSemanticLayers").is_some() {
+        return Err(IngestError::InvalidSource(
+            "reserved internal include field".into(),
+        ));
+    }
+    ingest_vscode_value(root)
+}
+
+fn ingest_vscode_value(root: Value) -> Result<Theme, IngestError> {
     if !root.is_object() {
         return Err(IngestError::InvalidSource(
             "theme root must be an object".into(),
@@ -404,6 +547,15 @@ pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
             "expected colors, tokenColors or semanticTokenColors".into(),
         ));
     }
+    if root.get("name").is_some_and(|v| !v.is_string())
+        || root
+            .get("type")
+            .is_some_and(|v| !matches!(v.as_str(), Some("dark" | "light" | "hc" | "hcLight")))
+    {
+        return Err(IngestError::InvalidSource(
+            "invalid theme name or appearance type".into(),
+        ));
+    }
     if root.get("colors").is_some_and(|v| !v.is_object())
         || root.get("tokenColors").is_some_and(|v| !v.is_array())
         || root
@@ -420,7 +572,7 @@ pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
         .unwrap_or("Unnamed")
         .to_string();
     let appearance = match root.get("type").and_then(Value::as_str) {
-        Some("light") => Appearance::Light,
+        Some("light" | "hcLight") => Appearance::Light,
         _ => Appearance::Dark,
     };
 
@@ -429,29 +581,52 @@ pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
     theme.meta.ir_version = IR_VERSION;
 
     if let Some(colors) = root.get("colors").and_then(Value::as_object) {
-        for (key, value) in colors {
+        // Explicit completion widget values outrank generic list fallbacks.
+        let mut entries: Vec<_> = colors.iter().collect();
+        entries.sort_by_key(|(key, _)| usize::from(key.starts_with("editorSuggestWidget.")));
+        for (key, value) in entries {
             let hex = value.as_str().ok_or_else(|| {
                 IngestError::InvalidSource(format!("workbench color {key} must be a string"))
             })?;
-            let Some((role, is_bg)) = workbench_role(key) else {
+            if hex == "default" {
+                if let Some((role, is_bg)) = workbench_role(key) {
+                    let style = theme.styles.entry(role).or_default();
+                    let property = if is_bg {
+                        crate::ir::Property::Bg
+                    } else {
+                        crate::ir::Property::Fg
+                    };
+                    style.clear_value(property);
+                    style
+                        .states
+                        .insert(property, crate::ir::PropertyState::Unspecified);
+                    style.clear_value(if is_bg {
+                        crate::ir::Property::BgOpacity
+                    } else {
+                        crate::ir::Property::FgOpacity
+                    });
+                }
                 continue;
-            };
+            }
             let color = parse_hex_maybe_alpha(hex).map_err(|_| IngestError::BadColor {
                 key: key.clone(),
                 value: hex.to_string(),
             })?;
+            let Some((role, is_bg)) = workbench_role(key) else {
+                continue;
+            };
             let style = theme.styles.entry(role).or_default();
-            let opacity = hex
-                .strip_prefix('#')
-                .filter(|h| h.len() == 8 && h.is_ascii())
-                .and_then(|h| u8::from_str_radix(&h[6..], 16).ok())
-                .map(|a| a as f64 / 255.0);
+            let opacity = crate::semantic::parse_color(hex)
+                .map_err(IngestError::InvalidSource)?
+                .1;
             if is_bg {
                 style.bg = Some(color);
                 style.bg_opacity = opacity;
+                style.states.remove(&crate::ir::Property::Bg);
             } else {
                 style.fg = Some(color);
                 style.fg_opacity = opacity;
+                style.states.remove(&crate::ir::Property::Fg);
             }
             style.source = Some(crate::ir::SourceInfo {
                 origin: crate::ir::Origin::Imported,
@@ -473,18 +648,58 @@ pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
 
     ingest_token_colors(&mut theme, &token_colors)?;
     // Preserve the entire source, including unsupported rules; do not claim portability.
-    let mut losses = vec![];
-    if root.get("semanticTokenColors").is_some() {
-        losses.push(serde_json::json!({"property":"semanticTokenColors","reason":"preserved but not yet mapped into portable modifiers"}));
+    let mut losses = theme
+        .extensions
+        .remove("hexwitch.import.scope-losses.v1")
+        .and_then(|v| v.as_array().cloned())
+        .unwrap_or_default();
+    if matches!(
+        root.get("type").and_then(Value::as_str),
+        Some("hc" | "hcLight")
+    ) {
+        losses.push(serde_json::json!({"property":"type","reason":"high-contrast appearance retained in source; separate high-contrast capability not modeled"}));
+    }
+    if let Some(layers) = root.get("hexwitchSemanticLayers") {
+        let layers = layers
+            .as_array()
+            .ok_or_else(|| IngestError::InvalidSource("invalid internal semantic layers".into()))?;
+        if layers.len() > 16 {
+            return Err(IngestError::InvalidSource(
+                "semantic include layer limit".into(),
+            ));
+        }
+        for layer in layers {
+            if !layer.is_object() {
+                return Err(IngestError::InvalidSource(
+                    "invalid semantic include layer".into(),
+                ));
+            }
+            let mut source = serde_json::json!({"semanticTokenColors":layer});
+            if let Some(enabled) = root.get("semanticHighlighting") {
+                source["semanticHighlighting"] = enabled.clone();
+            }
+            crate::semantic::import_semantic(&mut theme, &source, &mut losses)
+                .map_err(IngestError::InvalidSource)?;
+        }
+    } else {
+        crate::semantic::import_semantic(&mut theme, &root, &mut losses)
+            .map_err(IngestError::InvalidSource)?;
     }
     if let Some(colors) = root.get("colors").and_then(Value::as_object) {
+        for (key, value) in colors.iter().filter(|(_, v)| v.as_str() == Some("default")) {
+            let _ = value;
+            losses.push(serde_json::json!({"property":key,"reason":"editor default requested; target defaults unverified"}));
+        }
         for key in colors.keys().filter(|key| workbench_role(key).is_none()) {
             losses.push(serde_json::json!({"property":key,"reason":"unmapped workbench key; preserved in source extension"}));
         }
     }
     for entry in &token_colors {
         let scopes = match &entry.scope {
-            ScopeSpec::None => vec![],
+            ScopeSpec::None => {
+                losses.push(serde_json::json!({"property":"tokenColors.scope","reason":"unscoped token settings are ignored by the VS Code profile; editor defaults come from workbench colors"}));
+                vec![]
+            }
             ScopeSpec::One(s) => vec![s.clone()],
             ScopeSpec::Many(s) => s.clone(),
         };
@@ -624,7 +839,12 @@ mod tests {
             ]
         }"##;
         let t = ingest_vscode_json(json).unwrap();
-        assert_eq!(t.styles.len(), 1); // only surface.base
+        assert_eq!(t.styles.len(), 2); // base plus the newly supported cursor
+        assert!(t.extensions["hexwitch.import.losses.v1"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|loss| loss["property"] == "meta.weird.future-scope"));
     }
 
     #[test]

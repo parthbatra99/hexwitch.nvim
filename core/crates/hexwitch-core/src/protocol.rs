@@ -93,12 +93,14 @@ pub fn capabilities() -> serde_json::Value {
         "protocol_version": PROTOCOL_VERSION,
         "engine_version": env!("CARGO_PKG_VERSION"),
         "ir_version": crate::IR_VERSION,
+        "ir_features": ["property_opacity", "property_locks", "semantic_type_selectors", "semantic_priority", "independent_strikethrough"],
+        "intent_features": ["include_semantic"],
         "operations": ["import", "interpret", "revise", "validate", "emit"],
         "edit_spec_versions": [0, 1],
         "provider_transport": {"requires_explicit_provider":true,"structured_output":"json_schema","automatic_retry":false},
         "editors": ["nvim"],
         "offline": true,
-        "limitations": ["Scene calculations are not real-editor render verification", "Live provider and human preference evaluations are opt-in", "Cancellation and structured-output fallback are not yet supported", "Semantic modifier lowering is incomplete"]
+        "limitations": ["Scene calculations are not real-editor render verification", "Live provider and human preference evaluations are opt-in", "Cancellation and structured-output fallback are not yet supported", "Neovim cannot faithfully express modifier conjunctions or all priority interactions"]
     })
 }
 

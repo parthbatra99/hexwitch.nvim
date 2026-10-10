@@ -37,7 +37,12 @@ fn to_u32(c: Srgb) -> i64 {
 
 /// Load the colorscheme in headless nvim and return resolved groups as JSON.
 fn resolve_in_nvim(lua: &str, groups: &[&str]) -> serde_json::Value {
-    let dir = std::env::temp_dir().join(format!("hexwitch-nvim-roundtrip-{}", std::process::id()));
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let dir = std::env::temp_dir().join(format!(
+        "hexwitch-nvim-roundtrip-{}-{}",
+        std::process::id(),
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
     let colors_dir = dir.join("colors");
     std::fs::create_dir_all(&colors_dir).unwrap();
     std::fs::write(colors_dir.join("hexwitch_roundtrip.lua"), lua).unwrap();
@@ -167,6 +172,60 @@ fn nvim_resolves_emitted_colorscheme_as_expected() {
         lsp_var["fg"].as_i64(),
         Some(to_u32(Srgb::from_hex("#83a598").unwrap()))
     );
+}
+
+#[test]
+fn semantic_groups_and_independent_decorations_resolve_in_real_nvim() {
+    if !nvim_available() {
+        assert!(std::env::var("CI").is_err(), "Neovim required in CI");
+        return;
+    }
+    let theme = ingest_vscode_json(include_str!(
+        "../../../eval/import/semantic-precedence.jsonc"
+    ))
+    .unwrap();
+    let emitted = emit_nvim(&theme).unwrap();
+    assert!(emitted
+        .report
+        .losses
+        .iter()
+        .any(|(_, _, reason)| reason.contains("conjunction")));
+    let resolved = resolve_in_nvim(
+        &emitted.lua,
+        &[
+            "@lsp.type.class",
+            "@lsp.type.interface",
+            "@lsp.type.function",
+            "@lsp.typemod.variable.readonly.rust",
+            "@lsp.typemod.variable.async",
+            "Comment",
+        ],
+    );
+    assert_eq!(
+        resolved["@lsp.type.class"]["fg"].as_i64(),
+        Some(to_u32(Srgb::from_hex("#6688cc").unwrap()))
+    );
+    assert_eq!(
+        resolved["@lsp.type.interface"]["fg"].as_i64(),
+        Some(to_u32(Srgb::from_hex("#cc8866").unwrap()))
+    );
+    assert_eq!(resolved["@lsp.type.function"]["underline"], true);
+    assert_eq!(resolved["@lsp.type.function"]["strikethrough"], true);
+    assert_ne!(resolved["@lsp.type.function"]["bold"], true);
+    let expected = hexwitch_core::color::composite_over(
+        Srgb::from_hex("#a1b2c3").unwrap(),
+        128.0 / 255.0,
+        theme.base_bg().unwrap(),
+    );
+    assert_eq!(
+        resolved["@lsp.typemod.variable.readonly.rust"]["fg"].as_i64(),
+        Some(to_u32(expected))
+    );
+    assert_eq!(
+        resolved["@lsp.typemod.variable.readonly.rust"]["bold"],
+        true
+    );
+    assert_ne!(resolved["Comment"]["italic"], true);
 }
 
 #[test]

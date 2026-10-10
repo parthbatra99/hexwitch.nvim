@@ -42,6 +42,11 @@ jobs:
       - name: Lint
         run: cargo clippy --all-targets -- -D warnings
 
+      - name: Verify evaluation fixture metadata and hashes
+        run: |
+          python3 eval/verify-fixtures.py
+          python3 -m unittest discover -s eval -p 'test_fixture_metadata.py'
+
       - name: Test engine and thin Neovim adapter
         run: cargo test --all --locked
 

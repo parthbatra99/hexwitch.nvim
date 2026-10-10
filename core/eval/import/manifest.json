@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "suite": "import_fidelity",
+  "references": [
+    {
+      "file": "semantic-precedence.jsonc",
+      "origin": "Hexwitch authored rule-resolution contract",
+      "license": "MIT",
+      "revision": "semantic-contract-v1",
+      "sha256": "f5da5a8075c4bc1ae5178ca4bb7710769cd174348b67ccc95a0efab8aebd312b",
+      "purpose": "Distinguish lexical and semantic layers, specificity, source-order ties, typography reset, opacity and property mapping",
+      "expected": ["lexical variable #bb9966", "readonly Rust variable #a1b2c3 with alpha 128/255", "class #6688cc, interface #cc8866", "fontStyle resets bold and keeps both underline/strikethrough"],
+      "limitations": ["Synthetic, not aesthetic evidence", "Combined modifier priority in real editors is unverified"]
+    },
+    {
+      "file": "malformed-semantic.json",
+      "origin": "Hexwitch authored malformed-input boundary",
+      "license": "MIT",
+      "revision": "semantic-contract-v1",
+      "sha256": "6f6eb7001928847b129a96f478173fe919574eebce5cd370bb9d4eb79b074815",
+      "purpose": "Reject malformed semantic selectors rather than silently skipping",
+      "expected": ["import error for repeated dot selector"],
+      "limitations": ["One negative selector example; unit cases cover additional malformed values"]
+    },
+    {
+      "file": "vscode-1.95.0/dark_plus.json",
+      "origin": "https://github.com/microsoft/vscode/blob/912bb683695358a54ae0c670461738984cbb5b95/extensions/theme-defaults/themes/dark_plus.json",
+      "license": "MIT",
+      "license_file": "vscode-1.95.0/LICENSE.txt",
+      "revision": "912bb683695358a54ae0c670461738984cbb5b95 (VS Code 1.95.0)",
+      "sha256": "800eb11bb935198c9858f248ffd104925fa3ec5c49ac1aa0d9d969e0ad0c0884",
+      "purpose": "Complete upstream JSONC theme with include; explicit function/type/variable scope-stack probes",
+      "expected": ["base #1e1e1e", "comment #6a9955", "function scope #dcdcaa", "type scope #4ec9b0", "variable scope #9cdcfe", "custom semantic types and scope collapse reported"],
+      "limitations": ["Only supplied theme files, not VS Code workbench defaults or extension provider registries", "No claim of complete visual fidelity"]
+    },
+    {
+      "file": "vscode-1.95.0/dark_vs.json",
+      "origin": "https://github.com/microsoft/vscode/blob/912bb683695358a54ae0c670461738984cbb5b95/extensions/theme-defaults/themes/dark_vs.json",
+      "license": "MIT",
+      "license_file": "vscode-1.95.0/LICENSE.txt",
+      "revision": "912bb683695358a54ae0c670461738984cbb5b95 (VS Code 1.95.0)",
+      "sha256": "97517bb4bdcdd6d4642453bf0114000ed74ff28aa1a8ef5d0a83f0440b8108b1",
+      "purpose": "Unmodified included Dark+ base, shorthand RGBA and semantic enablement",
+      "expected": ["include resolves without mutating source file", "semantic enablement true"],
+      "limitations": ["Workbench unspecified keys need target defaults"]
+    },
+    {
+      "file": "vscode-1.95.0/LICENSE.txt",
+      "origin": "https://github.com/microsoft/vscode/blob/912bb683695358a54ae0c670461738984cbb5b95/LICENSE.txt",
+      "license": "MIT",
+      "revision": "912bb683695358a54ae0c670461738984cbb5b95 (VS Code 1.95.0)",
+      "sha256": "9480271317925265e806a9a196aaa33410a962fa9d4d1e248a4a5187bc8c9df9",
+      "purpose": "Preserve upstream license and copyright notice alongside complete fixtures",
+      "expected": ["license notice retained verbatim"],
+      "limitations": ["Does not cover other reference fixture licenses"]
+    }
+  ]
+}

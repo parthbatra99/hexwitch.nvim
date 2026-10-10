@@ -8,7 +8,9 @@ contrast pass is not a comfort or productivity result.
 `manifest.json` is the legacy metric regression set. Its six theme files are
 curated excerpts; do not describe them as complete faithful imports. Upstream
 revision/license verification remains work before adding them to a release
-fidelity corpus.
+fidelity corpus. `import/manifest.json` adds a complete pinned Dark+ reference
+and included base with original upstream MIT notice, plus authored semantic
+success/failure fixtures. Explicit scope probes are not full editor rendering.
 
 `corpus-v1.json` contains 50 authored annotated requests: 30 development and 20
 held-out. Required, forbidden, and acceptable outcomes are semantic judgments,
@@ -40,6 +42,17 @@ For each new fixture, record:
 This is the initial contribution specification, not yet a complete enforced
 fixture schema or a completed model comparison. Independent reviewers should
 annotate outcomes without seeing the system output.
+
+Import fixture metadata and exact byte hashes are enforced offline:
+
+```sh
+python3 core/eval/verify-fixtures.py
+python3 -m unittest discover -s core/eval -p 'test_fixture_metadata.py'
+```
+
+The validator rejects missing fields, unknown metadata, changed hashes and path
+escapes; CI runs it alongside the Rust suites. The six legacy excerpts still
+have unverified upstream license provenance and are not promoted to this suite.
 
 ## Human evaluation protocol (not yet run)
 

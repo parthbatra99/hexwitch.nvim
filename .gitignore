@@ -116,3 +116,6 @@ todo.md
 
 # Rust (core engine)
 core/target/
+
+# Evaluation helper bytecode
+core/eval/__pycache__/

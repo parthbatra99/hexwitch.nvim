@@ -464,7 +464,7 @@ fn link_definitions() -> Vec<(&'static str, &'static str)> {
 
 /// Groups whose definitions need post-processing beyond the generic path.
 fn underline_attrs(style: &Style) -> Vec<(&'static str, bool)> {
-    match style.underline {
+    let mut attrs = match style.underline {
         Some(UnderlineStyle::Single) => vec![("underline", true)],
         Some(UnderlineStyle::Double) => vec![("underdouble", true)],
         Some(UnderlineStyle::Curl) => vec![("undercurl", true)],
@@ -480,11 +480,18 @@ fn underline_attrs(style: &Style) -> Vec<(&'static str, bool)> {
                 ("underdouble", false),
                 ("underdotted", false),
                 ("underdashed", false),
-                ("strikethrough", false),
             ]
         }
         None => vec![],
+    };
+    if let Some(strike) = style.strikethrough {
+        attrs.push(("strikethrough", strike));
+    } else if style.states.get(&crate::ir::Property::Strikethrough)
+        == Some(&crate::ir::PropertyState::Clear)
+    {
+        attrs.push(("strikethrough", false));
     }
+    attrs
 }
 
 fn lua_color(c: Srgb) -> String {
@@ -544,6 +551,11 @@ pub fn emit_nvim(theme: &Theme) -> Result<NvimEmit, EmitError> {
             }
         }
         for (property, state) in &style.states {
+            if *property == crate::ir::Property::Underline
+                && *state == crate::ir::PropertyState::Clear
+            {
+                continue;
+            }
             property_losses.push((
                 role.to_string(),
                 format!("{property:?}"),
@@ -551,13 +563,8 @@ pub fn emit_nvim(theme: &Theme) -> Result<NvimEmit, EmitError> {
             ));
         }
     }
-    for semantic in &theme.modifiers {
-        property_losses.push((
-            semantic.role.to_string(),
-            "modifiers".into(),
-            "semantic modifier overrides not yet emitted".into(),
-        ));
-    }
+    let semantic = super::semantic_nvim::emit(theme).map_err(EmitError::InvalidTheme)?;
+    property_losses.extend(semantic.losses);
     let theme = &lowered;
     if theme.base_bg().is_none() {
         return Err(EmitError::MissingBase(theme.meta.name.clone()));
@@ -731,6 +738,10 @@ pub fn emit_nvim(theme: &Theme) -> Result<NvimEmit, EmitError> {
         report.linked.push(group.to_string());
     }
 
+    // Explicit semantic definitions follow generic LSP links so they are not overwritten.
+    lua.push_str(&semantic.lua);
+    report.defined.extend(semantic.defined);
+
     // ---- terminal palette ----
     for slot in 0u8..16 {
         if let Some(style) = theme.get(&Role::Terminal(slot)) {
@@ -746,6 +757,17 @@ pub fn emit_nvim(theme: &Theme) -> Result<NvimEmit, EmitError> {
         if !consumed.contains(&role.to_string()) {
             report.unconsumed_roles.push(role.to_string());
         }
+    }
+    if theme
+        .get(&"other.terminal-default".parse().unwrap())
+        .is_some()
+    {
+        report.losses.push((
+            "other.terminal-default".into(),
+            "fg/bg".into(),
+            "Neovim built-in terminal defaults follow Normal, not an independent terminal surface"
+                .into(),
+        ));
     }
 
     let _ = writeln!(lua, "\n-- vim: sw=2 ts=2 et");

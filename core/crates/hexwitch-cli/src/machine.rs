@@ -48,9 +48,18 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                 };
                 let value = serde_json::to_value(&imported).map_err(|e| invalid(e.to_string()))?;
                 write_spec_value(&value, out).map_err(io)?;
+                let losses = imported.extensions.get("hexwitch.import.losses.v1");
+                let outcome = if losses
+                    .and_then(Value::as_array)
+                    .is_some_and(|l| !l.is_empty())
+                {
+                    Outcome::Partial
+                } else {
+                    Outcome::Satisfied
+                };
                 Ok((
-                    Outcome::Satisfied,
-                    json!({"theme":value,"losses":imported.extensions.get("hexwitch.import.losses.v1"),"limitations":["Limited representative scope-stack grammar; not complete TextMate or semantic-token resolution"]}),
+                    outcome,
+                    json!({"theme":value,"losses":losses,"limitations":["Limited representative scope-stack grammar; custom semantic hierarchy/defaults require editor context"]}),
                 ))
             }
             Command::Validate { path, scenes } => {
@@ -145,8 +154,16 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                     artifact::write_atomic(&path, emitted.lua.as_bytes())
                         .map_err(|e| io(e.to_string()))?;
                 }
+                let outcome = if emitted.report.losses.is_empty()
+                    && emitted.report.unconsumed_roles.is_empty()
+                    && emitted.report.skipped.is_empty()
+                {
+                    Outcome::Satisfied
+                } else {
+                    Outcome::Partial
+                };
                 Ok((
-                    Outcome::Satisfied,
+                    outcome,
                     json!({"artifact":emitted.lua,"report":emitted.report}),
                 ))
             }

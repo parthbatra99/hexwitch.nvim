@@ -20,6 +20,9 @@ pub struct IntentSpec {
 pub struct Target {
     pub roles: Vec<String>,
     pub property: Property,
+    /// Include all existing semantic overrides as well as the lexical role.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub include_semantic: bool,
 }
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -119,6 +122,8 @@ pub struct PropertyOutcome {
     pub property: Property,
     pub outcome: Outcome,
     pub reason: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub semantic_rule: Option<usize>,
 }
 #[derive(Debug, Clone, Serialize)]
 pub struct IntentReport {
@@ -190,7 +195,10 @@ fn validate_action(action: &Action) -> Result<(), String> {
                     _ => false,
                 }
         }
-        Action::SetBool { .. } => matches!(p, Property::Bold | Property::Italic),
+        Action::SetBool { .. } => matches!(
+            p,
+            Property::Bold | Property::Italic | Property::Strikethrough
+        ),
         Action::SetUnderline { .. } => p == Property::Underline,
         Action::Lightness { delta, .. } | Action::Chroma { delta, .. } => {
             is_color && delta.is_finite() && (-1.0..=1.0).contains(delta)
@@ -266,16 +274,33 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
     let mut local_locks = std::collections::BTreeSet::new();
     for action in &spec.actions {
         let target = action.target();
+        let mut targets = vec![];
         for role in roles(&revised, target)? {
+            targets.push((role.clone(), None));
+            if target.include_semantic {
+                targets.extend(
+                    revised
+                        .modifiers
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, rule)| rule.role == role)
+                        .map(|(index, _)| (role.clone(), Some(index))),
+                );
+            }
+        }
+        for (role, semantic_rule) in targets {
             let p = target.property;
-            let style = revised.styles.get_mut(&role).unwrap();
+            let style = match semantic_rule {
+                Some(index) => &mut revised.modifiers[index].style,
+                None => revised.styles.get_mut(&role).unwrap(),
+            };
             let before = style.clone();
             let mut outcome = Outcome::Satisfied;
             let mut reason = String::new();
             match action {
                 Action::Lock { scope, .. } => match scope {
                     Scope::Request => {
-                        local_locks.insert((role.clone(), p));
+                        local_locks.insert((role.clone(), semantic_rule, p));
                     }
                     Scope::Persistent => {
                         style.locked.insert(p);
@@ -287,9 +312,11 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
                         style.provenance = crate::ir::Provenance::Ingested;
                     }
                     style.locked.remove(&p);
-                    local_locks.remove(&(role.clone(), p));
+                    local_locks.remove(&(role.clone(), semantic_rule, p));
                 }
-                _ if style.is_locked(p) || local_locks.contains(&(role.clone(), p)) => {
+                _ if style.is_locked(p)
+                    || local_locks.contains(&(role.clone(), semantic_rule, p)) =>
+                {
                     outcome = Outcome::Refused;
                     reason = "property is locked".into();
                 }
@@ -308,10 +335,11 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
                     style.states.remove(&p);
                 }
                 Action::SetBool { value, .. } => {
-                    if p == Property::Bold {
-                        style.bold = Some(*value);
-                    } else {
-                        style.italic = Some(*value);
+                    match p {
+                        Property::Bold => style.bold = Some(*value),
+                        Property::Italic => style.italic = Some(*value),
+                        Property::Strikethrough => style.strikethrough = Some(*value),
+                        _ => unreachable!(),
                     }
                     style.states.remove(&p);
                 }
@@ -384,6 +412,7 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
                 property: p,
                 outcome,
                 reason,
+                semantic_rule,
             });
         }
     }
@@ -415,6 +444,7 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
                 "final contrast {:?}; required {}",
                 achieved, requirement.min
             ),
+            semantic_rule: None,
         });
     }
     if report

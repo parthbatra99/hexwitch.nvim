@@ -14,6 +14,8 @@ pub struct Scene {
     pub min_contrast: f64,
     #[serde(default)]
     pub ordering_verified: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantic: Option<crate::semantic::SemanticContext>,
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -71,6 +73,7 @@ pub fn resolved_style(theme: &Theme, role: &Role) -> Option<Style> {
                 Property::Bold => style.bold = parent.bold,
                 Property::Italic => style.italic = parent.italic,
                 Property::Underline => style.underline = parent.underline,
+                Property::Strikethrough => style.strikethrough = parent.strikethrough,
                 Property::Blend => style.blend = parent.blend,
             }
             if style.has_value(property) {
@@ -105,7 +108,16 @@ pub fn validate_scenes(theme: &Theme, scenes: &[Scene]) -> Result<ValidationRepo
             bg = None;
             reasons.push("surface needs an unknown external backdrop".into());
         }
-        let text = resolved_style(theme, &scene.foreground);
+        let mut text = resolved_style(theme, &scene.foreground);
+        if let Some(context) = &scene.semantic {
+            context.validate()?;
+            if let Some(base) = &text {
+                let resolved =
+                    crate::semantic::resolve_semantic(theme, &scene.foreground, context, base)?;
+                reasons.extend(resolved.limitations);
+                text = Some(resolved.style);
+            }
+        }
         let mut fg = text.as_ref().and_then(|s| s.fg);
         let mut fg_alpha = text.as_ref().and_then(|s| s.fg_opacity).unwrap_or(1.0);
         if fg.is_none() {
@@ -218,9 +230,19 @@ pub fn initial_scenes() -> Vec<Scene> {
                 overlays: overlays.into_iter().map(role).collect(),
                 min_contrast: 4.5,
                 ordering_verified: false,
+                semantic: None,
             });
         }
     }
+    scenes.push(Scene {
+        name: "terminal/default".into(),
+        foreground: role("other.terminal-default"),
+        surface: role("other.terminal-default"),
+        overlays: vec![],
+        min_contrast: 4.5,
+        ordering_verified: false,
+        semantic: None,
+    });
     scenes.push(Scene {
         name: "completion-selected".into(),
         foreground: role("text.primary"),
@@ -228,6 +250,7 @@ pub fn initial_scenes() -> Vec<Scene> {
         overlays: vec![role("other.completion-selection")],
         min_contrast: 4.5,
         ordering_verified: false,
+        semantic: None,
     });
     for kind in ["error", "warning", "info", "hint"] {
         scenes.push(Scene {
@@ -237,16 +260,18 @@ pub fn initial_scenes() -> Vec<Scene> {
             overlays: vec![],
             min_contrast: 4.5,
             ordering_verified: false,
+            semantic: None,
         });
     }
     for i in 0..16 {
         scenes.push(Scene {
             name: format!("terminal/{i}"),
             foreground: Role::Terminal(i),
-            surface: role("surface.base"),
+            surface: role("other.terminal-default"),
             overlays: vec![],
             min_contrast: 4.5,
             ordering_verified: false,
+            semantic: None,
         });
     }
     scenes
@@ -271,6 +296,7 @@ mod tests {
             overlays: vec!["interaction.selection".parse().unwrap()],
             min_contrast: 4.5,
             ordering_verified: false,
+            semantic: None,
         };
         assert_eq!(
             validate_scenes(&t, &[scene.clone()]).unwrap().status,

@@ -50,8 +50,10 @@ See [FUTURE_PLAN.md](FUTURE_PLAN.md) for acceptance gates.
   scopes, contrast ladders, and accent budgets. The six fixtures are curated
   excerpts with independently calculated metrics, not complete pinned theme
   imports. JSONC and sandboxed includes are now supported; alpha and source
-  rules are retained. Full scope resolution and semantic-rule lowering remain
-  incomplete.
+  rules are retained. Standard semantic selectors resolve per property;
+  class/interface distinctions and single-modifier Neovim groups are emitted.
+  Full TextMate resolution, custom semantic registries, and editor priority
+  conformance remain incomplete.
 - **M2 — revise + emit:** seven operations and whole-role protection,
   reports, Neovim emission, and headless round-trips. The replacement
   contrast solver searches both lightness directions and validates quantized

@@ -28,7 +28,20 @@ fn import_validate_and_interpret_are_offline_and_structured() {
     let (ok, value) = call(&["import", theme.to_str().unwrap()]);
     assert!(ok);
     assert_eq!(value["result"]["theme"]["meta"]["ir_version"], 1);
+    assert_eq!(value["outcome"], "partial");
     let (ok, value) = call(&["validate", theme.to_str().unwrap()]);
     assert!(ok);
     assert_ne!(value["result"]["status"], "pass");
+    let semantic = root.join("import/semantic-precedence.jsonc");
+    let (ok, value) = call(&["emit", semantic.to_str().unwrap()]);
+    assert!(ok);
+    assert_eq!(value["outcome"], "partial");
+    assert!(value["result"]["artifact"]
+        .as_str()
+        .unwrap()
+        .contains("@lsp.typemod.variable.readonly.rust"));
+    let malformed = root.join("import/malformed-semantic.json");
+    let (ok, value) = call(&["import", malformed.to_str().unwrap()]);
+    assert!(!ok);
+    assert_eq!(value["errors"][0]["code"], "invalid_input");
 }

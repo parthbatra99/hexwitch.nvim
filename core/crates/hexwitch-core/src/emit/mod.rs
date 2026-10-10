@@ -7,6 +7,7 @@
 //! role, and which IR roles the target has no place for.
 
 pub mod nvim;
+mod semantic_nvim;
 
 pub use nvim::{emit_nvim, EmitError, EmitReport, NvimEmit};
 

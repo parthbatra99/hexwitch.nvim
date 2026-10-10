@@ -77,6 +77,9 @@ pub struct Style {
     pub italic: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub underline: Option<UnderlineStyle>,
+    /// Independent from underline so both decorations can coexist.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strikethrough: Option<bool>,
     /// Floating-window blend (Neovim `winblend`-style, 0-100), where
     /// supported.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -97,11 +100,12 @@ pub enum Property {
     Bold,
     Italic,
     Underline,
+    Strikethrough,
     Blend,
 }
 
 impl Property {
-    pub const ALL: [Self; 10] = [
+    pub const ALL: [Self; 11] = [
         Self::Fg,
         Self::Bg,
         Self::Special,
@@ -111,6 +115,7 @@ impl Property {
         Self::Bold,
         Self::Italic,
         Self::Underline,
+        Self::Strikethrough,
         Self::Blend,
     ];
 }
@@ -152,6 +157,7 @@ impl Style {
             Property::Bold => self.bold.is_some(),
             Property::Italic => self.italic.is_some(),
             Property::Underline => self.underline.is_some(),
+            Property::Strikethrough => self.strikethrough.is_some(),
             Property::Blend => self.blend.is_some(),
         }
     }
@@ -166,6 +172,7 @@ impl Style {
             Property::Bold => self.bold = None,
             Property::Italic => self.italic = None,
             Property::Underline => self.underline = None,
+            Property::Strikethrough => self.strikethrough = None,
             Property::Blend => self.blend = None,
         }
     }
@@ -190,6 +197,29 @@ impl Style {
         }
         Ok(())
     }
+    /// Copy exactly one visual property, including explicit state semantics.
+    /// Locks and source metadata are not inherited through this operation.
+    pub fn copy_property_from(&mut self, other: &Style, property: Property) {
+        self.clear_value(property);
+        self.states.remove(&property);
+        if let Some(state) = other.states.get(&property) {
+            self.states.insert(property, *state);
+        }
+        match property {
+            Property::Fg => self.fg = other.fg,
+            Property::Bg => self.bg = other.bg,
+            Property::Special => self.special = other.special,
+            Property::FgOpacity => self.fg_opacity = other.fg_opacity,
+            Property::BgOpacity => self.bg_opacity = other.bg_opacity,
+            Property::SpecialOpacity => self.special_opacity = other.special_opacity,
+            Property::Bold => self.bold = other.bold,
+            Property::Italic => self.italic = other.italic,
+            Property::Underline => self.underline = other.underline,
+            Property::Strikethrough => self.strikethrough = other.strikethrough,
+            Property::Blend => self.blend = other.blend,
+        }
+    }
+
     pub fn is_locked(&self, property: Property) -> bool {
         self.provenance == Provenance::Locked || self.locked.contains(&property)
     }
@@ -216,6 +246,7 @@ impl Style {
             bold: None,
             italic: None,
             underline: None,
+            strikethrough: None,
             blend: None,
             provenance: Provenance::Ingested,
         }

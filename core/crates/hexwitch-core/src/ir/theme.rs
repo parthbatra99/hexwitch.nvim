@@ -56,6 +56,16 @@ pub struct SemanticStyle {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
     pub style: Style,
+    /// Retains distinctions such as class/interface that share a portable role.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_type: Option<String>,
+    /// Source rule order; equal-specificity rules resolve per property.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub priority: u32,
+}
+
+fn is_zero(value: &u32) -> bool {
+    *value == 0
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -235,12 +245,27 @@ impl Theme {
             if !self.styles.contains_key(&entry.role) {
                 return Err(format!("modifier references missing role {}", entry.role));
             }
-            if entry.modifiers.is_empty()
-                || entry.modifiers.iter().any(|m| {
-                    m.is_empty() || !m.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
-                })
+            if entry.modifiers.len() > 32
+                || entry
+                    .modifiers
+                    .iter()
+                    .any(|m| !crate::semantic::valid_id(m))
+                || entry
+                    .token_type
+                    .as_ref()
+                    .is_some_and(|t| !crate::semantic::valid_id(t))
+                || entry
+                    .language
+                    .as_ref()
+                    .is_some_and(|l| !crate::semantic::valid_id(l))
             {
-                return Err("invalid semantic modifiers".into());
+                return Err("invalid semantic selector".into());
+            }
+            if let Some(token_type) = &entry.token_type {
+                if crate::semantic::portable_role(token_type).is_some_and(|role| role != entry.role)
+                {
+                    return Err("semantic type does not match portable role".into());
+                }
             }
             entry.style.validate()?;
         }
@@ -271,7 +296,8 @@ impl Theme {
     }
 
     pub fn from_json_str(json: &str) -> serde_json::Result<Self> {
-        let value: serde_json::Value = serde_json::from_str(json)?;
+        let value =
+            crate::jsonc::parse(json).map_err(<serde_json::Error as serde::de::Error>::custom)?;
         if value
             .pointer("/meta/ir_version")
             .and_then(serde_json::Value::as_u64)
@@ -290,7 +316,8 @@ impl Theme {
 
     /// Explicit compatibility conversion; never guesses at newer schemas.
     pub fn migrate_v0(json: &str) -> serde_json::Result<Self> {
-        let mut value: serde_json::Value = serde_json::from_str(json)?;
+        let mut value =
+            crate::jsonc::parse(json).map_err(<serde_json::Error as serde::de::Error>::custom)?;
         if !value.get("meta").is_some_and(serde_json::Value::is_object)
             || !value
                 .get("styles")
@@ -299,6 +326,22 @@ impl Theme {
             return Err(<serde_json::Error as serde::de::Error>::custom(
                 "migration requires an IR object with meta and styles",
             ));
+        }
+        // Legacy strikethrough occupied the underline enum. Make it independent
+        // before upgrading so later clear-underline edits preserve strike.
+        if let Some(styles) = value
+            .get_mut("styles")
+            .and_then(serde_json::Value::as_object_mut)
+        {
+            for style in styles.values_mut() {
+                if style.get("underline").and_then(serde_json::Value::as_str)
+                    == Some("strikethrough")
+                {
+                    let object = style.as_object_mut().unwrap();
+                    object.remove("underline");
+                    object.insert("strikethrough".into(), serde_json::Value::Bool(true));
+                }
+            }
         }
         let version = match value.pointer("/meta/ir_version") {
             None => 0,

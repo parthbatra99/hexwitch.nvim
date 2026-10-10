@@ -22,7 +22,9 @@ pub mod ir;
 pub mod jsonc;
 pub mod protocol;
 pub mod revise;
+pub mod scope;
 pub mod selector;
+pub mod semantic;
 pub mod solver;
 pub mod validate;
 
