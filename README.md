@@ -1,13 +1,14 @@
 # hexwitch
 
-**A theme engine, not a theme.** Hexwitch turns something you love — an
-existing theme, a wallpaper, a description — into a coherent, readable
-editor environment, and keeps it recognizable as *the thing you loved*
-while you refine it.
+**A theme engine, not a theme.** Hexwitch is building an editor-independent
+engine for adapting references into a personal editor theme. Today the
+prototype imports a selected subset of VS Code theme JSON, applies
+structured revisions, and emits Neovim colorschemes. Image references,
+description synthesis, and other editors are planned, not proven capabilities.
 
-Most theme generators hand you a pile of hex codes. Hexwitch treats a
-theme as a system of relationships (surfaces, hierarchy, syntax roles,
-interaction states) and compiles that system into concrete editors:
+The intended design treats a theme as a system of relationships (surfaces,
+hierarchy, syntax roles, interaction states). This is the target pipeline;
+not every stage or editor below is implemented yet:
 
 ```
 reference (theme / image / description)
@@ -17,40 +18,48 @@ reference (theme / image / description)
    → emit        Neovim / VS Code / Zed artifacts
 ```
 
-Three rules the engine does not break:
+Three design boundaries:
 
-1. **The LLM never picks colors.** Interpretation turns language into a
-   structured, reviewable edit spec. Color computation is deterministic.
-2. **The IR is the product.** One canonical role graph
-   (`syntax.keyword`, `diagnostic.error.virtual_text`, …) that all
-   adapters lower into editor-native highlighting.
-3. **Emit is not the last step.** What gets validated is what the adapter
-   actually outputs — after fallbacks, quantization, and alpha compositing.
+1. **The engine computes final colors.** Interpretation turns language into
+   a structured, reviewable edit spec. Trusted user/reference colors are
+   legitimate inputs; color computation remains deterministic.
+2. **The IR is the product.** Canonical roles (`syntax.keyword`,
+   `diagnostic.error.virtual-text`, …) separate design from editor mappings.
+   The current role map is not yet a complete relationship graph.
+3. **Emission needs verification.** Current tests resolve selected emitted
+   highlights in real Neovim. Base-background contrast calculations are not
+   a rendered-code audit or proof of overlay readability.
 
 ## Repository layout
 
 | Path | What it is |
 |---|---|
 | `core/` | Rust workspace: the engine (color science, IR, analysis, revision, validation, emission) |
-| `adapters/nvim/` | Neovim frontend (legacy Lua plugin, being replaced by a thin client of the engine) |
+| `adapters/nvim/` | Thin Neovim client: reference, prompt, candidate review, apply, undo/redo |
+| `adapters/nvim-legacy/` | Original v1 Lua plugin, preserved separately for reference |
 
 ## Status
 
-- **M0 — foundations (done):** color science (sRGB/OKLab/OKLCH, WCAG
-  contrast, gamut mapping, compositing) and IR v0, with tests.
-- **M1 — ingest + analyze (done):** VS Code theme ingest, identity
-  fingerprints (contrast ladders, accent budgets), eval set of six
-  reference themes with independently derived goldens.
-- **M2 — revise + emit (done):** edit specs (`protect`/`change` ops in
-  OKLCH: lightness/chroma/hue shifts, minimal-lightness contrast solves)
-  with minimal diff and honest revision reports; Neovim colorscheme
-  emission with degradation reports; headless-Neovim round-trip tests.
-- **M3 — interpretation bridge (done, plugin pending):** natural language
-  -> validated edit specs. The model emits a flat action list under a
-  strict schema (enforced server-side *and* client-side) and never picks
-  colors; everything between model output and colorscheme is
-  deterministic and offline-testable. Thin Neovim plugin is the
-  remaining piece.
+**M0–M3 are working prototype slices, not production-complete capabilities.**
+See [FUTURE_PLAN.md](FUTURE_PLAN.md) for acceptance gates.
+
+- **M0 — foundations:** sRGB/OKLab/OKLCH, WCAG contrast, compositing,
+  and IR v0. Gamut mapping uses deterministic fixed-hue chroma reduction;
+  it is not a complete implementation of the CSS gamut-mapping specification.
+- **M1 — ingest + analyze:** selected VS Code workbench colors and token
+  scopes, contrast ladders, and accent budgets. The six fixtures are curated
+  excerpts with independently calculated metrics, not complete pinned theme
+  imports. JSONC/includes, semantic rules, and opacity are not supported yet.
+- **M2 — revise + emit:** seven operations and whole-role protection,
+  reports, Neovim emission, and headless round-trips. The current coarse
+  contrast search does not establish global minimality. Validation does not
+  yet cover selection/diff/search/popup scene combinations.
+- **M3 — interpretation + thin Neovim client (initial slice):** natural
+  language -> edit specs -> candidate review -> apply/undo/redo. The
+  adapter uses the Rust binary and built-in Neovim UI, with offline
+  replay tests across the full loop. Live provider behavior and broader
+  interpretation accuracy still need evaluation; prebuilt binaries are
+  not yet distributed.
 - **M4 — portability proof (VS Code adapter).**
 - **M5 — image references, candidate sets, lineage.**
 
@@ -92,11 +101,27 @@ hexwitch interpret eval/themes/gruvbox-dark-medium.json \
 # model response offline.
 ```
 
-## The old Neovim plugin
+## Neovim
 
-The original Lua plugin (LLM-prompt → 16 hex colors) lives under
-`adapters/nvim/` unchanged for now. It will shrink into a thin frontend —
-pick a reference, write a prompt, preview, iterate — as M3 lands.
+See [the adapter setup and workflow](adapters/nvim/README.md). Configure
+`adapters/nvim/` as the plugin directory, build the Rust binary, and set
+`cmd` to its path. `:HexwitchReference`, `:Hexwitch`, `:HexwitchStatus`,
+`:HexwitchApply`, and `:HexwitchUndo` form the working loop.
+
+The original Lua plugin is preserved in `adapters/nvim-legacy/`; do not
+load both adapters, which share the `hexwitch` module/command namespace.
+
+## Testing the whole loop
+
+```sh
+cargo test --manifest-path core/Cargo.toml --all --locked
+```
+
+With Neovim installed, this includes the new adapter's headless tests
+against the real binary: offline interpretation, revision reports,
+candidate acceptance, undo/redo, branching, and failure recovery. CI
+installs Neovim so these tests cannot silently skip there. This verifies
+functionality, not subjective theme quality or live model accuracy.
 
 ## Design notes
 

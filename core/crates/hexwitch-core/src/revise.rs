@@ -330,9 +330,11 @@ pub fn revise(theme: &Theme, spec: &EditSpec) -> Result<(Theme, RevisionReport),
     for target in &spec.protect {
         let mut any = false;
         for role in revised.styles.keys() {
-            if matches(target, role) && !protected.contains(role) {
-                protected.push(role.clone());
+            if matches(target, role) {
                 any = true;
+                if !protected.contains(role) {
+                    protected.push(role.clone());
+                }
             }
         }
         // Wildcards matching nothing are fine; an exact, well-formed role
@@ -591,6 +593,22 @@ mod tests {
         // Protection is recorded as Locked provenance for future rounds.
         assert_eq!(
             out.get(&Role::Syntax(SyntaxRole::Comment))
+                .unwrap()
+                .provenance,
+            Provenance::Locked
+        );
+    }
+
+    #[test]
+    fn protection_is_idempotent_across_rounds() {
+        let t = nordish();
+        let spec = spec(r##"{"protect":["syntax.keyword","syntax.keyword"]}"##);
+        let (first, _) = revise(&t, &spec).unwrap();
+        let (second, _) = revise(&first, &spec).unwrap();
+        assert_eq!(first.styles, second.styles);
+        assert_eq!(
+            second
+                .get(&Role::Syntax(SyntaxRole::Keyword))
                 .unwrap()
                 .provenance,
             Provenance::Locked

@@ -513,7 +513,16 @@ pub fn emit_nvim(theme: &Theme) -> Result<NvimEmit, EmitError> {
         Appearance::Dark => "dark",
         Appearance::Light => "light",
     };
-    let source = theme.meta.source.as_deref().unwrap_or("unknown");
+    // Metadata is data, not Lua. Keep it on a single comment line so an
+    // imported IR source containing newlines cannot inject executable code.
+    let source: String = theme
+        .meta
+        .source
+        .as_deref()
+        .unwrap_or("unknown")
+        .chars()
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect();
 
     let _ = write!(
         lua,
@@ -754,6 +763,17 @@ mod tests {
             .skipped
             .iter()
             .any(|(g, r)| g == "Visual" && r == "interaction.selection"));
+    }
+
+    #[test]
+    fn source_metadata_cannot_escape_the_comment() {
+        let mut theme = gruvbox_ish();
+        theme.meta.source = Some("reference\nerror('injected')\rnext".into());
+        let emitted = emit_nvim(&theme).unwrap();
+        assert!(emitted
+            .lua
+            .contains("-- Source: reference error('injected') next"));
+        assert!(!emitted.lua.contains("\nerror('injected')"));
     }
 
     #[test]

@@ -98,6 +98,9 @@ enum Command {
         /// Print the revision report even on success.
         #[arg(long)]
         report: bool,
+        /// Write a machine-readable revision report for editor clients.
+        #[arg(long)]
+        report_json: Option<std::path::PathBuf>,
     },
     /// Interpret a natural-language request as an edit spec (LLM bridge).
     /// The model never picks colors; it emits actions that are validated
@@ -308,6 +311,7 @@ fn run(command: Command) -> Result<(), String> {
             out,
             emit_nvim,
             report,
+            report_json,
         } => {
             let theme_json = std::fs::read_to_string(&path)
                 .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
@@ -347,6 +351,11 @@ fn run(command: Command) -> Result<(), String> {
                 );
             }
 
+            if let Some(path) = report_json {
+                let json = serde_json::to_string_pretty(&revision).map_err(|e| e.to_string())?;
+                std::fs::write(&path, json)
+                    .map_err(|e| format!("cannot write {}: {e}", path.display()))?;
+            }
             let revised_json = revised.to_json_string().map_err(|e| e.to_string())?;
             match out {
                 Some(p) => {

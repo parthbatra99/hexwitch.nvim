@@ -38,15 +38,15 @@ jobs:
       - name: Lint
         run: cargo clippy --all-targets -- -D warnings
 
-      - name: Test
-        run: cargo test --all
+      - name: Test engine and thin Neovim adapter
+        run: cargo test --all --locked
 
   legacy-lua:
     name: Legacy Neovim plugin
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: adapters/nvim
+        working-directory: adapters/nvim-legacy
     steps:
       - uses: actions/checkout@v4
 
