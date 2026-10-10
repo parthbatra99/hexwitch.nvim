@@ -5,6 +5,10 @@
 //! subcommands arrive with their milestones and must stay scriptable —
 //! the Neovim adapter (and later VS Code/Zed) drive this same binary.
 
+mod artifact;
+mod machine;
+mod provider;
+
 use clap::{Parser, Subcommand};
 use hexwitch_core::color::{contrast_verdict, gamut_map, Oklch, Srgb};
 use hexwitch_core::eval::{render_report, run_eval_dir};
@@ -17,12 +21,33 @@ use hexwitch_core::eval::{render_report, run_eval_dir};
     disable_help_subcommand = true
 )]
 struct Cli {
+    /// Versioned JSON response envelope (never parse human stderr).
+    #[arg(long, global = true)]
+    machine: bool,
+    #[arg(long, global = true, default_value = "local")]
+    request_id: String,
     #[command(subcommand)]
     command: Command,
 }
 
 #[derive(Subcommand)]
 enum Command {
+    /// Discover protocol, engine, and supported operation versions.
+    Capabilities,
+    /// Import source data into validated IR (migration must be explicit).
+    Import {
+        path: std::path::PathBuf,
+        #[arg(long)]
+        migrate_v0: bool,
+        #[arg(short, long)]
+        out: Option<std::path::PathBuf>,
+    },
+    /// Validate calculated scenes; unknown rendering is unverified, not pass.
+    Validate {
+        path: std::path::PathBuf,
+        #[arg(long)]
+        scenes: Option<std::path::PathBuf>,
+    },
     /// Convert a color between representations.
     Convert {
         /// Color as #rrggbb.
@@ -121,8 +146,8 @@ enum Command {
         /// Write the validated edit spec here (IR EditSpec JSON).
         #[arg(short, long)]
         out: Option<std::path::PathBuf>,
-        /// Provider: `openai` or `openrouter` (default: whichever key is
-        /// set, OPENAI_API_KEY / OPENROUTER_API_KEY).
+        /// Explicit provider: `openai` or `openrouter`. Only its configured
+        /// OPENAI_API_KEY / OPENROUTER_API_KEY is used.
         #[arg(long)]
         provider: Option<String>,
         /// Model name (default gpt-4o-mini / openai/gpt-4o-mini).
@@ -166,11 +191,18 @@ fn summarize_report(report: &hexwitch_core::emit::EmitReport) -> String {
             "  unconsumed: {role} (no mapping in this target yet)\n"
         ));
     }
+    for (role, property, reason) in &report.losses {
+        s.push_str(&format!("  loss: {role} {property}: {reason}\n"));
+    }
     s
 }
 
 fn main() {
     let cli = Cli::parse();
+    if cli.machine {
+        machine_main(cli.command, &cli.request_id);
+        return;
+    }
     if let Err(err) = run(cli.command) {
         eprintln!("error: {err}");
         std::process::exit(1);
@@ -179,6 +211,41 @@ fn main() {
 
 fn run(command: Command) -> Result<(), String> {
     match command {
+        Command::Capabilities => println!("{}", hexwitch_core::protocol::capabilities()),
+        Command::Import {
+            path,
+            migrate_v0,
+            out,
+        } => {
+            let raw = read_input(&path)?;
+            let theme = if migrate_v0 {
+                hexwitch_core::ir::Theme::migrate_v0(&raw).map_err(|e| e.to_string())?
+            } else {
+                hexwitch_core::import_path::load_theme_path(&path).map_err(|e| e.to_string())?
+            };
+            let value = serde_json::to_value(theme).map_err(|e| e.to_string())?;
+            if out.is_none() {
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&value).map_err(|e| e.to_string())?
+                );
+            }
+            write_spec_value(&value, out)?;
+        }
+        Command::Validate { path, scenes } => {
+            let theme = hexwitch_core::ingest::load_theme(&read_input(&path)?)
+                .map_err(|e| e.to_string())?;
+            let scenes = match scenes {
+                Some(p) => serde_json::from_str(&read_input(&p)?)
+                    .map_err(|e| format!("invalid scenes: {e}"))?,
+                None => hexwitch_core::validate::initial_scenes(),
+            };
+            let report = hexwitch_core::validate::validate_scenes(&theme, &scenes)?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&report).map_err(|e| e.to_string())?
+            );
+        }
         Command::Convert { color, to } => {
             let c = parse_color(&color)?;
             match to {
@@ -219,6 +286,14 @@ fn run(command: Command) -> Result<(), String> {
             }
         }
         Command::Map { l, c, h } => {
+            if !l.is_finite()
+                || !(0.0..=1.0).contains(&l)
+                || !c.is_finite()
+                || !(0.0..=1.0).contains(&c)
+                || !h.is_finite()
+            {
+                return Err("invalid OKLCH parameters".into());
+            }
             let mapped = gamut_map(Oklch::new(l, c, h));
             let back = mapped.to_oklch();
             println!(
@@ -231,9 +306,10 @@ fn run(command: Command) -> Result<(), String> {
             );
         }
         Command::Analyze { path, json } => {
-            let source = std::fs::read_to_string(&path)
-                .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-            let theme = hexwitch_core::ingest::load_theme(&source).map_err(|e| e.to_string())?;
+            let source = read_input(&path)?;
+            let _ = source;
+            let theme =
+                hexwitch_core::import_path::load_theme_path(&path).map_err(|e| e.to_string())?;
             let fp = hexwitch_core::analyze::fingerprint(&theme).map_err(|e| e.to_string())?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&fp).unwrap());
@@ -270,9 +346,10 @@ fn run(command: Command) -> Result<(), String> {
             out,
             report,
         } => {
-            let source = std::fs::read_to_string(&path)
-                .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-            let theme = hexwitch_core::ingest::load_theme(&source).map_err(|e| e.to_string())?;
+            let source = read_input(&path)?;
+            let _ = source;
+            let theme =
+                hexwitch_core::import_path::load_theme_path(&path).map_err(|e| e.to_string())?;
             let emitted = match target {
                 Editor::Nvim => {
                     hexwitch_core::emit::emit_nvim(&theme).map_err(|e| e.to_string())?
@@ -284,7 +361,7 @@ fn run(command: Command) -> Result<(), String> {
                         std::fs::create_dir_all(parent)
                             .map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
                     }
-                    std::fs::write(&p, emitted.lua)
+                    artifact::write_atomic(&p, emitted.lua.as_bytes())
                         .map_err(|e| format!("cannot write {}: {e}", p.display()))?;
                     if report {
                         eprintln!("{}", summarize_report(&emitted.report));
@@ -313,12 +390,12 @@ fn run(command: Command) -> Result<(), String> {
             report,
             report_json,
         } => {
-            let theme_json = std::fs::read_to_string(&path)
-                .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-            let theme = hexwitch_core::ingest::load_theme(&theme_json)
+            ensure_distinct(&[out.as_deref(), emit_nvim.as_deref(), report_json.as_deref()])?;
+            let theme_json = read_input(&path)?;
+            let _ = theme_json;
+            let theme = hexwitch_core::import_path::load_theme_path(&path)
                 .map_err(|e| format!("cannot load theme: {e}"))?;
-            let spec_json = std::fs::read_to_string(&spec)
-                .map_err(|e| format!("cannot read {}: {e}", spec.display()))?;
+            let spec_json = read_input(&spec)?;
             let spec = hexwitch_core::revise::EditSpec::from_json(&spec_json)
                 .map_err(|e| format!("invalid edit spec: {e}"))?;
 
@@ -340,7 +417,7 @@ fn run(command: Command) -> Result<(), String> {
                     std::fs::create_dir_all(parent)
                         .map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
                 }
-                std::fs::write(&nvim_out, emitted.lua)
+                artifact::write_atomic(&nvim_out, emitted.lua.as_bytes())
                     .map_err(|e| format!("cannot write {}: {e}", nvim_out.display()))?;
                 eprintln!(
                     "emitted {} ({} defined, {} linked, {} skipped)",
@@ -353,13 +430,13 @@ fn run(command: Command) -> Result<(), String> {
 
             if let Some(path) = report_json {
                 let json = serde_json::to_string_pretty(&revision).map_err(|e| e.to_string())?;
-                std::fs::write(&path, json)
+                artifact::write_atomic(&path, json.as_bytes())
                     .map_err(|e| format!("cannot write {}: {e}", path.display()))?;
             }
             let revised_json = revised.to_json_string().map_err(|e| e.to_string())?;
             match out {
                 Some(p) => {
-                    std::fs::write(&p, revised_json)
+                    artifact::write_atomic(&p, revised_json.as_bytes())
                         .map_err(|e| format!("cannot write {}: {e}", p.display()))?;
                     eprintln!("revised theme written to {}", p.display());
                 }
@@ -377,19 +454,20 @@ fn run(command: Command) -> Result<(), String> {
         } => {
             use hexwitch_core::interpret as interp;
 
-            let theme_json = std::fs::read_to_string(&path)
-                .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+            let theme_json = read_input(&path)?;
+            let _ = theme_json;
             let theme =
-                hexwitch_core::ingest::load_theme(&theme_json).map_err(|e| e.to_string())?;
+                hexwitch_core::import_path::load_theme_path(&path).map_err(|e| e.to_string())?;
 
             // Offline validation path: no network, no prompt needed.
             if let Some(response_path) = from_llm {
-                let raw = std::fs::read_to_string(&response_path)
-                    .map_err(|e| format!("cannot read {}: {e}", response_path.display()))?;
+                let raw = read_input(&response_path)?;
                 let llm =
                     interp::parse_model_output(&raw).map_err(|e| format!("model output: {e}"))?;
                 let spec = interp::llm_spec_to_edit_spec(&llm)
                     .map_err(|e| format!("invalid spec: {e}"))?;
+                spec.validate(&theme)
+                    .map_err(|e| format!("invalid theme targets: {e}"))?;
                 if let Some(notes) = &llm.notes {
                     eprintln!("notes: {notes}");
                 }
@@ -409,12 +487,95 @@ fn run(command: Command) -> Result<(), String> {
             let (endpoint, api_key, default_model) = pick_provider(provider.as_deref())?;
             let model = model.unwrap_or_else(|| default_model.to_string());
 
-            let spec = call_provider(endpoint, &api_key, &model, &system, &user)
+            let llm = provider::call_provider(endpoint, &api_key, &model, &system, &user)
                 .map_err(|e| e.to_string())?;
+            let spec = interp::llm_spec_to_edit_spec(&llm).map_err(|e| e.to_string())?;
+            spec.validate(&theme).map_err(|e| e.to_string())?;
+            if let Some(notes) = llm.notes {
+                eprintln!("notes: {notes}");
+            }
             write_spec(&spec, out)?;
         }
     }
     Ok(())
+}
+
+fn read_input(path: &std::path::Path) -> Result<String, String> {
+    let metadata =
+        std::fs::metadata(path).map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+    if metadata.len() > 8 * 1024 * 1024 {
+        return Err("input exceeds 8 MiB limit".into());
+    }
+    let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+    use std::io::Read;
+    let mut raw = String::new();
+    file.take(8 * 1024 * 1024 + 1)
+        .read_to_string(&mut raw)
+        .map_err(|e| e.to_string())?;
+    if raw.len() > 8 * 1024 * 1024 {
+        return Err("input exceeds 8 MiB limit".into());
+    }
+    Ok(raw)
+}
+
+fn ensure_distinct(paths: &[Option<&std::path::Path>]) -> Result<(), String> {
+    let mut seen = std::collections::BTreeSet::new();
+    for path in paths.iter().flatten() {
+        let absolute = if path.is_absolute() {
+            path.to_path_buf()
+        } else {
+            std::env::current_dir()
+                .map_err(|e| e.to_string())?
+                .join(path)
+        };
+        let mut normalized = std::path::PathBuf::new();
+        for component in absolute.components() {
+            match component {
+                std::path::Component::CurDir => {}
+                std::path::Component::ParentDir => {
+                    normalized.pop();
+                }
+                other => normalized.push(other.as_os_str()),
+            }
+        }
+        if let Some(parent) = normalized.parent() {
+            if let Ok(real) = parent.canonicalize() {
+                normalized = real.join(normalized.file_name().unwrap());
+            }
+        }
+        if !seen.insert(normalized) {
+            return Err("artifact output paths must be distinct".into());
+        }
+    }
+    Ok(())
+}
+
+fn write_spec_value(
+    value: &serde_json::Value,
+    out: Option<std::path::PathBuf>,
+) -> Result<(), String> {
+    if let Some(path) = out {
+        artifact::write_atomic(
+            &path,
+            serde_json::to_string_pretty(value)
+                .map_err(|e| e.to_string())?
+                .as_bytes(),
+        )
+        .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+fn machine_main(command: Command, request_id: &str) {
+    let response = machine::run(command, request_id);
+    let failed = response.outcome == hexwitch_core::protocol::Outcome::Error;
+    println!(
+        "{}",
+        serde_json::to_string(&response).expect("finite validated protocol response")
+    );
+    if failed {
+        std::process::exit(1);
+    }
 }
 
 fn write_spec(
@@ -424,7 +585,8 @@ fn write_spec(
     let json = serde_json::to_string_pretty(spec).map_err(|e| e.to_string())?;
     match out {
         Some(p) => {
-            std::fs::write(&p, json).map_err(|e| format!("cannot write {}: {e}", p.display()))?;
+            artifact::write_atomic(&p, json.as_bytes())
+                .map_err(|e| format!("cannot write {}: {e}", p.display()))?;
             eprintln!("edit spec written to {}", p.display());
         }
         None => println!("{json}"),
@@ -452,145 +614,11 @@ fn pick_provider(flag: Option<&str>) -> Result<(&'static str, String, &'static s
             Ok((OPENROUTER_ENDPOINT, k, "openai/gpt-4o-mini"))
         }
         Some(other) => Err(format!("unknown provider {other:?} (openai | openrouter)")),
-        None => match (openai_key, openrouter_key) {
-            (Some(k), _) => Ok((OPENAI_ENDPOINT, k, "gpt-4o-mini")),
-            (None, Some(k)) => Ok((OPENROUTER_ENDPOINT, k, "openai/gpt-4o-mini")),
-            (None, None) => Err(
-                "no provider key found: set OPENAI_API_KEY or OPENROUTER_API_KEY, or pass --provider"
-                    .to_string(),
-            ),
-        },
+        None => Err(
+            "explicit --provider openai|openrouter required; no automatic credential discovery"
+                .into(),
+        ),
     }
 }
 
-/// Call the provider via curl (no async runtime dependency). The API key
-/// lives in a 0600 header file, never in argv. One retry on validation
-/// failure, with the validation error shown to the model.
-fn call_provider(
-    endpoint: &str,
-    api_key: &str,
-    model: &str,
-    system: &str,
-    user: &str,
-) -> Result<hexwitch_core::revise::EditSpec, String> {
-    use hexwitch_core::interpret as interp;
-
-    let mut messages = vec![
-        serde_json::json!({ "role": "system", "content": system }),
-        serde_json::json!({ "role": "user", "content": user }),
-    ];
-
-    let tmp = std::env::temp_dir().join(format!("hexwitch-interpret-{}", std::process::id()));
-    std::fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
-    let header_path = tmp.join("headers");
-    let payload_path = tmp.join("payload.json");
-    let response_path = tmp.join("response.json");
-
-    // Header file keeps the key out of argv (`ps` visibility).
-    std::fs::write(
-        &header_path,
-        format!("Content-Type: application/json\nAuthorization: Bearer {api_key}"),
-    )
-    .map_err(|e| e.to_string())?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        let _ = std::fs::set_permissions(&header_path, std::fs::Permissions::from_mode(0o600));
-    }
-
-    let cleanup = || {
-        let _ = std::fs::remove_file(&header_path);
-        let _ = std::fs::remove_file(&payload_path);
-        let _ = std::fs::remove_file(&response_path);
-        let _ = std::fs::remove_dir(&tmp);
-    };
-
-    let result = (|| -> Result<hexwitch_core::revise::EditSpec, String> {
-        for attempt in 1..=2 {
-            let payload = serde_json::json!({
-                "model": model,
-                "temperature": 0,
-                "messages": messages,
-                "response_format": {
-                    "type": "json_schema",
-                    "json_schema": interp::response_schema(),
-                },
-            });
-            std::fs::write(&payload_path, payload.to_string()).map_err(|e| e.to_string())?;
-            let _ = std::fs::remove_file(&response_path);
-
-            let status = std::process::Command::new("curl")
-                .arg("-sS")
-                .arg("-m")
-                .arg("120")
-                .arg("-X")
-                .arg("POST")
-                .arg(endpoint)
-                .arg("-H")
-                .arg(format!("@{}", header_path.display()))
-                .arg("--data-binary")
-                .arg(format!("@{}", payload_path.display()))
-                .arg("-o")
-                .arg(response_path.display().to_string())
-                .arg("-w")
-                .arg("%{http_code}")
-                .output()
-                .map_err(|e| format!("cannot run curl: {e} (is it installed?)"))?;
-            let code = String::from_utf8_lossy(&status.stdout).trim().to_string();
-            let body = std::fs::read_to_string(&response_path).unwrap_or_default();
-            if !code.starts_with('2') {
-                return Err(format!(
-                    "provider returned HTTP {code}: {}",
-                    truncate(&body, 400)
-                ));
-            }
-
-            let content = serde_json::from_str::<serde_json::Value>(&body)
-                .ok()
-                .and_then(|v| {
-                    v.pointer("/choices/0/message/content")
-                        .and_then(|c| c.as_str())
-                        .map(str::to_string)
-                })
-                .ok_or_else(|| {
-                    format!("no message content in response: {}", truncate(&body, 400))
-                })?;
-
-            match interp::parse_model_output(&content)
-                .and_then(|llm| interp::llm_spec_to_edit_spec(&llm).map(|spec| (llm, spec)))
-            {
-                Ok((llm, spec)) => {
-                    if let Some(notes) = &llm.notes {
-                        eprintln!("notes: {notes}");
-                    }
-                    return Ok(spec);
-                }
-                Err(e) if attempt == 1 => {
-                    eprintln!("attempt 1 failed validation ({e}); asking the model to correct it");
-                    messages.push(serde_json::json!({ "role": "assistant", "content": content }));
-                    messages.push(serde_json::json!({
-                        "role": "user",
-                        "content": format!("Your output failed validation: {e}. Return a corrected JSON that matches the schema exactly.")
-                    }));
-                }
-                Err(e) => {
-                    return Err(format!(
-                        "model output invalid after retry: {e}\nraw output: {content}"
-                    ))
-                }
-            }
-        }
-        unreachable!("loop returns in both branches")
-    })();
-
-    cleanup();
-    result
-}
-
-fn truncate(s: &str, max: usize) -> String {
-    if s.len() <= max {
-        s.to_string()
-    } else {
-        format!("{}...", &s[..max])
-    }
-}
+// Provider transport lives in provider.rs; no credential-bearing temporary files.

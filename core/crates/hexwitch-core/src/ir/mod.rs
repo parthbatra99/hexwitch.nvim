@@ -12,10 +12,10 @@
 //!   VS Code) or a capture (Zed) is each adapter's lowering problem.
 //! * **Styles carry more than color.** Foreground, background, special
 //!   (underline/undercurl color), font attributes, blend, and provenance.
-//! * **`None` means unspecified/inheritable**, not transparent and not
-//!   "no opinion" — fallback resolution is an explicit adapter concern.
-//! * **Provenance is first-class.** Which colors the user loves (and must
-//!   survive revision) is recorded in the IR itself.
+//! * **Property states are explicit.** Omission, inherit, clear and concrete
+//!   values are distinct; opacity and typography remain separate properties.
+//! * **Source and protection are independent.** Generated properties can be
+//!   locked without losing origin; legacy provenance is compatibility-only.
 
 pub mod role;
 pub mod style;
@@ -25,5 +25,5 @@ pub use role::{
     DiagnosticKind, DiagnosticPart, DiffKind, DiffPart, InteractionRole, Role, RoleParseError,
     Surface, SyntaxRole, TextRole,
 };
-pub use style::{Provenance, Style, UnderlineStyle};
-pub use theme::{Appearance, Theme, ThemeMeta};
+pub use style::{Origin, Property, PropertyState, Provenance, SourceInfo, Style, UnderlineStyle};
+pub use theme::{Appearance, Relationship, RelationshipKind, SemanticStyle, Theme, ThemeMeta};

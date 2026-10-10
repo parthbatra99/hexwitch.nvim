@@ -30,12 +30,14 @@ pub enum EmitError {
     MissingBase(String),
     #[error("theme `{0}` has no text.primary foreground; cannot emit")]
     MissingPrimary(String),
+    #[error("invalid theme: {0}")]
+    InvalidTheme(String),
 }
 
 /// What the adapter could and could not do. Deliberately public: callers
 /// (CLI, tests, the future plugin) surface this to the user instead of
 /// letting silent degradation pass.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, serde::Serialize)]
 pub struct EmitReport {
     pub defined: Vec<String>,
     pub linked: Vec<String>,
@@ -43,6 +45,8 @@ pub struct EmitReport {
     pub skipped: Vec<(String, String)>,
     /// IR roles this target has no mapping for (yet).
     pub unconsumed_roles: Vec<String>,
+    /// Property-specific degradation, including approximate alpha lowering.
+    pub losses: Vec<(String, String, String)>,
 }
 
 pub struct NvimEmit {
@@ -464,9 +468,21 @@ fn underline_attrs(style: &Style) -> Vec<(&'static str, bool)> {
         Some(UnderlineStyle::Single) => vec![("underline", true)],
         Some(UnderlineStyle::Double) => vec![("underdouble", true)],
         Some(UnderlineStyle::Curl) => vec![("undercurl", true)],
-        Some(UnderlineStyle::Dot) => vec![("underdot", true)],
-        Some(UnderlineStyle::Dash) => vec![("underdash", true)],
+        Some(UnderlineStyle::Dot) => vec![("underdotted", true)],
+        Some(UnderlineStyle::Dash) => vec![("underdashed", true)],
         Some(UnderlineStyle::Strikethrough) => vec![("strikethrough", true)],
+        None if style.states.get(&crate::ir::Property::Underline)
+            == Some(&crate::ir::PropertyState::Clear) =>
+        {
+            vec![
+                ("underline", false),
+                ("undercurl", false),
+                ("underdouble", false),
+                ("underdotted", false),
+                ("underdashed", false),
+                ("strikethrough", false),
+            ]
+        }
         None => vec![],
     }
 }
@@ -497,6 +513,52 @@ fn sanitize_name(name: &str) -> String {
 
 /// Emit a complete Neovim colorscheme Lua file plus an honest report.
 pub fn emit_nvim(theme: &Theme) -> Result<NvimEmit, EmitError> {
+    theme.validate().map_err(EmitError::InvalidTheme)?;
+    let mut lowered = theme.clone();
+    let mut property_losses = vec![];
+    let base = theme.base_bg().unwrap_or(Srgb::BLACK);
+    for (role, style) in &mut lowered.styles {
+        if let Some(resolved) = crate::validate::resolved_style(theme, role) {
+            *style = resolved;
+        }
+        for (property, alpha) in [
+            (crate::ir::Property::Fg, style.fg_opacity),
+            (crate::ir::Property::Bg, style.bg_opacity),
+            (crate::ir::Property::Special, style.special_opacity),
+        ] {
+            if let Some(alpha) = alpha.filter(|a| *a < 1.0) {
+                let color = match property {
+                    crate::ir::Property::Fg => &mut style.fg,
+                    crate::ir::Property::Bg => &mut style.bg,
+                    _ => &mut style.special,
+                };
+                if let Some(c) = color {
+                    *c = crate::color::composite_over(*c, alpha, base);
+                }
+                property_losses.push((
+                    role.to_string(),
+                    format!("{property:?}"),
+                    "alpha flattened against base; context-dependent backgrounds not preserved"
+                        .into(),
+                ));
+            }
+        }
+        for (property, state) in &style.states {
+            property_losses.push((
+                role.to_string(),
+                format!("{property:?}"),
+                format!("explicit {state:?} lowering requires target defaults; emitted omission"),
+            ));
+        }
+    }
+    for semantic in &theme.modifiers {
+        property_losses.push((
+            semantic.role.to_string(),
+            "modifiers".into(),
+            "semantic modifier overrides not yet emitted".into(),
+        ));
+    }
+    let theme = &lowered;
     if theme.base_bg().is_none() {
         return Err(EmitError::MissingBase(theme.meta.name.clone()));
     }
@@ -504,7 +566,10 @@ pub fn emit_nvim(theme: &Theme) -> Result<NvimEmit, EmitError> {
         return Err(EmitError::MissingPrimary(theme.meta.name.clone()));
     }
 
-    let mut report = EmitReport::default();
+    let mut report = EmitReport {
+        losses: property_losses,
+        ..EmitReport::default()
+    };
     let mut consumed: HashSet<String> = HashSet::new();
     let mut lua = String::new();
 
@@ -555,11 +620,11 @@ pub fn emit_nvim(theme: &Theme) -> Result<NvimEmit, EmitError> {
                         for (k, v) in underline_attrs(style) {
                             opts.push(format!("{k} = {v}"));
                         }
-                        if style.bold == Some(true) {
-                            opts.push("bold = true".into());
+                        if let Some(bold) = style.bold {
+                            opts.push(format!("bold = {bold}"));
                         }
-                        if style.italic == Some(true) {
-                            opts.push("italic = true".into());
+                        if let Some(italic) = style.italic {
+                            opts.push(format!("italic = {italic}"));
                         }
                     }
                 }
@@ -589,11 +654,11 @@ pub fn emit_nvim(theme: &Theme) -> Result<NvimEmit, EmitError> {
                         for (k, v) in underline_attrs(style) {
                             opts.push(format!("{k} = {v}"));
                         }
-                        if style.bold == Some(true) {
-                            opts.push("bold = true".into());
+                        if let Some(bold) = style.bold {
+                            opts.push(format!("bold = {bold}"));
                         }
-                        if style.italic == Some(true) {
-                            opts.push("italic = true".into());
+                        if let Some(italic) = style.italic {
+                            opts.push(format!("italic = {italic}"));
                         }
                         if let Some(blend) = style.blend {
                             opts.push(format!("blend = {blend}"));
@@ -787,7 +852,7 @@ mod tests {
     #[test]
     fn italic_and_underline_survive() {
         let mut t = gruvbox_ish();
-        let mut comment = t.get(&Role::Syntax(SyntaxRole::Comment)).copied().unwrap();
+        let mut comment = t.get(&Role::Syntax(SyntaxRole::Comment)).cloned().unwrap();
         comment.italic = Some(true);
         comment.underline = Some(UnderlineStyle::Curl);
         t.set(Role::Syntax(SyntaxRole::Comment), comment);

@@ -14,12 +14,19 @@ pub mod analyze;
 pub mod color;
 pub mod emit;
 pub mod eval;
+pub mod import_path;
 pub mod ingest;
+pub mod intent;
 pub mod interpret;
 pub mod ir;
+pub mod jsonc;
+pub mod protocol;
 pub mod revise;
+pub mod selector;
+pub mod solver;
+pub mod validate;
 
 /// Version of the intermediate representation itself.
 /// Bumped on breaking changes to the IR schema; themes carry it for forward
 /// compatibility checks.
-pub const IR_VERSION: u32 = 0;
+pub const IR_VERSION: u32 = 1;

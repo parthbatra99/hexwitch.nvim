@@ -23,6 +23,7 @@ use thiserror::Error;
 
 use crate::analyze::fingerprint;
 use crate::color::Srgb;
+#[cfg(test)]
 use crate::ir::role::Role;
 use crate::ir::theme::Theme;
 use crate::revise::{Against, Change, EditSpec, Op};
@@ -41,6 +42,7 @@ pub const ACTIONS: &[&str] = &[
 /// One action as emitted by the model. All optional fields are nullable
 /// so the shape fits strict structured-output schemas.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LlmAction {
     pub action: String,
     pub target: String,
@@ -57,10 +59,10 @@ pub struct LlmAction {
 /// The model's full response: an action list plus free-form notes the UI
 /// can surface to the user ("here is how I read your request").
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct LlmSpec {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
-    #[serde(default)]
     pub actions: Vec<LlmAction>,
 }
 
@@ -108,7 +110,7 @@ pub fn llm_spec_to_edit_spec(spec: &LlmSpec) -> Result<EditSpec, InterpretError>
             })
         };
         let require_target = |t: &str| -> Result<(), InterpretError> {
-            let ok = t == "*" || t.ends_with(".*") || t.parse::<Role>().is_ok();
+            let ok = crate::selector::valid_selector(t);
             if ok {
                 Ok(())
             } else {
@@ -174,6 +176,23 @@ pub fn llm_spec_to_edit_spec(spec: &LlmSpec) -> Result<EditSpec, InterpretError>
                     "unknown action {other:?}; valid actions: {ACTIONS:?}"
                 )))
             }
+        }
+    }
+    for (index, a) in spec.actions.iter().enumerate() {
+        let unused = match a.action.as_str() {
+            "protect" => {
+                a.amount.is_some() || a.against.is_some() || a.min.is_some() || a.shift.is_some()
+            }
+            "hue" => a.amount.is_some() || a.against.is_some() || a.min.is_some(),
+            "min_contrast" => a.amount.is_some() || a.shift.is_some(),
+            _ => a.against.is_some() || a.min.is_some() || a.shift.is_some(),
+        };
+        if unused {
+            return Err(InterpretError::InvalidAction {
+                index,
+                action: a.action.clone(),
+                message: "irrelevant non-null parameters are not allowed".into(),
+            });
         }
     }
     Ok(out)

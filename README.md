@@ -49,11 +49,14 @@ See [FUTURE_PLAN.md](FUTURE_PLAN.md) for acceptance gates.
 - **M1 — ingest + analyze:** selected VS Code workbench colors and token
   scopes, contrast ladders, and accent budgets. The six fixtures are curated
   excerpts with independently calculated metrics, not complete pinned theme
-  imports. JSONC/includes, semantic rules, and opacity are not supported yet.
+  imports. JSONC and sandboxed includes are now supported; alpha and source
+  rules are retained. Full scope resolution and semantic-rule lowering remain
+  incomplete.
 - **M2 — revise + emit:** seven operations and whole-role protection,
-  reports, Neovim emission, and headless round-trips. The current coarse
-  contrast search does not establish global minimality. Validation does not
-  yet cover selection/diff/search/popup scene combinations.
+  reports, Neovim emission, and headless round-trips. The replacement
+  contrast solver searches both lightness directions and validates quantized
+  crossings without claiming global optimality. Calculated scene validation
+  covers overlays but explicitly marks unknown editor ordering unverified.
 - **M3 — interpretation + thin Neovim client (initial slice):** natural
   language -> edit specs -> candidate review -> apply/undo/redo. The
   adapter uses the Rust binary and built-in Neovim UI, with offline
@@ -63,7 +66,16 @@ See [FUTURE_PLAN.md](FUTURE_PLAN.md) for acceptance gates.
 - **M4 — portability proof (VS Code adapter).**
 - **M5 — image references, candidate sets, lineage.**
 
-## Using the CLI (M0–M2)
+## Versioned contracts
+
+See [IR/intent/protocol v1](docs/contracts/ir-v1.md) and the
+[implementation evidence ledger](docs/IMPLEMENTATION_STATUS.md). New clients
+can use `hexwitch --machine --request-id r1 capabilities`. Existing IR v0 files
+require explicit `hexwitch import old.json --migrate-v0 --out migrated.json`.
+The legacy CLI/client loop remains available; property-targeted intent v1 is
+currently exposed through machine revision.
+
+## Using the CLI
 
 ```sh
 cd core
@@ -95,7 +107,7 @@ cargo run -q -p hexwitch-cli -- revise eval/themes/gruvbox-dark-medium.json \
 # with an API key (OPENAI_API_KEY or OPENROUTER_API_KEY):
 hexwitch interpret eval/themes/gruvbox-dark-medium.json \
   "darker background and readable comments, keep the syntax colors" \
-  --out spec.json
+  --provider openai --out spec.json
 # shows the model's notes, writes a validated edit spec; then revise as
 # above. --dry-run prints the exact prompt; --from-llm validates a saved
 # model response offline.

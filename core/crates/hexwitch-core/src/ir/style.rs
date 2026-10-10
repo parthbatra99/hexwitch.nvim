@@ -1,6 +1,7 @@
 //! Visual treatment attached to a role, plus where it came from.
 
 use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::color::Srgb;
 
@@ -42,15 +43,26 @@ pub enum Provenance {
 
 /// The full visual treatment for one role.
 ///
-/// `fg`/`bg`/`special` of `None` mean *unspecified* — the value may be
-/// inherited or fall back per adapter rules. It does not mean "transparent"
-/// and not "deliberately cleared"; explicit clearing (e.g. `ctermfg=NONE`
-/// style semantics) is an adapter concern recorded at lowering time.
+/// Omitted concrete properties are unspecified unless `states` explicitly
+/// selects inherit or clear. Opacity is independent from color; omitted
+/// opacity is opaque. `locked` is independent from source origin.
 ///
 /// Unknown fields are rejected: the IR is a contract, not a suggestion.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Style {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fg_opacity: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bg_opacity: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub special_opacity: Option<f64>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub states: BTreeMap<Property, PropertyState>,
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub locked: BTreeSet<Property>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<SourceInfo>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fg: Option<Srgb>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -73,6 +85,116 @@ pub struct Style {
     pub provenance: Provenance,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Property {
+    Fg,
+    Bg,
+    Special,
+    FgOpacity,
+    BgOpacity,
+    SpecialOpacity,
+    Bold,
+    Italic,
+    Underline,
+    Blend,
+}
+
+impl Property {
+    pub const ALL: [Self; 10] = [
+        Self::Fg,
+        Self::Bg,
+        Self::Special,
+        Self::FgOpacity,
+        Self::BgOpacity,
+        Self::SpecialOpacity,
+        Self::Bold,
+        Self::Italic,
+        Self::Underline,
+        Self::Blend,
+    ];
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PropertyState {
+    Unspecified,
+    Inherit,
+    Clear,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceInfo {
+    pub origin: Origin,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reference: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Origin {
+    Imported,
+    Generated,
+    Derived,
+    User,
+}
+
+impl Style {
+    pub fn has_value(&self, property: Property) -> bool {
+        match property {
+            Property::Fg => self.fg.is_some(),
+            Property::Bg => self.bg.is_some(),
+            Property::Special => self.special.is_some(),
+            Property::FgOpacity => self.fg_opacity.is_some(),
+            Property::BgOpacity => self.bg_opacity.is_some(),
+            Property::SpecialOpacity => self.special_opacity.is_some(),
+            Property::Bold => self.bold.is_some(),
+            Property::Italic => self.italic.is_some(),
+            Property::Underline => self.underline.is_some(),
+            Property::Blend => self.blend.is_some(),
+        }
+    }
+    pub fn clear_value(&mut self, property: Property) {
+        match property {
+            Property::Fg => self.fg = None,
+            Property::Bg => self.bg = None,
+            Property::Special => self.special = None,
+            Property::FgOpacity => self.fg_opacity = None,
+            Property::BgOpacity => self.bg_opacity = None,
+            Property::SpecialOpacity => self.special_opacity = None,
+            Property::Bold => self.bold = None,
+            Property::Italic => self.italic = None,
+            Property::Underline => self.underline = None,
+            Property::Blend => self.blend = None,
+        }
+    }
+    pub fn validate(&self) -> Result<(), String> {
+        for opacity in [self.fg_opacity, self.bg_opacity, self.special_opacity]
+            .into_iter()
+            .flatten()
+        {
+            if !opacity.is_finite() || !(0.0..=1.0).contains(&opacity) {
+                return Err("opacity must be finite and in 0..1".into());
+            }
+        }
+        if self.blend.is_some_and(|b| b > 100) {
+            return Err("blend must be in 0..100".into());
+        }
+        for property in self.states.keys() {
+            if self.has_value(*property) {
+                return Err(format!(
+                    "{property:?} cannot have both a state and a concrete value"
+                ));
+            }
+        }
+        Ok(())
+    }
+    pub fn is_locked(&self, property: Property) -> bool {
+        self.provenance == Provenance::Locked || self.locked.contains(&property)
+    }
+}
+
 impl Provenance {
     pub fn is_ingested(&self) -> bool {
         matches!(self, Provenance::Ingested)
@@ -80,8 +202,14 @@ impl Provenance {
 }
 
 impl Style {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Style {
+            fg_opacity: None,
+            bg_opacity: None,
+            special_opacity: None,
+            states: BTreeMap::new(),
+            locked: BTreeSet::new(),
+            source: None,
             fg: None,
             bg: None,
             special: None,
@@ -94,27 +222,27 @@ impl Style {
     }
 
     /// A foreground-only style, the most common shape in a theme.
-    pub const fn fg(fg: Srgb) -> Self {
+    pub fn fg(fg: Srgb) -> Self {
         let mut s = Style::new();
         s.fg = Some(fg);
         s
     }
 
     /// A background-only style (surfaces, line tints).
-    pub const fn bg(bg: Srgb) -> Self {
+    pub fn bg(bg: Srgb) -> Self {
         let mut s = Style::new();
         s.bg = Some(bg);
         s
     }
 
     /// Foreground + background pair.
-    pub const fn pair(fg: Srgb, bg: Srgb) -> Self {
+    pub fn pair(fg: Srgb, bg: Srgb) -> Self {
         let mut s = Style::fg(fg);
         s.bg = Some(bg);
         s
     }
 
-    pub const fn with_provenance(mut self, provenance: Provenance) -> Self {
+    pub fn with_provenance(mut self, provenance: Provenance) -> Self {
         self.provenance = provenance;
         self
     }
@@ -153,6 +281,7 @@ mod tests {
             underline: Some(UnderlineStyle::Curl),
             blend: Some(10),
             provenance: Provenance::Locked,
+            ..Style::new()
         };
         let json = serde_json::to_string(&s).unwrap();
         let back: Style = serde_json::from_str(&json).unwrap();

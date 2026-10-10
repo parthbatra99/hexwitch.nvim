@@ -154,8 +154,15 @@ end
 
 function M.apply(id)
   if not guard() then return end
-  local v = id and session.versions[tonumber(id)] or session.pending
+  local num = id and tonumber(id) or nil
+  if id and (not num or num < 1 or num ~= math.floor(num)) then
+    return complete(nil, "Invalid version id: " .. tostring(id))
+  end
+  local v = num and session.versions[num] or session.pending
   if not v then return complete(nil, "No candidate to apply") end
+  if session.pending and session.pending ~= v then
+    return complete(nil, "Apply or discard the pending candidate before switching versions")
+  end
   if v.has_issues then
     ui.notify("Accepting a partial revision: inspect :HexwitchStatus for refused/failed edits", vim.log.levels.WARN)
   end

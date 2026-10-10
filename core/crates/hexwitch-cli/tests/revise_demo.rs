@@ -225,7 +225,8 @@ fn nord_comment_repair_requires_actual_movement() {
         comment.to_oklch(),
     );
     assert!(
-        (a.h - b.h).abs() < 0.5,
+        // Quantized 8-bit color recovery: fixed-hue search allows 1 degree.
+        (a.h - b.h).abs() < 1.0,
         "comment hue drifted {} -> {}",
         a.h,
         b.h

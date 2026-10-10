@@ -6,10 +6,14 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
 jobs:
   rust:
     name: Core engine
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: core
@@ -44,6 +48,7 @@ jobs:
   legacy-lua:
     name: Legacy Neovim plugin
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: adapters/nvim-legacy

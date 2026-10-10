@@ -5,14 +5,10 @@
 //! halves of what a theme *is*: workbench `colors` (UI surfaces/states) and
 //! `tokenColors` (TextMate scopes → syntax styles).
 //!
-//! Deliberate v0 limits, documented rather than hidden:
-//! * Only a curated, unambiguous subset of workbench keys and TextMate
-//!   scopes is mapped. Unmapped entries are ignored, and adapters/reporting
-//!   will surface coverage later (M1 continues this work).
-//! * Colors with alpha (`#rrggbbaa`) drop the alpha channel here; compositing
-//!   semantics belong to scene validation, which models them explicitly.
-//! * `semanticTokenColors` is not mapped yet; it arrives with the VS Code
-//!   adapter's lowering tables.
+//! Deliberate limits: selected workbench mappings and a restricted dotted
+//! selector/ancestor grammar, not full TextMate. Source rules and opacity are
+//! preserved; unsupported semantics are recorded in import losses.
+//! `semanticTokenColors` is retained but not yet mapped to portable modifiers.
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -31,6 +27,8 @@ pub enum IngestError {
     Json(#[from] serde_json::Error),
     #[error("invalid color for `{key}`: {value}")]
     BadColor { key: String, value: String },
+    #[error("invalid source: {0}")]
+    InvalidSource(String),
 }
 
 /// VS Code workbench key -> (role, slot) mapping lives in
@@ -66,7 +64,9 @@ struct TokenSettings {
 fn parse_hex_maybe_alpha(s: &str) -> Result<Srgb, String> {
     let h = s.strip_prefix('#').unwrap_or(s);
     if h.len() == 8 {
-        // Keep the RGB part; alpha handling is scene validation's job.
+        if !h.is_ascii() || !h.bytes().all(|b| b.is_ascii_hexdigit()) {
+            return Err("invalid hex color".into());
+        }
         Srgb::from_hex(&h[..6]).map_err(|e| e.to_string())
     } else {
         Srgb::from_hex(&format!("#{h}")).map_err(|e| e.to_string())
@@ -83,6 +83,37 @@ fn selector_matches(selector: &str, scope: &str) -> bool {
             .is_some_and(|r| r.starts_with('.'))
 }
 
+fn simple_selector(selector: &str) -> bool {
+    selector.is_empty()
+        || selector.split_whitespace().all(|part| {
+            !part.is_empty()
+                && part.split('.').all(|segment| {
+                    !segment.is_empty()
+                        && segment
+                            .chars()
+                            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+                })
+        })
+}
+fn stack_matches(selector: &str, stack: &str) -> bool {
+    if selector.is_empty() {
+        return true;
+    }
+    let scopes: Vec<_> = stack.split_whitespace().collect();
+    let parts: Vec<_> = selector.split_whitespace().collect();
+    let mut index = scopes.len();
+    for part in parts.iter().rev() {
+        let Some(found) = (0..index)
+            .rev()
+            .find(|i| selector_matches(part, scopes[*i]))
+        else {
+            return false;
+        };
+        index = found;
+    }
+    true
+}
+
 fn depth(s: &str) -> usize {
     s.split('.').count()
 }
@@ -91,40 +122,66 @@ fn ingest_token_colors(
     theme: &mut Theme,
     token_colors: &[TokenColorEntry],
 ) -> Result<(), IngestError> {
-    // scope -> (settings, order of appearance)
-    let mut rules: BTreeMap<String, (TokenSettings, usize)> = BTreeMap::new();
+    // Resolve a deliberately limited selector grammar: dotted scopes, comma
+    // alternatives and ordered ancestor stacks. This is not full TextMate.
+    let mut rules: Vec<(String, &TokenSettings, usize)> = vec![];
+    let mut representatives: BTreeMap<Role, (String, usize)> = BTreeMap::new();
     for (order, entry) in token_colors.iter().enumerate() {
         let scopes = match &entry.scope {
-            ScopeSpec::None => continue,
+            ScopeSpec::None => vec![String::new()],
             ScopeSpec::One(s) => vec![s.clone()],
             ScopeSpec::Many(v) => v.clone(),
         };
         for scope in scopes {
-            rules
-                .entry(scope)
-                .and_modify(|(s, _)| *s = entry.settings.clone())
-                .or_insert_with(|| (entry.settings.clone(), order));
+            for selector in scope.split(',').map(str::trim) {
+                if !simple_selector(selector) {
+                    continue;
+                }
+                rules.push((selector.to_string(), &entry.settings, order));
+                let leaf = selector.split_whitespace().last().unwrap_or("");
+                let best = scope_rules()
+                    .into_iter()
+                    .filter(|(sel, _)| selector_matches(sel, leaf))
+                    .max_by_key(|(sel, _)| depth(sel));
+                if let Some((_, role)) = best {
+                    let replace =
+                        representatives
+                            .get(&role)
+                            .is_none_or(|(previous, previous_order)| {
+                                (depth(leaf), order)
+                                    >= (
+                                        depth(previous.split_whitespace().last().unwrap_or("")),
+                                        *previous_order,
+                                    )
+                            });
+                    if replace {
+                        representatives.insert(role, (selector.to_string(), order));
+                    }
+                }
+            }
         }
     }
-
-    // TextMate-style resolution: for each scope in the theme, the *deepest*
-    // selector from our table that matches it claims the role. This keeps
-    // `variable.other.property` styling the property role (not being
-    // stolen by the general `variable` selector) while still letting
-    // `comment.line.double-dash.lua` claim the comment role. A role is
-    // claimed once; iteration is over a BTreeMap, so duplicate sources
-    // resolve deterministically.
-    for (scope, (settings, _order)) in &rules {
-        let best = scope_rules()
-            .into_iter()
-            .filter(|(sel, _)| selector_matches(sel, scope))
-            .max_by_key(|(sel, _)| depth(sel));
-        let Some((_, role)) = best else { continue };
-        if theme.styles.contains_key(&role) {
-            continue;
+    for (role, (scope, _)) in representatives {
+        let mut applicable: Vec<_> = rules
+            .iter()
+            .filter(|(selector, _, _)| stack_matches(selector, &scope))
+            .collect();
+        applicable.sort_by_key(|(selector, _, order)| {
+            (selector.split_whitespace().count(), depth(selector), *order)
+        });
+        let mut settings = TokenSettings::default();
+        for (_, rule, _) in applicable {
+            if rule.foreground.is_some() {
+                settings.foreground = rule.foreground.clone();
+            }
+            if rule.background.is_some() {
+                settings.background = rule.background.clone();
+            }
+            if rule.font_style.is_some() {
+                settings.font_style = rule.font_style.clone();
+            }
         }
-
-        let mut style = Style::new();
+        let mut style = theme.get(&role).cloned().unwrap_or_default();
         if let Some(fg) = &settings.foreground {
             style.fg = Some(
                 parse_hex_maybe_alpha(fg).map_err(|_| IngestError::BadColor {
@@ -141,8 +198,26 @@ fn ingest_token_colors(
                 })?,
             );
         }
+        let alpha = |value: &str| {
+            value
+                .strip_prefix('#')
+                .filter(|h| h.len() == 8 && h.is_ascii())
+                .and_then(|h| u8::from_str_radix(&h[6..], 16).ok())
+                .map(|a| a as f64 / 255.0)
+        };
+        style.fg_opacity = settings.foreground.as_deref().and_then(alpha);
+        style.bg_opacity = settings.background.as_deref().and_then(alpha);
+        style.source = Some(crate::ir::SourceInfo {
+            origin: crate::ir::Origin::Imported,
+            reference: Some(scope.clone()),
+        });
         apply_font_style(&mut style, settings.font_style.as_deref());
-        if style.fg.is_some() || style.bg.is_some() || style.underline.is_some() {
+        if style.fg.is_some()
+            || style.bg.is_some()
+            || style.bold.is_some()
+            || style.italic.is_some()
+            || style.underline.is_some()
+        {
             theme.set(role, style);
         }
     }
@@ -151,6 +226,14 @@ fn ingest_token_colors(
 
 fn apply_font_style(style: &mut Style, font_style: Option<&str>) {
     let Some(fs) = font_style else { return };
+    // A specified fontStyle replaces the typography family, including empty resets.
+    style.bold = Some(false);
+    style.italic = Some(false);
+    style.underline = None;
+    style.states.insert(
+        crate::ir::Property::Underline,
+        crate::ir::PropertyState::Clear,
+    );
     for token in fs.split_whitespace() {
         match token {
             "bold" => style.bold = Some(true),
@@ -159,6 +242,9 @@ fn apply_font_style(style: &mut Style, font_style: Option<&str>) {
             "strikethrough" => style.underline = Some(UnderlineStyle::Strikethrough),
             _ => {}
         }
+    }
+    if style.underline.is_some() {
+        style.states.remove(&crate::ir::Property::Underline);
     }
 }
 
@@ -218,7 +304,7 @@ fn workbench_role(key: &str) -> Option<(Role, bool)> {
             Role::Surface(Surface::Float),
             true,
         ),
-        ("editorWidget.border", Role::Surface(Surface::Border), true),
+        ("editorWidget.border", Role::Surface(Surface::Border), false),
         (
             "editorLineNumber.foreground",
             Role::Surface(Surface::Gutter),
@@ -264,7 +350,7 @@ fn workbench_role(key: &str) -> Option<(Role, bool)> {
                 kind: DiffKind::Added,
                 part: DiffPart::Gutter,
             },
-            true,
+            false,
         ),
         (
             "editorGutter.modifiedBackground",
@@ -272,7 +358,7 @@ fn workbench_role(key: &str) -> Option<(Role, bool)> {
                 kind: DiffKind::Changed,
                 part: DiffPart::Gutter,
             },
-            true,
+            false,
         ),
     ];
     table
@@ -288,10 +374,10 @@ fn workbench_role(key: &str) -> Option<(Role, bool)> {
 /// This is what the CLI (and later the Neovim client) feed to analyze,
 /// revise, and emit, so revisions round-trip through IR files.
 pub fn load_theme(json: &str) -> Result<Theme, IngestError> {
-    let v: serde_json::Value = serde_json::from_str(json)?;
+    let v = crate::jsonc::parse(json).map_err(IngestError::InvalidSource)?;
     let is_ir = v.get("meta").is_some() && v.get("styles").is_some();
     if is_ir {
-        serde_json::from_value(v).map_err(IngestError::Json)
+        Theme::from_json_str(&v.to_string()).map_err(IngestError::Json)
     } else {
         ingest_vscode_json(json)
     }
@@ -299,7 +385,35 @@ pub fn load_theme(json: &str) -> Result<Theme, IngestError> {
 
 /// Ingest a VS Code theme JSON document into the IR.
 pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
-    let root: Value = serde_json::from_str(json)?;
+    let root = crate::jsonc::parse(json).map_err(IngestError::InvalidSource)?;
+    if !root.is_object() {
+        return Err(IngestError::InvalidSource(
+            "theme root must be an object".into(),
+        ));
+    }
+    if root.get("include").is_some() {
+        return Err(IngestError::InvalidSource(
+            "includes require load_theme_path for sandboxed resolution".into(),
+        ));
+    }
+    if !["colors", "tokenColors", "semanticTokenColors"]
+        .iter()
+        .any(|key| root.get(key).is_some())
+    {
+        return Err(IngestError::InvalidSource(
+            "expected colors, tokenColors or semanticTokenColors".into(),
+        ));
+    }
+    if root.get("colors").is_some_and(|v| !v.is_object())
+        || root.get("tokenColors").is_some_and(|v| !v.is_array())
+        || root
+            .get("semanticTokenColors")
+            .is_some_and(|v| !v.is_object())
+    {
+        return Err(IngestError::InvalidSource(
+            "invalid theme field type".into(),
+        ));
+    }
     let name = root
         .get("name")
         .and_then(Value::as_str)
@@ -316,7 +430,9 @@ pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
 
     if let Some(colors) = root.get("colors").and_then(Value::as_object) {
         for (key, value) in colors {
-            let Some(hex) = value.as_str() else { continue };
+            let hex = value.as_str().ok_or_else(|| {
+                IngestError::InvalidSource(format!("workbench color {key} must be a string"))
+            })?;
             let Some((role, is_bg)) = workbench_role(key) else {
                 continue;
             };
@@ -325,11 +441,22 @@ pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
                 value: hex.to_string(),
             })?;
             let style = theme.styles.entry(role).or_default();
+            let opacity = hex
+                .strip_prefix('#')
+                .filter(|h| h.len() == 8 && h.is_ascii())
+                .and_then(|h| u8::from_str_radix(&h[6..], 16).ok())
+                .map(|a| a as f64 / 255.0);
             if is_bg {
                 style.bg = Some(color);
+                style.bg_opacity = opacity;
             } else {
                 style.fg = Some(color);
+                style.fg_opacity = opacity;
             }
+            style.source = Some(crate::ir::SourceInfo {
+                origin: crate::ir::Origin::Imported,
+                reference: Some(key.clone()),
+            });
         }
     }
 
@@ -338,12 +465,48 @@ pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
         .and_then(Value::as_array)
         .map(|arr| {
             arr.iter()
-                .filter_map(|v| serde_json::from_value(v.clone()).ok())
-                .collect()
+                .map(|v| serde_json::from_value(v.clone()))
+                .collect::<Result<Vec<_>, _>>()
         })
+        .transpose()?
         .unwrap_or_default();
 
     ingest_token_colors(&mut theme, &token_colors)?;
+    // Preserve the entire source, including unsupported rules; do not claim portability.
+    let mut losses = vec![];
+    if root.get("semanticTokenColors").is_some() {
+        losses.push(serde_json::json!({"property":"semanticTokenColors","reason":"preserved but not yet mapped into portable modifiers"}));
+    }
+    if let Some(colors) = root.get("colors").and_then(Value::as_object) {
+        for key in colors.keys().filter(|key| workbench_role(key).is_none()) {
+            losses.push(serde_json::json!({"property":key,"reason":"unmapped workbench key; preserved in source extension"}));
+        }
+    }
+    for entry in &token_colors {
+        let scopes = match &entry.scope {
+            ScopeSpec::None => vec![],
+            ScopeSpec::One(s) => vec![s.clone()],
+            ScopeSpec::Many(s) => s.clone(),
+        };
+        for scope in scopes {
+            for selector in scope.split(',').map(str::trim) {
+                let leaf = selector.split_whitespace().last().unwrap_or("");
+                if !simple_selector(selector)
+                    || !scope_rules()
+                        .iter()
+                        .any(|(sel, _)| selector_matches(sel, leaf))
+                {
+                    losses.push(serde_json::json!({"property":selector,"reason":"unsupported or unmapped selector; preserved in source extension"}));
+                }
+            }
+        }
+    }
+    theme.extensions.insert(
+        "hexwitch.import.losses.v1".into(),
+        serde_json::json!(losses),
+    );
+    theme.extensions.insert("vscode.source".into(), root);
+    theme.validate().map_err(IngestError::InvalidSource)?;
     Ok(theme)
 }
 
@@ -436,7 +599,7 @@ mod tests {
     }
 
     #[test]
-    fn alpha_colors_drop_to_rgb() {
+    fn alpha_rgb_channel_and_appearance_are_preserved() {
         let json = r##"{
             "name": "A", "type": "light",
             "colors": { "editor.background": "#ffffff", "editor.selectionBackground": "#515c7e4d" }

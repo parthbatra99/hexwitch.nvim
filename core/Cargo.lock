@@ -111,6 +111,7 @@ dependencies = [
  "clap",
  "hexwitch-core",
  "serde_json",
+ "thiserror",
 ]
 
 [[package]]

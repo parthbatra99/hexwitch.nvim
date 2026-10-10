@@ -114,6 +114,9 @@ local ok, err = xpcall(function()
     assert(v.notes:find("notes:", 1, true), "interpretation notes dropped")
     assert(v.report:find("revision:", 1, true), "revision report dropped")
     eq(vim.api.nvim_get_hl(0, { name = "Normal", link = false }).bg, oldbg, "candidate auto-applied")
+    assert(not hx.apply("not-a-version"))
+    assert(not hx.apply(parent.id), "saved-version switch discarded pending candidate")
+    eq(hx.state().pending.id, v.id)
     assert(hx.apply())
     eq(vim.api.nvim_get_hl(0, { name = "Normal", link = false }).bg, tonumber("1e1e1e", 16))
     eq(fg("Keyword"), tonumber("fb4934", 16))
@@ -142,7 +145,7 @@ local ok, err = xpcall(function()
     reference()
     local path = specfile("partial", { protect = { "syntax.keyword" }, changes = {
       { target = "syntax.keyword", op = "lighter", amount = 0.1 },
-      { target = "syntax.comment", op = "min_contrast", against = "surface.base", min = 25 },
+      { target = "syntax.comment", op = "min_contrast", against = "surface.base", min = 21 },
     } })
     local v = revise_spec(path)
     eq(#v.revision.refused, 1)

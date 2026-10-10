@@ -17,6 +17,7 @@ pub enum Appearance {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ThemeMeta {
     pub name: String,
     pub appearance: Appearance,
@@ -28,21 +29,77 @@ pub struct ThemeMeta {
     pub source: Option<String>,
     /// IR version this theme was built against. Older IR themes load into
     /// newer engines via explicit migration steps only.
-    #[serde(default = "default_ir_version")]
     pub ir_version: u32,
-}
-
-fn default_ir_version() -> u32 {
-    IR_VERSION
 }
 
 /// A theme: one appearance mode. Light + dark variants sharing an identity
 /// are two `Theme`s linked by a family concept (added with revise).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Theme {
     pub meta: ThemeMeta,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub modifiers: Vec<SemanticStyle>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relationships: Vec<Relationship>,
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub extensions: BTreeMap<String, serde_json::Value>,
     /// Role -> treatment. `BTreeMap` for deterministic, diff-friendly JSON.
     pub styles: BTreeMap<Role, Style>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticStyle {
+    pub role: Role,
+    pub modifiers: std::collections::BTreeSet<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+    pub style: Style,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Relationship {
+    pub from: Role,
+    pub to: Role,
+    pub kind: RelationshipKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RelationshipKind {
+    Inherits,
+    Surface,
+    Association,
+    LowerProminence,
+}
+
+impl<'de> Deserialize<'de> for Theme {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Wire {
+            meta: ThemeMeta,
+            styles: BTreeMap<Role, Style>,
+            #[serde(default)]
+            modifiers: Vec<SemanticStyle>,
+            #[serde(default)]
+            relationships: Vec<Relationship>,
+            #[serde(default)]
+            extensions: BTreeMap<String, serde_json::Value>,
+        }
+        let wire = Wire::deserialize(deserializer)?;
+        let theme = Theme {
+            meta: wire.meta,
+            styles: wire.styles,
+            modifiers: wire.modifiers,
+            relationships: wire.relationships,
+            extensions: wire.extensions,
+        };
+        theme.validate().map_err(serde::de::Error::custom)?;
+        Ok(theme)
+    }
 }
 
 /// Problems a theme can have before any scene validation runs.
@@ -65,6 +122,9 @@ impl Theme {
                 ir_version: IR_VERSION,
             },
             styles: BTreeMap::new(),
+            modifiers: vec![],
+            relationships: vec![],
+            extensions: BTreeMap::new(),
         }
     }
 
@@ -94,7 +154,16 @@ impl Theme {
     /// Contrast of a role's foreground against a given background color —
     /// the primitive scene checks are built from.
     pub fn fg_contrast_against(&self, role: &Role, backdrop: Srgb) -> Option<f64> {
-        self.fg(role).map(|fg| contrast_ratio(fg, backdrop))
+        self.fg(role).map(|fg| {
+            contrast_ratio(
+                crate::color::composite_over(
+                    fg,
+                    self.get(role).and_then(|s| s.fg_opacity).unwrap_or(1.0),
+                    backdrop,
+                ),
+                backdrop,
+            )
+        })
     }
 
     /// Quick structural sanity: the roles every emitted theme must define
@@ -140,8 +209,120 @@ impl Theme {
         serde_json::to_string_pretty(self)
     }
 
+    pub fn validate(&self) -> Result<(), String> {
+        if self.styles.len() > 4096
+            || self.modifiers.len() > 4096
+            || self.relationships.len() > 4096
+        {
+            return Err("IR collection size limit exceeded".into());
+        }
+        if self.meta.ir_version != IR_VERSION {
+            return Err(format!(
+                "unsupported IR version {}; explicit migration required (engine {})",
+                self.meta.ir_version, IR_VERSION
+            ));
+        }
+        if self.meta.name.trim().is_empty() {
+            return Err("theme name must not be empty".into());
+        }
+        for (role, style) in &self.styles {
+            if role.to_string().parse::<Role>().is_err() {
+                return Err(format!("invalid role {role}"));
+            }
+            style.validate().map_err(|e| format!("{role}: {e}"))?;
+        }
+        for entry in &self.modifiers {
+            if !self.styles.contains_key(&entry.role) {
+                return Err(format!("modifier references missing role {}", entry.role));
+            }
+            if entry.modifiers.is_empty()
+                || entry.modifiers.iter().any(|m| {
+                    m.is_empty() || !m.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                })
+            {
+                return Err("invalid semantic modifiers".into());
+            }
+            entry.style.validate()?;
+        }
+        let mut parents = std::collections::BTreeSet::new();
+        for edge in &self.relationships {
+            if edge.kind == RelationshipKind::Inherits && !parents.insert(edge.from.clone()) {
+                return Err("multiple inheritance parents are ambiguous".into());
+            }
+            if !self.styles.contains_key(&edge.from) || !self.styles.contains_key(&edge.to) {
+                return Err("relationship references missing role".into());
+            }
+        }
+        for role in self.styles.keys() {
+            let mut seen = std::collections::BTreeSet::new();
+            let mut current = role;
+            while let Some(edge) = self
+                .relationships
+                .iter()
+                .find(|e| e.from == *current && e.kind == RelationshipKind::Inherits)
+            {
+                if !seen.insert(current.clone()) {
+                    return Err("inheritance cycle".into());
+                }
+                current = &edge.to;
+            }
+        }
+        Ok(())
+    }
+
     pub fn from_json_str(json: &str) -> serde_json::Result<Self> {
-        serde_json::from_str(json)
+        let value: serde_json::Value = serde_json::from_str(json)?;
+        if value
+            .pointer("/meta/ir_version")
+            .and_then(serde_json::Value::as_u64)
+            != Some(IR_VERSION as u64)
+        {
+            return Err(<serde_json::Error as serde::de::Error>::custom(
+                "explicit ir_version required; use migration for v0",
+            ));
+        }
+        let theme: Self = serde_json::from_value(value)?;
+        theme
+            .validate()
+            .map_err(<serde_json::Error as serde::de::Error>::custom)?;
+        Ok(theme)
+    }
+
+    /// Explicit compatibility conversion; never guesses at newer schemas.
+    pub fn migrate_v0(json: &str) -> serde_json::Result<Self> {
+        let mut value: serde_json::Value = serde_json::from_str(json)?;
+        if !value.get("meta").is_some_and(serde_json::Value::is_object)
+            || !value
+                .get("styles")
+                .is_some_and(serde_json::Value::is_object)
+        {
+            return Err(<serde_json::Error as serde::de::Error>::custom(
+                "migration requires an IR object with meta and styles",
+            ));
+        }
+        let version = match value.pointer("/meta/ir_version") {
+            None => 0,
+            Some(v) => v.as_u64().ok_or_else(|| {
+                <serde_json::Error as serde::de::Error>::custom("invalid IR version")
+            })?,
+        };
+        if version != 0 {
+            return Err(<serde_json::Error as serde::de::Error>::custom(
+                "migration accepts IR v0 only",
+            ));
+        }
+        value["meta"]["ir_version"] = serde_json::json!(IR_VERSION);
+        let mut theme: Self = serde_json::from_value(value)?;
+        for style in theme.styles.values_mut() {
+            if style.provenance == crate::ir::style::Provenance::Locked {
+                style.locked.extend(crate::ir::style::Property::ALL);
+                style.provenance = crate::ir::style::Provenance::Ingested;
+            }
+        }
+        theme
+            .validate()
+            .map_err(<serde_json::Error as serde::de::Error>::custom)?;
+        Ok(theme)
     }
 }
 
