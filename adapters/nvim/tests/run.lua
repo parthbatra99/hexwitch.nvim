@@ -30,7 +30,7 @@ local function fg(name) return vim.api.nvim_get_hl(0, { name = name, link = fals
 local function reset(opts)
   engine.exec = real_exec
   session.versions, session.history, session.cursor = {}, {}, 0
-  session.pending, session.original, session.busy = nil, nil, false
+  session.pending, session.original, session.busy, session.clarification = nil, nil, false, nil
   session.root = tmp .. "/session-" .. passed
   vim.fn.mkdir(session.root, "p")
   hx.setup(vim.tbl_extend("force", { cmd = vim.env.HEXWITCH_BINARY }, opts or {}))
@@ -157,6 +157,37 @@ local ok, err = xpcall(function()
     revise_spec(clean)
     eq(hx.state().cursor, 2, "clean auto-apply failed")
     eq(hx.state().pending, nil)
+  end)
+
+  test("property-aware replay applies independent edits and handles clarification", function()
+    reference()
+    local oldbg = vim.api.nvim_get_hl(0, { name = "Normal", link = false }).bg
+    local v = success(function(cb)
+      hx.refine("Keep the background color, but remove its transparency.", {
+        v1 = true, from_llm = fixtures .. "llm/property-opaque-background.json",
+      }, cb)
+    end)
+    assert(v.v1 and v.revision.properties)
+    assert(hx.apply())
+    eq(vim.api.nvim_get_hl(0, { name = "Normal", link = false }).bg, oldbg)
+    local before = hx.state()
+    local clarification = success(function(cb)
+      hx.refine("Make that blue quieter.", { v1 = true, from_llm = fixtures .. "llm/clarify-blue.json" }, cb)
+    end)
+    eq(clarification.decision, "needs_clarification")
+    eq(hx.state().pending, nil)
+    eq(#hx.state().versions, #before.versions)
+    eq(hx.state().busy, false)
+    eq(#hx.state().clarification, 1)
+    local path = specfile("v1-rollback", { version = 1, actions = {
+      { op = "set_color", target = { roles = { "syntax.comment" }, property = "fg" }, color = "#282828" },
+    }, requirements = {
+      { role = "syntax.comment", property = "fg", backgrounds = { { surface = "surface.base", overlays = {} } }, min = 4.5 },
+    } })
+    local err = async(function(cb) hx.refine("Reviewed invalid floor", { v1 = true, spec = path }, cb) end)
+    assert(err and err:find("rolled back", 1, true))
+    eq(hx.state().pending, nil)
+    eq(#hx.state().versions, #before.versions)
   end)
 
   test("invalid model replay never creates a candidate", function()

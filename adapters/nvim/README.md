@@ -2,8 +2,8 @@
 
 A thin client for the Rust engine. No Telescope or Plenary dependencies.
 Requires **Neovim 0.10+** and a matching `hexwitch` binary. Live interpretation
-also requires curl and `OPENAI_API_KEY` or `OPENROUTER_API_KEY` in Neovim's
-launch environment. Offline replay and explicit edit specs need neither key.
+also requires curl, an explicit provider setting and its `OPENAI_API_KEY` or
+`OPENROUTER_API_KEY` in Neovim's launch environment. Offline replay and explicit edit specs need neither key.
 
 ## Local installation
 
@@ -72,6 +72,26 @@ For testing without a provider:
 
 `:HexwitchSpec /path/to/spec.json` prepares a revision from an explicit
 EditSpec, skipping interpretation but not revision or emission.
+
+## Property-aware interpretation (opt-in)
+
+`:HexwitchV1 no italics anywhere` uses the v1 interpretation/report protocol.
+Unlike legacy replay it can name individual fg/bg/opacity/typography properties,
+show clarification questions without creating a candidate, and block required
+constraint rollback. It still requires an explicitly configured provider for
+live calls; no network call happens for saved replay:
+
+```lua
+require("hexwitch").refine("Keep the background color, but remove its transparency.", {
+  v1 = true,
+  from_llm = "/repo/core/eval/llm/property-opaque-background.json",
+})
+```
+
+`opts.context` can point to reviewed prior requests/actions. Clarification is
+shown in notifications and `:HexwitchStatus`; supply a corrected request to
+continue. The v1 path is not yet the default. Persistent recovery, cancellation
+and complete rendered-scene application gates remain unfinished.
 
 ## Safety and current limits
 

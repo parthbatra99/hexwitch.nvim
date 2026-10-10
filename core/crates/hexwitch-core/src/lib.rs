@@ -11,6 +11,7 @@
 //! M2 revise/emit -> M3 interpretation bridge -> M4 second adapter.
 
 pub mod analyze;
+pub mod backdrop;
 pub mod color;
 pub mod emit;
 pub mod eval;
@@ -18,6 +19,8 @@ pub mod import_path;
 pub mod ingest;
 pub mod intent;
 pub mod interpret;
+pub mod interpret_eval;
+pub mod interpret_v1;
 pub mod ir;
 pub mod jsonc;
 pub mod protocol;
@@ -25,6 +28,7 @@ pub mod revise;
 pub mod scope;
 pub mod selector;
 pub mod semantic;
+mod semantic_constraints;
 pub mod solver;
 pub mod validate;
 

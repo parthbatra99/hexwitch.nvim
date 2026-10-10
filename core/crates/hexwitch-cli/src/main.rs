@@ -48,6 +48,14 @@ enum Command {
         #[arg(long)]
         scenes: Option<std::path::PathBuf>,
     },
+    /// Judge recorded v1 model responses against semantic outcomes (offline).
+    EvalInterpretation {
+        suite: std::path::PathBuf,
+        #[arg(long)]
+        run: std::path::PathBuf,
+        #[arg(short, long)]
+        out: Option<std::path::PathBuf>,
+    },
     /// Convert a color between representations.
     Convert {
         /// Color as #rrggbb.
@@ -153,6 +161,12 @@ enum Command {
         /// Model name (default gpt-4o-mini / openai/gpt-4o-mini).
         #[arg(short, long)]
         model: Option<String>,
+        /// Property-aware interpretation with explicit clarification outcomes.
+        #[arg(long)]
+        v1: bool,
+        /// Reviewed prior requests/actions for relative iteration (v1 only).
+        #[arg(long, requires = "v1")]
+        context: Option<std::path::PathBuf>,
     },
 }
 
@@ -245,6 +259,21 @@ fn run(command: Command) -> Result<(), String> {
                 "{}",
                 serde_json::to_string_pretty(&report).map_err(|e| e.to_string())?
             );
+        }
+        Command::EvalInterpretation { suite, run, out } => {
+            let report = hexwitch_core::interpret_eval::run_suite(&suite, &run)?;
+            let value = serde_json::to_value(&report).map_err(|e| e.to_string())?;
+            write_spec_value(&value, out)?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&report).map_err(|e| e.to_string())?
+            );
+            if report.failed > 0 {
+                return Err(format!(
+                    "{} interpretation evaluation cases failed",
+                    report.failed
+                ));
+            }
         }
         Command::Convert { color, to } => {
             let c = parse_color(&color)?;
@@ -451,7 +480,14 @@ fn run(command: Command) -> Result<(), String> {
             out,
             provider,
             model,
+            v1,
+            context,
         } => {
+            if v1 {
+                return run_interpret_v1(
+                    path, prompt, dry_run, from_llm, out, provider, model, context,
+                );
+            }
             use hexwitch_core::interpret as interp;
 
             let theme_json = read_input(&path)?;
@@ -497,6 +533,57 @@ fn run(command: Command) -> Result<(), String> {
             write_spec(&spec, out)?;
         }
     }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+fn run_interpret_v1(
+    path: std::path::PathBuf,
+    prompt: Option<String>,
+    dry_run: bool,
+    from_llm: Option<std::path::PathBuf>,
+    out: Option<std::path::PathBuf>,
+    provider_name: Option<String>,
+    model: Option<String>,
+    context: Option<std::path::PathBuf>,
+) -> Result<(), String> {
+    let theme = hexwitch_core::import_path::load_theme_path(&path).map_err(|e| e.to_string())?;
+    let prompt=prompt.ok_or("v1 interpretation requires the original request, including for offline trusted-color validation")?;
+    let context = match context {
+        Some(p) => serde_json::from_str(&read_input(&p)?).map_err(|e| e.to_string())?,
+        None => hexwitch_core::interpret_v1::IterationContext::default(),
+    };
+    let user = hexwitch_core::interpret_v1::user_prompt(&theme, &prompt, &context)?;
+    let system = hexwitch_core::interpret_v1::system_prompt();
+    if dry_run {
+        println!("--- system ---\n{system}\n--- user ---\n{user}");
+        return Ok(());
+    }
+    let response = match from_llm {
+        Some(p) => hexwitch_core::interpret_v1::parse_model_output(&read_input(&p)?)?,
+        None => {
+            let (endpoint, key, default_model) = pick_provider(provider_name.as_deref())?;
+            provider::call_provider_v1(
+                endpoint,
+                &key,
+                model.as_deref().unwrap_or(default_model),
+                &system,
+                &user,
+            )
+            .map_err(|e| e.to_string())?
+        }
+    };
+    let interpretation = hexwitch_core::interpret_v1::validate(&response, &theme, &prompt)?;
+    if let (Some(spec), Some(path)) = (&interpretation.spec, out) {
+        write_spec_value(
+            &serde_json::to_value(spec).map_err(|e| e.to_string())?,
+            Some(path),
+        )?;
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&interpretation).map_err(|e| e.to_string())?
+    );
     Ok(())
 }
 
@@ -598,21 +685,19 @@ const OPENAI_ENDPOINT: &str = "https://api.openai.com/v1/chat/completions";
 const OPENROUTER_ENDPOINT: &str = "https://openrouter.ai/api/v1/chat/completions";
 
 fn pick_provider(flag: Option<&str>) -> Result<(&'static str, String, &'static str), String> {
-    let openai_key = std::env::var("OPENAI_API_KEY")
-        .ok()
-        .filter(|k| !k.is_empty());
-    let openrouter_key = std::env::var("OPENROUTER_API_KEY")
-        .ok()
-        .filter(|k| !k.is_empty());
+    let key = |name: &str| {
+        std::env::var(name)
+            .ok()
+            .filter(|k| !k.is_empty())
+            .ok_or_else(|| format!("{name} is not set"))
+    };
     match flag {
-        Some("openai") => {
-            let k = openai_key.ok_or("OPENAI_API_KEY is not set")?;
-            Ok((OPENAI_ENDPOINT, k, "gpt-4o-mini"))
-        }
-        Some("openrouter") => {
-            let k = openrouter_key.ok_or("OPENROUTER_API_KEY is not set")?;
-            Ok((OPENROUTER_ENDPOINT, k, "openai/gpt-4o-mini"))
-        }
+        Some("openai") => Ok((OPENAI_ENDPOINT, key("OPENAI_API_KEY")?, "gpt-4o-mini")),
+        Some("openrouter") => Ok((
+            OPENROUTER_ENDPOINT,
+            key("OPENROUTER_API_KEY")?,
+            "openai/gpt-4o-mini",
+        )),
         Some(other) => Err(format!("unknown provider {other:?} (openai | openrouter)")),
         None => Err(
             "explicit --provider openai|openrouter required; no automatic credential discovery"

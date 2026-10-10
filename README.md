@@ -64,7 +64,9 @@ See [FUTURE_PLAN.md](FUTURE_PLAN.md) for acceptance gates.
   adapter uses the Rust binary and built-in Neovim UI, with offline
   replay tests across the full loop. Live provider behavior and broader
   interpretation accuracy still need evaluation; prebuilt binaries are
-  not yet distributed.
+  not yet distributed. Opt-in `interpret --v1` / `:HexwitchV1` supports property
+  targeting, explicit clarification and trusted user anchors. An offline
+  semantic-outcome evaluator now complements schema and replay tests.
 - **M4 — portability proof (VS Code adapter).**
 - **M5 — image references, candidate sets, lineage.**
 
@@ -75,7 +77,10 @@ See [IR/intent/protocol v1](docs/contracts/ir-v1.md) and the
 can use `hexwitch --machine --request-id r1 capabilities`. Existing IR v0 files
 require explicit `hexwitch import old.json --migrate-v0 --out migrated.json`.
 The legacy CLI/client loop remains available; property-targeted intent v1 is
-currently exposed through machine revision.
+currently exposed through machine revision. Use `interpret --v1` with the
+original request (including offline replay), and `:HexwitchV1` for opt-in
+property-aware refinement. Clarification returns questions without writing an
+action spec.
 
 ## Using the CLI
 

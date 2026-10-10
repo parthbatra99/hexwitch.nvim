@@ -45,7 +45,7 @@ jobs:
       - name: Verify evaluation fixture metadata and hashes
         run: |
           python3 eval/verify-fixtures.py
-          python3 -m unittest discover -s eval -p 'test_fixture_metadata.py'
+          python3 -m unittest discover -s eval -p 'test_*.py'
 
       - name: Test engine and thin Neovim adapter
         run: cargo test --all --locked

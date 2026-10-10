@@ -75,12 +75,35 @@ Operations: `lock` (scope `request` or `persistent`), `unlock`, `set_color`,
 }
 ```
 
-`requirements` specify final role/property/backgrounds/min/persistent. A failed
-required constraint rolls back the v1 candidate transaction. Persistent
-constraints are stored under `hexwitch.constraints.v1`; literal backgrounds do
-not follow later surface edits (role-aware constraints are future work).
+`requirements` specify final role/property/backgrounds/min/persistent, with
+optional include_semantic. Backgrounds accept literal hex or
+`{surface:"surface.base",overlays:[]}`; role scenes follow later surface changes
+and compose alpha. Foreground-replacing overlays/external blending cannot be
+verified by a background-only floor. A failed required constraint rolls back the
+v1 candidate transaction and sets report.rolled_back=true. Persistent constraints
+are stored under `hexwitch.constraints.v1`; duplicate requirements are idempotent.
+Semantic floors check bounded effective combinations, not only independent rules;
+more than 256 contexts/eight modifiers is unverified and fails closed. Intent
+reports identify failed semantic_context and mark proposed edits rolled_back.
 `preferences` have a target, weight 0..1, reason; they are reported as soft
 identity preferences, not yet optimized. Outcomes are distinct from parse errors.
+
+## Interpretation v1
+
+`interpret --v1` is opt-in; legacy replay remains supported. A model response has
+version, decision, notes, questions, actions. Every action names role collection,
+property, include_semantic and required nullable operation fields. Unknown/missing
+fields and unused non-null parameters fail validation. ready requires actions;
+unchanged/needs_clarification/unsupported require no actions. Clarification needs
+questions. CLI stdout returns the interpretation/report; `--out` writes only an
+IntentSpec for actionable responses and leaves existing artifacts unchanged for
+clarification. Original request is required even for replay so opaque user hex
+anchors can be validated without trusting model-generated color values.
+
+`--context` provides reviewed previous_requests/previous_actions, not inferred
+history. `eval-interpretation` judges recorded responses against executable semantic
+predicates with SHA-256 reproducibility and categorized failures. A canned replay
+is contract evidence, not a live model-quality benchmark.
 
 ## Protocol
 

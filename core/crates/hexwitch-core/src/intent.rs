@@ -76,14 +76,14 @@ pub enum Action {
     },
     Contrast {
         target: Target,
-        backgrounds: Vec<Srgb>,
+        backgrounds: Vec<crate::backdrop::Backdrop>,
         min: f64,
         #[serde(default)]
         direction: Direction,
     },
 }
 impl Action {
-    fn target(&self) -> &Target {
+    pub fn target(&self) -> &Target {
         match self {
             Self::Lock { target, .. }
             | Self::Unlock { target }
@@ -104,10 +104,12 @@ impl Action {
 pub struct Constraint {
     pub role: Role,
     pub property: Property,
-    pub backgrounds: Vec<Srgb>,
+    pub backgrounds: Vec<crate::backdrop::Backdrop>,
     pub min: f64,
     #[serde(default)]
     pub persistent: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub include_semantic: bool,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -124,6 +126,8 @@ pub struct PropertyOutcome {
     pub reason: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub semantic_rule: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub semantic_context: Option<crate::semantic::SemanticContext>,
 }
 #[derive(Debug, Clone, Serialize)]
 pub struct IntentReport {
@@ -131,6 +135,8 @@ pub struct IntentReport {
     pub properties: Vec<PropertyOutcome>,
     pub requirements: Vec<PropertyOutcome>,
     pub preferences: Vec<Preference>,
+    /// Required constraints failed; proposed property changes were not retained.
+    pub rolled_back: bool,
 }
 
 fn roles(theme: &Theme, target: &Target) -> Result<Vec<Role>, String> {
@@ -180,7 +186,7 @@ fn set_color(style: &mut crate::ir::Style, property: Property, value: Srgb) {
         _ => unreachable!(),
     }
 }
-fn validate_action(action: &Action) -> Result<(), String> {
+pub(crate) fn validate_action(action: &Action) -> Result<(), String> {
     let p = action.target().property;
     let is_color = matches!(p, Property::Fg | Property::Bg | Property::Special);
     let ok = match action {
@@ -235,6 +241,11 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
     for action in &spec.actions {
         roles(theme, action.target())?;
         validate_action(action)?;
+        if let Action::Contrast { backgrounds, .. } = action {
+            for b in backgrounds {
+                b.validate(theme)?;
+            }
+        }
     }
     for preference in &spec.preferences {
         roles(theme, &preference.target)?;
@@ -249,7 +260,14 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
         .transpose()
         .map_err(|e| format!("invalid stored constraints: {e}"))?
         .unwrap_or_default();
-    constraints.extend(spec.requirements.clone());
+    for requirement in &spec.requirements {
+        if !constraints.contains(requirement) {
+            constraints.push(requirement.clone());
+        }
+    }
+    if constraints.len() > 1024 || spec.preferences.len() > 1024 {
+        return Err("persistent constraint or preference count limit exceeded".into());
+    }
     for requirement in &constraints {
         if !theme.styles.contains_key(&requirement.role)
             || !matches!(
@@ -263,6 +281,9 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
         {
             return Err("invalid requirement".into());
         }
+        for b in &requirement.backgrounds {
+            b.validate(theme)?;
+        }
     }
     let mut revised = theme.clone();
     let mut report = IntentReport {
@@ -270,10 +291,17 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
         properties: vec![],
         requirements: vec![],
         preferences: spec.preferences.clone(),
+        rolled_back: false,
     };
     let mut local_locks = std::collections::BTreeSet::new();
     for action in &spec.actions {
         let target = action.target();
+        let contrast_backgrounds = match action {
+            Action::Contrast { backgrounds, .. } => {
+                Some(crate::backdrop::resolve_all(&revised, backgrounds))
+            }
+            _ => None,
+        };
         let mut targets = vec![];
         for role in roles(&revised, target)? {
             targets.push((role.clone(), None));
@@ -290,6 +318,22 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
         }
         for (role, semantic_rule) in targets {
             let p = target.property;
+            // Semantic patches often omit fg/opacity and inherit the lexical
+            // treatment. Solve that effective color without filling other slots.
+            let inherited = crate::validate::resolved_style(&revised, &role);
+            let effective_opacity = match semantic_rule {
+                Some(index) => {
+                    let patch = &revised.modifiers[index].style;
+                    let own = match p {
+                        Property::Fg => patch.fg_opacity,
+                        Property::Bg => patch.bg_opacity,
+                        Property::Special => patch.special_opacity,
+                        _ => None,
+                    };
+                    own.unwrap_or_else(|| inherited.as_ref().map(|s| opacity(s, p)).unwrap_or(1.0))
+                }
+                None => inherited.as_ref().map(|s| opacity(s, p)).unwrap_or(1.0),
+            };
             let style = match semantic_rule {
                 Some(index) => &mut revised.modifiers[index].style,
                 None => revised.styles.get_mut(&role).unwrap(),
@@ -351,7 +395,15 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
                     let new =
                         match action {
                             Action::SetColor { color, .. } => Ok(*color),
-                            _ => match color(style, p) {
+                            _ => match color(style, p).or_else(|| {
+                                if !style.states.contains_key(&p)
+                                    || style.states.get(&p) == Some(&PropertyState::Inherit)
+                                {
+                                    inherited.as_ref().and_then(|s| color(s, p))
+                                } else {
+                                    None
+                                }
+                            }) {
                                 None => Err("target property has no concrete color".into()),
                                 Some(current) => {
                                     let ok = current.to_oklch();
@@ -367,20 +419,20 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
                                         Action::Hue { degrees, .. } => {
                                             Ok(gamut_map(Oklch::new(ok.l, ok.c, ok.h + degrees)))
                                         }
-                                        Action::Contrast {
-                                            backgrounds,
-                                            min,
-                                            direction,
-                                            ..
-                                        } => solve_contrast(
-                                            current,
-                                            backgrounds,
-                                            *min,
-                                            *direction,
-                                            opacity(style, p),
-                                        )
-                                        .map(|r| r.color)
-                                        .map_err(|e| e.to_string()),
+                                        Action::Contrast { min, direction, .. } => {
+                                            match contrast_backgrounds.as_ref().unwrap() {
+                                                Ok(backgrounds) => solve_contrast(
+                                                    current,
+                                                    backgrounds,
+                                                    *min,
+                                                    *direction,
+                                                    effective_opacity,
+                                                )
+                                                .map(|r| r.color)
+                                                .map_err(|e| e.to_string()),
+                                                Err(reason) => Err(reason.clone()),
+                                            }
+                                        }
                                         _ => unreachable!(),
                                     }
                                 }
@@ -413,39 +465,78 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
                 outcome,
                 reason,
                 semantic_rule,
+                semantic_context: None,
             });
         }
     }
     for requirement in &constraints {
-        let achieved = revised.get(&requirement.role).and_then(|s| {
-            color(s, requirement.property).map(|c| {
-                requirement
-                    .backgrounds
-                    .iter()
-                    .map(|b| {
-                        contrast_ratio(
-                            crate::color::composite_over(c, opacity(s, requirement.property), *b),
-                            *b,
-                        )
+        let backgrounds = crate::backdrop::resolve_all(&revised, &requirement.backgrounds);
+        let base = crate::validate::resolved_style(&revised, &requirement.role);
+        let mut treatments = vec![(None, base.clone())];
+        if requirement.include_semantic {
+            match crate::semantic_constraints::treatments(
+                &revised,
+                &requirement.role,
+                &base.clone().unwrap_or_default(),
+            ) {
+                Ok(contexts) => treatments.extend(
+                    contexts
+                        .into_iter()
+                        .map(|(context, style)| (Some(context), Some(style))),
+                ),
+                Err(reason) => report.requirements.push(PropertyOutcome {
+                    role: requirement.role.clone(),
+                    property: requirement.property,
+                    outcome: Outcome::Infeasible,
+                    reason,
+                    semantic_rule: None,
+                    semantic_context: None,
+                }),
+            }
+        }
+        for (semantic_context, treatment) in treatments {
+            let achieved = treatment.as_ref().and_then(|s| {
+                color(s, requirement.property)
+                    .zip(backgrounds.as_ref().ok())
+                    .map(|(c, backgrounds)| {
+                        backgrounds
+                            .iter()
+                            .map(|b| {
+                                contrast_ratio(
+                                    crate::color::composite_over(
+                                        c,
+                                        opacity(s, requirement.property),
+                                        *b,
+                                    ),
+                                    *b,
+                                )
+                            })
+                            .fold(21.0, f64::min)
                     })
-                    .fold(21.0, f64::min)
-            })
-        });
-        let satisfied = achieved.is_some_and(|r| r >= requirement.min);
-        report.requirements.push(PropertyOutcome {
-            role: requirement.role.clone(),
-            property: requirement.property,
-            outcome: if satisfied {
-                Outcome::Satisfied
-            } else {
-                Outcome::Infeasible
-            },
-            reason: format!(
-                "final contrast {:?}; required {}",
-                achieved, requirement.min
-            ),
-            semantic_rule: None,
-        });
+            });
+            let satisfied = achieved.is_some_and(|r| r >= requirement.min);
+            report.requirements.push(PropertyOutcome {
+                role: requirement.role.clone(),
+                property: requirement.property,
+                outcome: if satisfied {
+                    Outcome::Satisfied
+                } else {
+                    Outcome::Infeasible
+                },
+                reason: format!(
+                    "final contrast {:?}; required {}; {}",
+                    achieved,
+                    requirement.min,
+                    backgrounds
+                        .as_ref()
+                        .err()
+                        .map(String::as_str)
+                        .unwrap_or("backgrounds resolved")
+                ),
+                semantic_rule: None,
+                semantic_context,
+            });
+        }
     }
     if report
         .requirements
@@ -454,6 +545,7 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
     {
         // Required constraints are transactional: return the original, never an invalid candidate.
         report.outcome = Outcome::Infeasible;
+        report.rolled_back = true;
         return Ok((theme.clone(), report));
     }
     let persistent: Vec<_> = constraints.into_iter().filter(|r| r.persistent).collect();

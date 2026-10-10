@@ -3,6 +3,17 @@ use super::*;
 use hexwitch_core::protocol::{ErrorCode, Outcome, Response};
 use serde_json::{json, Value};
 
+fn provider_error(e: provider::ProviderError) -> (ErrorCode, String) {
+    let code = match e.code {
+        "timeout" => ErrorCode::Timeout,
+        "rate_limited" => ErrorCode::RateLimited,
+        "refusal" => ErrorCode::ProviderRefusal,
+        "payload_too_large" => ErrorCode::PayloadTooLarge,
+        _ => ErrorCode::ProviderUnavailable,
+    };
+    (code, e.to_string())
+}
+
 pub fn run(command: Command, request_id: &str) -> Response<Value> {
     let operation = match &command {
         Command::Capabilities => "capabilities",
@@ -11,6 +22,7 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
         Command::Revise { .. } => "revise",
         Command::Validate { .. } => "validate",
         Command::Emit { .. } => "emit",
+        Command::EvalInterpretation { .. } => "eval_interpretation",
         _ => "unsupported",
     };
     let fail = |code, message: String| Response::failure(request_id, operation, code, message);
@@ -32,6 +44,20 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                 })
             };
         match command {
+            Command::EvalInterpretation { suite, run, out } => {
+                let report =
+                    hexwitch_core::interpret_eval::run_suite(&suite, &run).map_err(invalid)?;
+                let value = json!(report);
+                write_spec_value(&value, out).map_err(io)?;
+                Ok((
+                    if report.failed == 0 {
+                        Outcome::Satisfied
+                    } else {
+                        Outcome::Infeasible
+                    },
+                    value,
+                ))
+            }
             Command::Capabilities => {
                 Ok((Outcome::Satisfied, hexwitch_core::protocol::capabilities()))
             }
@@ -175,8 +201,55 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                 provider: provider_name,
                 model,
                 out,
+                v1,
+                context,
             } => {
                 let theme = theme(&path)?;
+                if v1 {
+                    let request = prompt.ok_or_else(|| {
+                        invalid("v1 requires original request, including offline replay".into())
+                    })?;
+                    let context = match context {
+                        Some(p) => serde_json::from_str(&read_input(&p).map_err(io)?)
+                            .map_err(|e| invalid(e.to_string()))?,
+                        None => hexwitch_core::interpret_v1::IterationContext::default(),
+                    };
+                    let user = hexwitch_core::interpret_v1::user_prompt(&theme, &request, &context)
+                        .map_err(invalid)?;
+                    let system = hexwitch_core::interpret_v1::system_prompt();
+                    if dry_run {
+                        return Ok((
+                            Outcome::Unchanged,
+                            json!({"system":system,"user":user,"schema":hexwitch_core::interpret_v1::response_schema()}),
+                        ));
+                    }
+                    let response = match from_llm {
+                        Some(p) => hexwitch_core::interpret_v1::parse_model_output(
+                            &read_input(&p).map_err(io)?,
+                        )
+                        .map_err(invalid)?,
+                        None => {
+                            let (endpoint, key, default_model) =
+                                pick_provider(provider_name.as_deref())
+                                    .map_err(|e| (ErrorCode::ProviderUnavailable, e))?;
+                            provider::call_provider_v1(
+                                endpoint,
+                                &key,
+                                model.as_deref().unwrap_or(default_model),
+                                &system,
+                                &user,
+                            )
+                            .map_err(provider_error)?
+                        }
+                    };
+                    let interpreted =
+                        hexwitch_core::interpret_v1::validate(&response, &theme, &request)
+                            .map_err(invalid)?;
+                    if let Some(spec) = &interpreted.spec {
+                        write_spec_value(&json!(spec), out).map_err(io)?;
+                    }
+                    return Ok((interpreted.outcome, json!(interpreted)));
+                }
                 if dry_run {
                     return Ok((
                         Outcome::Unchanged,

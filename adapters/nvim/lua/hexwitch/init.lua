@@ -84,17 +84,29 @@ function M.reference(path, cb)
 end
 
 local function prepare(v, parent, cb)
-  return engine.revise(parent.theme, v.spec, v.theme, v.lua, v.report_path, function(err, _, stderr)
+  return engine.revise(parent.theme, v.spec, v.theme, v.lua, v.report_path, function(err, _, stderr, response)
     if err then return complete(cb, err) end
+    if v.v1 then
+      local report = response and response.result and response.result.revision
+      if type(report) ~= "table" or type(report.properties) ~= "table" or type(report.requirements) ~= "table" then
+        return complete(cb, "Invalid property revision report")
+      end
+      v.revision = report
+      v.report = vim.json.encode(report)
+      v.has_issues = response.outcome ~= "satisfied" and response.outcome ~= "unchanged"
+      if report.rolled_back then return complete(cb, "Required constraints failed; candidate was rolled back") end
+    end
     local raw, read_err = read(v.report_path)
     if not raw then return complete(cb, "Cannot read revision report: " .. tostring(read_err)) end
     local ok, report = pcall(vim.json.decode, raw)
-    if not ok or type(report) ~= "table" or type(report.failed) ~= "table"
-        or type(report.refused) ~= "table" then
-      return complete(cb, "Invalid machine-readable revision report")
+    if not v.v1 then
+      if not ok or type(report) ~= "table" or type(report.failed) ~= "table"
+          or type(report.refused) ~= "table" then
+        return complete(cb, "Invalid machine-readable revision report")
+      end
+      v.revision, v.report = report, stderr
+      v.has_issues = #report.failed > 0 or #report.refused > 0
     end
-    v.revision, v.report = report, stderr
-    v.has_issues = #report.failed > 0 or #report.refused > 0
     table.insert(session.versions, v)
     session.pending = v
     session.busy = false
@@ -111,7 +123,7 @@ local function prepare(v, parent, cb)
       ui.notify(stderr)
     end
     if cb then cb(nil, v) end
-  end)
+  end, { v1 = v.v1 })
 end
 
 -- opts.from_llm is the offline replay path: the real engine validates a saved
@@ -125,10 +137,12 @@ function M.refine(prompt, opts, cb)
   end
   local parent = session.active()
   if not parent then return complete(cb, "Load a reference with :HexwitchReference <theme.json> first") end
-  if not opts.spec and not opts.from_llm and (type(prompt) ~= "string" or not prompt:find("%S")) then
+  if not opts.spec and (opts.v1 or not opts.from_llm) and (type(prompt) ~= "string" or not prompt:find("%S")) then
     return complete(cb, "A non-empty refinement prompt is required")
   end
   local v = version(session.directory(), prompt or "Edit spec", parent)
+  v.v1 = opts.v1 or false
+  session.clarification = nil
   session.busy = true
   if opts.spec then
     local raw, e = read(absolute(opts.spec))
@@ -137,10 +151,28 @@ function M.refine(prompt, opts, cb)
     if not ok then return complete(cb, "Cannot save edit spec: " .. tostring(why)) end
     return prepare(v, parent, cb)
   end
-  local interpret_opts = opts.from_llm and { from_llm = absolute(opts.from_llm) } or nil
-  return engine.interpret(parent.theme, prompt, v.spec, function(err, _, stderr)
+  local interpret_opts = { v1 = v.v1, from_llm = opts.from_llm and absolute(opts.from_llm) or nil,
+    context = opts.context and absolute(opts.context) or nil }
+  return engine.interpret(parent.theme, prompt, v.spec, function(err, _, stderr, response)
     if err then return complete(cb, err) end
-    v.notes = stderr
+    if v.v1 then
+      local result = response and response.result
+      if type(result) ~= "table" or type(result.notes) ~= "string" then
+        return complete(cb, "Invalid property interpretation response")
+      end
+      v.notes = result.notes
+      if result.spec == nil or result.spec == vim.NIL then
+        session.clarification = result.questions
+        ui.notify(result.notes)
+        for _, question in ipairs(result.questions or {}) do ui.notify(question) end
+        return complete(cb, nil, result)
+      end
+      if result.preview and result.preview.rolled_back then
+        return complete(cb, "Required constraints are infeasible; no candidate created")
+      end
+    else
+      v.notes = stderr
+    end
     return prepare(v, parent, cb)
   end, interpret_opts)
 end
@@ -206,11 +238,14 @@ end
 
 function M.state()
   return vim.deepcopy({ versions = session.versions, history = session.history,
-    cursor = session.cursor, pending = session.pending, busy = session.busy })
+    cursor = session.cursor, pending = session.pending, busy = session.busy, clarification = session.clarification })
 end
 
 function M.status()
   local lines = { "Hexwitch " .. (session.busy and "(processing)" or "(idle)"), "" }
+  if session.clarification then
+    for _, question in ipairs(session.clarification) do table.insert(lines, "Clarification: " .. question) end
+  end
   local active = session.active()
   for _, v in ipairs(session.versions) do
     local label = active == v and "active" or (session.pending == v and "pending" or "saved")

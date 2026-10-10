@@ -140,9 +140,26 @@ fn transport(
     }
 }
 
-pub fn decode_response(body: &str) -> Result<LlmSpec, ProviderError> {
-    let value: serde_json::Value = serde_json::from_str(body)
-        .map_err(|_| error("invalid_response", "invalid JSON response"))?;
+pub fn call_provider_v1(
+    endpoint: &str,
+    key: &str,
+    model: &str,
+    system: &str,
+    user: &str,
+) -> Result<hexwitch_core::interpret_v1::ModelInterpretation, ProviderError> {
+    if key.is_empty() || key.chars().any(char::is_control) {
+        return Err(error("invalid_input", "invalid credential"));
+    }
+    let payload = serde_json::json!({"model":model,"temperature":0,"messages":[{"role":"system","content":system},{"role":"user","content":user}],"response_format":{"type":"json_schema","json_schema":hexwitch_core::interpret_v1::response_schema()}});
+    let body = transport(endpoint, key, &payload.to_string(), 120, false)?;
+    let content = decode_content(&body)?;
+    hexwitch_core::interpret_v1::parse_model_output(&content)
+        .map_err(|_| error("invalid_response", "model output failed v1 schema parsing"))
+}
+
+fn decode_content(body: &str) -> Result<String, ProviderError> {
+    let value = hexwitch_core::jsonc::parse(body)
+        .map_err(|_| error("invalid_response", "invalid or duplicate-key JSON response"))?;
     if value
         .pointer("/choices/0/message/refusal")
         .is_some_and(|v| !v.is_null())
@@ -169,7 +186,12 @@ pub fn decode_response(body: &str) -> Result<LlmSpec, ProviderError> {
         .pointer("/choices/0/message/content")
         .and_then(|v| v.as_str())
         .ok_or_else(|| error("invalid_response", "missing message content"))?;
-    let spec = interpret::parse_model_output(content)
+    Ok(content.to_string())
+}
+
+pub fn decode_response(body: &str) -> Result<LlmSpec, ProviderError> {
+    let content = decode_content(body)?;
+    let spec = interpret::parse_model_output(&content)
         .map_err(|_| error("invalid_response", "model output failed schema parsing"))?;
     interpret::llm_spec_to_edit_spec(&spec).map_err(|_| {
         error(
@@ -194,6 +216,24 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("credential"));
+    }
+    #[test]
+    fn v1_response_decode_preserves_clarification_and_checks_completion_status() {
+        let model = include_str!("../../../eval/llm/clarify-blue.json");
+        let body =
+            serde_json::json!({"choices":[{"finish_reason":"stop","message":{"content":model}}]})
+                .to_string();
+        let content = decode_content(&body).unwrap();
+        assert_eq!(
+            hexwitch_core::interpret_v1::parse_model_output(&content)
+                .unwrap()
+                .decision,
+            hexwitch_core::interpret_v1::Decision::NeedsClarification
+        );
+        let refusal=serde_json::json!({"choices":[{"finish_reason":"stop","message":{"refusal":"declined","content":model}}]}).to_string();
+        assert_eq!(decode_content(&refusal).unwrap_err().code, "refusal");
+        let duplicate = r#"{"choices":[],"choices":[]}"#;
+        assert!(decode_content(duplicate).is_err());
     }
     #[test]
     fn real_transport_mock_checks_status_and_stream() {

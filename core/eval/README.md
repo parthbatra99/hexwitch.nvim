@@ -54,6 +54,26 @@ The validator rejects missing fields, unknown metadata, changed hashes and path
 escapes; CI runs it alongside the Rust suites. The six legacy excerpts still
 have unverified upstream license provenance and are not promoted to this suite.
 
+## Executable interpretation evaluation
+
+`interpretation-suite-v1.json` defines 12 machine-checkable cases from the
+50-request corpus (eight development, four held-out). Predicates judge preservation,
+allowed changes, locks, typography resets, opacity, trusted anchors, contrast,
+strength and clarification. `interpretation-contract-replay.json` is deliberately
+hand-authored, not live model output. Rebuild it with build-contract-replay.py.
+
+```sh
+hexwitch --machine eval-interpretation core/eval/interpretation-suite-v1.json \
+  --run core/eval/interpretation-contract-replay.json
+```
+
+To compare a model, collect responses separately with explicit provider consent,
+label run.kind=recorded_provider and record provider/model/prompt_version. Supply
+case_id and raw response strings or decoded JSON. The evaluator does not call a
+network provider; absent responses are failures, not silently skipped cases.
+Reports include hashes and failure classes; run provenance is caller-supplied.
+Do not describe the canned 12/12 as model accuracy or full held-out coverage.
+
 ## Human evaluation protocol (not yet run)
 
 Ask separately: preserved loved treatments, understood requested change, rounds

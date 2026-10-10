@@ -17,6 +17,13 @@ command("HexwitchReplay", function(o) api().refine("Offline replay", { from_llm 
   { nargs = 1, complete = "file", desc = "Interpret a saved model response offline" })
 command("HexwitchApply", function(o) api().apply(o.args ~= "" and o.args or nil) end,
   { nargs = "?", desc = "Accept a pending or saved version" })
+command("HexwitchV1", function(o)
+  if o.args == "" then
+    vim.ui.input({ prompt = "Hexwitch property refinement: " }, function(input)
+      if input and input:find("%S") then api().refine(input, { v1 = true }) end
+    end)
+  else api().refine(o.args, { v1 = true }) end
+end, { nargs = "*", desc = "Property-aware refinement with explicit clarification" })
 command("HexwitchDiscard", function() api().discard() end)
 command("HexwitchUndo", function() api().undo() end)
 command("HexwitchRedo", function() api().redo() end)
