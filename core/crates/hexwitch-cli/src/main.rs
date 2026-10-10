@@ -60,6 +60,20 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
+    /// Emit an editor artifact from a theme JSON file.
+    Emit {
+        /// Path to a theme .json file (VS Code format or IR format).
+        path: std::path::PathBuf,
+        /// Target editor.
+        #[arg(short, long, value_enum, default_value_t = Editor::Nvim)]
+        target: Editor,
+        /// Write to this path instead of stdout.
+        #[arg(short, long)]
+        out: Option<std::path::PathBuf>,
+        /// Print the emit report to stderr.
+        #[arg(long)]
+        report: bool,
+    },
     /// Run the eval set: ingest + analyze reference themes, compare
     /// against goldens and invariants. Non-zero exit on failure.
     Eval {
@@ -78,8 +92,34 @@ enum Target {
     Hex,
 }
 
+/// Editor emission targets (grows with M4: VS Code, Zed).
+#[derive(clap::ValueEnum, Clone, Copy)]
+enum Editor {
+    Nvim,
+}
+
 fn parse_color(s: &str) -> Result<Srgb, String> {
     Srgb::from_hex(s).map_err(|e| e.to_string())
+}
+
+fn summarize_report(report: &hexwitch_core::emit::EmitReport) -> String {
+    let mut s = String::new();
+    s.push_str(&format!(
+        "emit report: {} defined, {} linked, {} skipped, {} unconsumed IR role(s)\n",
+        report.defined.len(),
+        report.linked.len(),
+        report.skipped.len(),
+        report.unconsumed_roles.len()
+    ));
+    for (group, role) in report.skipped.iter().take(10) {
+        s.push_str(&format!("  skipped {group}: IR lacks {role}\n"));
+    }
+    for role in report.unconsumed_roles.iter().take(10) {
+        s.push_str(&format!(
+            "  unconsumed: {role} (no mapping in this target yet)\n"
+        ));
+    }
+    s
 }
 
 fn main() {
@@ -174,6 +214,40 @@ fn run(command: Command) -> Result<(), String> {
                         "  {:<32} l={:.3} c={:.3} h={:6.1}",
                         accent.role, accent.l, accent.c, accent.h
                     );
+                }
+            }
+        }
+        Command::Emit {
+            path,
+            target,
+            out,
+            report,
+        } => {
+            let source = std::fs::read_to_string(&path)
+                .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+            let theme = ingest_vscode_json(&source).map_err(|e| e.to_string())?;
+            let emitted = match target {
+                Editor::Nvim => {
+                    hexwitch_core::emit::emit_nvim(&theme).map_err(|e| e.to_string())?
+                }
+            };
+            match out {
+                Some(p) => {
+                    if let Some(parent) = p.parent() {
+                        std::fs::create_dir_all(parent)
+                            .map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
+                    }
+                    std::fs::write(&p, emitted.lua)
+                        .map_err(|e| format!("cannot write {}: {e}", p.display()))?;
+                    if report {
+                        eprintln!("{}", summarize_report(&emitted.report));
+                    }
+                }
+                None => {
+                    print!("{}", emitted.lua);
+                    if report {
+                        eprintln!("{}", summarize_report(&emitted.report));
+                    }
                 }
             }
         }

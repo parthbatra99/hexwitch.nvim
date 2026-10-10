@@ -36,28 +36,41 @@ Three rules the engine does not break:
 
 ## Status
 
-- **M0 — foundations (in progress):** color science (sRGB/OKLab/OKLCH, WCAG
+- **M0 — foundations (done):** color science (sRGB/OKLab/OKLCH, WCAG
   contrast, gamut mapping, compositing) and IR v0, with tests.
-- **M1 — ingest + analyze:** import real themes, compute identity
-  fingerprints (contrast ladders, hue/chroma budgets).
-- **M2 — revise + emit:** edit specs with protected roles; first Neovim
-  colorscheme emission.
+- **M1 — ingest + analyze (done):** VS Code theme ingest, identity
+  fingerprints (contrast ladders, accent budgets), eval set of six
+  reference themes with independently derived goldens.
+- **M2 — emit (in progress):** Neovim colorscheme emission with an honest
+  degradation report, validated by loading the emitted file in headless
+  Neovim and reading resolved highlights back. Revise (edit specs,
+  protected roles) is next.
 - **M3 — interpretation bridge + thin Neovim UI.**
 - **M4 — portability proof (VS Code adapter).**
 - **M5 — image references, candidate sets, lineage.**
 
-## Using the CLI (M0)
+## Using the CLI (M0–M2)
 
 ```sh
 cd core
-cargo run -p hexwitch-cli -- contrast #ebdbb2 #282828
+cargo run -q -p hexwitch-cli -- contrast '#ebdbb2' '#282828'
 # #ebdbb2 on #282828: 10.75:1  (AAA)
 
-cargo run -p hexwitch-cli -- convert #fb4934
-# oklch(0.65250 0.18319 27.95)
+cargo run -q -p hexwitch-cli -- convert '#fb4934'
+# oklch(0.65969 0.21751 30.39)
 
-cargo run -p hexwitch-cli -- map 0.7 0.4 29
+cargo run -q -p hexwitch-cli -- map 0.7 0.4 29
 # chroma reduction keeps the hue, drops saturation to reach sRGB
+
+cargo run -q -p hexwitch-cli -- eval eval
+# 6 reference themes vs independently derived goldens: all pass
+
+cargo run -q -p hexwitch-cli -- analyze eval/themes/tokyo-night.json
+# contrast ladder + accent budget for any theme
+
+cargo run -q -p hexwitch-cli -- emit eval/themes/gruvbox-dark-medium.json \
+  --out ~/.config/nvim/colors/hexwitch-gruvbox.lua --report
+# a real colorscheme + a report of what was skipped or collapsed
 ```
 
 ## The old Neovim plugin

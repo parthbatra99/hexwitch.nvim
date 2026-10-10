@@ -21,6 +21,12 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      - name: Install Neovim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: v0.10.0
+
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
