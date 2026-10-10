@@ -281,6 +281,22 @@ fn workbench_role(key: &str) -> Option<(Role, bool)> {
         .map(|(_, role, is_bg)| (role.clone(), *is_bg))
 }
 
+/// Load a theme from JSON, accepting either format:
+/// * engine IR (has `meta` + `styles`)
+/// * VS Code theme JSON (has `colors` and/or `tokenColors`)
+///
+/// This is what the CLI (and later the Neovim client) feed to analyze,
+/// revise, and emit, so revisions round-trip through IR files.
+pub fn load_theme(json: &str) -> Result<Theme, IngestError> {
+    let v: serde_json::Value = serde_json::from_str(json)?;
+    let is_ir = v.get("meta").is_some() && v.get("styles").is_some();
+    if is_ir {
+        serde_json::from_value(v).map_err(IngestError::Json)
+    } else {
+        ingest_vscode_json(json)
+    }
+}
+
 /// Ingest a VS Code theme JSON document into the IR.
 pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
     let root: Value = serde_json::from_str(json)?;

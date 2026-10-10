@@ -41,11 +41,11 @@ Three rules the engine does not break:
 - **M1 — ingest + analyze (done):** VS Code theme ingest, identity
   fingerprints (contrast ladders, accent budgets), eval set of six
   reference themes with independently derived goldens.
-- **M2 — emit (in progress):** Neovim colorscheme emission with an honest
-  degradation report, validated by loading the emitted file in headless
-  Neovim and reading resolved highlights back. Revise (edit specs,
-  protected roles) is next.
-- **M3 — interpretation bridge + thin Neovim UI.**
+- **M2 — revise + emit (done):** edit specs (`protect`/`change` ops in
+  OKLCH: lightness/chroma/hue shifts, minimal-lightness contrast solves)
+  with minimal diff and honest revision reports; Neovim colorscheme
+  emission with degradation reports; headless-Neovim round-trip tests.
+- **M3 — interpretation bridge + thin Neovim UI (next).**
 - **M4 — portability proof (VS Code adapter).**
 - **M5 — image references, candidate sets, lineage.**
 
@@ -71,6 +71,12 @@ cargo run -q -p hexwitch-cli -- analyze eval/themes/tokyo-night.json
 cargo run -q -p hexwitch-cli -- emit eval/themes/gruvbox-dark-medium.json \
   --out ~/.config/nvim/colors/hexwitch-gruvbox.lua --report
 # a real colorscheme + a report of what was skipped or collapsed
+
+cargo run -q -p hexwitch-cli -- revise eval/themes/gruvbox-dark-medium.json \
+  --spec eval/editspecs/gruvbox-focus.json \
+  --out revised.json --emit-nvim colors/hexwitch-gruvbox-focus.lua
+# darker base, readable comments, protected syntax — minimal diff, with a
+# per-role report of every color that moved
 ```
 
 ## The old Neovim plugin

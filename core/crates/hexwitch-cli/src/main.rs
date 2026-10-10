@@ -8,7 +8,6 @@
 use clap::{Parser, Subcommand};
 use hexwitch_core::color::{contrast_verdict, gamut_map, Oklch, Srgb};
 use hexwitch_core::eval::{render_report, run_eval_dir};
-use hexwitch_core::ingest::ingest_vscode_json;
 
 #[derive(Parser)]
 #[command(
@@ -81,6 +80,24 @@ enum Command {
         /// relative to the current directory (the workspace root is `core/`).
         #[arg(default_value = "eval")]
         dir: std::path::PathBuf,
+    },
+    /// Apply an edit spec to a theme: protected roles survive, changes
+    /// apply minimally, everything else stays bit-identical.
+    Revise {
+        /// Path to a theme .json file (IR or VS Code format).
+        path: std::path::PathBuf,
+        /// Path to an edit-spec .json file.
+        #[arg(short, long)]
+        spec: std::path::PathBuf,
+        /// Write the revised theme (IR JSON) here instead of stdout.
+        #[arg(short, long)]
+        out: Option<std::path::PathBuf>,
+        /// Also emit a Neovim colorscheme to this path.
+        #[arg(long)]
+        emit_nvim: Option<std::path::PathBuf>,
+        /// Print the revision report even on success.
+        #[arg(long)]
+        report: bool,
     },
 }
 
@@ -186,7 +203,7 @@ fn run(command: Command) -> Result<(), String> {
         Command::Analyze { path, json } => {
             let source = std::fs::read_to_string(&path)
                 .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-            let theme = ingest_vscode_json(&source).map_err(|e| e.to_string())?;
+            let theme = hexwitch_core::ingest::load_theme(&source).map_err(|e| e.to_string())?;
             let fp = hexwitch_core::analyze::fingerprint(&theme).map_err(|e| e.to_string())?;
             if json {
                 println!("{}", serde_json::to_string_pretty(&fp).unwrap());
@@ -225,7 +242,7 @@ fn run(command: Command) -> Result<(), String> {
         } => {
             let source = std::fs::read_to_string(&path)
                 .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
-            let theme = ingest_vscode_json(&source).map_err(|e| e.to_string())?;
+            let theme = hexwitch_core::ingest::load_theme(&source).map_err(|e| e.to_string())?;
             let emitted = match target {
                 Editor::Nvim => {
                     hexwitch_core::emit::emit_nvim(&theme).map_err(|e| e.to_string())?
@@ -256,6 +273,61 @@ fn run(command: Command) -> Result<(), String> {
             print!("{}", render_report(&outcomes));
             if outcomes.iter().any(|o| !o.passed) {
                 std::process::exit(1);
+            }
+        }
+        Command::Revise {
+            path,
+            spec,
+            out,
+            emit_nvim,
+            report,
+        } => {
+            let theme_json = std::fs::read_to_string(&path)
+                .map_err(|e| format!("cannot read {}: {e}", path.display()))?;
+            let theme = hexwitch_core::ingest::load_theme(&theme_json)
+                .map_err(|e| format!("cannot load theme: {e}"))?;
+            let spec_json = std::fs::read_to_string(&spec)
+                .map_err(|e| format!("cannot read {}: {e}", spec.display()))?;
+            let spec = hexwitch_core::revise::EditSpec::from_json(&spec_json)
+                .map_err(|e| format!("invalid edit spec: {e}"))?;
+
+            let (revised, revision) = hexwitch_core::revise::revise(&theme, &spec)
+                .map_err(|e| format!("revision refused: {e}"))?;
+
+            eprint!("{}", revision.summary());
+            if !revision.failed.is_empty() || report {
+                eprintln!(
+                    "({} role(s) failed; failures keep their original colors)",
+                    revision.failed.len()
+                );
+            }
+
+            if let Some(nvim_out) = emit_nvim {
+                let emitted =
+                    hexwitch_core::emit::emit_nvim(&revised).map_err(|e| e.to_string())?;
+                if let Some(parent) = nvim_out.parent() {
+                    std::fs::create_dir_all(parent)
+                        .map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
+                }
+                std::fs::write(&nvim_out, emitted.lua)
+                    .map_err(|e| format!("cannot write {}: {e}", nvim_out.display()))?;
+                eprintln!(
+                    "emitted {} ({} defined, {} linked, {} skipped)",
+                    nvim_out.display(),
+                    emitted.report.defined.len(),
+                    emitted.report.linked.len(),
+                    emitted.report.skipped.len()
+                );
+            }
+
+            let revised_json = revised.to_json_string().map_err(|e| e.to_string())?;
+            match out {
+                Some(p) => {
+                    std::fs::write(&p, revised_json)
+                        .map_err(|e| format!("cannot write {}: {e}", p.display()))?;
+                    eprintln!("revised theme written to {}", p.display());
+                }
+                None => println!("{revised_json}"),
             }
         }
     }

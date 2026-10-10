@@ -16,6 +16,7 @@ pub mod emit;
 pub mod eval;
 pub mod ingest;
 pub mod ir;
+pub mod revise;
 
 /// Version of the intermediate representation itself.
 /// Bumped on breaking changes to the IR schema; themes carry it for forward
