@@ -62,8 +62,11 @@ require("hexwitch").setup({
 Set the named key environment variable before launching Neovim. For another API,
 change base_url (e.g. `https://openrouter.ai/api/v1`) and use that provider's model
 identifier and key. `OPENAI_BASE_URL` is supported when base_url is omitted.
-Local compatible servers may use HTTP on localhost/loopback; remote URLs require
-HTTPS. URL credentials, query strings and fragments are rejected.
+Both HTTP and HTTPS API roots are accepted. HTTP is unencrypted: API keys and
+prompts can be intercepted or modified in transit. Prefer HTTPS; use HTTP only
+when you deliberately trust the connection (for example, an internal gateway).
+The CLI and health check warn about HTTP. URL credentials, query strings and
+fragments are still rejected.
 
 Response formats are explicit: `json_schema` for strict structured output,
 `json_object` for JSON-mode servers, `none` when the server only supports ordinary

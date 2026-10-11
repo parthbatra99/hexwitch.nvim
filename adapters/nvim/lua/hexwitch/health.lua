@@ -22,7 +22,12 @@ function M.check()
     (cfg.provider == "openrouter" and "https://openrouter.ai/api/v1" or "https://api.openai.com/v1")
   if base_url:find("[%s?#]") or base_url:match("^https?://[^/]*@") then
     vim.health.error("Invalid API root (hidden): credentials/query/fragment/whitespace are not allowed")
-  else vim.health.info("API root: " .. base_url) end
+  else
+    vim.health.info("API root: " .. base_url)
+    if base_url:match("^http://") then
+      vim.health.warn("HTTP API connection is unencrypted: credentials and prompts may be read or modified in transit. Prefer HTTPS.")
+    end
+  end
   vim.health.info("Response format: " .. cfg.response_format)
   local key_env = cfg.api_key_env or (cfg.provider == "openrouter" and "OPENROUTER_API_KEY" or "OPENAI_API_KEY")
   if vim.env[key_env] and vim.env[key_env] ~= "" then

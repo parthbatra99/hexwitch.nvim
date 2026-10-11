@@ -75,6 +75,9 @@ fn custom_base_url_key_environment_and_output_modes_reach_chat_completions() {
             String::from_utf8_lossy(&output.stderr)
         );
         assert!(!String::from_utf8_lossy(&output.stdout).contains("mock-compatible-key"));
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(stderr.contains("HTTP API connection is unencrypted"));
+        assert!(!stderr.contains("mock-compatible-key"));
         let result: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(result["outcome"], "needs_clarification");
         let (head, payload) = worker.join().unwrap();

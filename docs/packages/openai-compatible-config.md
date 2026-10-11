@@ -35,8 +35,10 @@ the system prompt and still run strict local validation. No automatic retry or
 format downgrade silently incurs more requests. Sampling temperature is omitted
 rather than forcing an unsupported parameter on reasoning-model APIs.
 
-HTTPS is required remotely. HTTP is allowed only on actual loopback/localhost for
-local compatible servers. Parsed URLs reject credentials, query and fragment,
+Both HTTP and HTTPS are accepted, including explicit remote/internal HTTP gateways.
+HTTPS remains recommended: HTTP sends credentials/prompts unencrypted and cannot
+protect against interception or modification. CLI and health checks warn, without
+printing the credential or payload. Parsed URLs reject credentials, query and fragment,
 so keys cannot accidentally enter argv/logs via URL configuration. Credentials
 and payload travel over stdin, never curl argv or temporary files. Redirects remain
 disabled; redacted provider failures, response limits and completion/refusal checks
@@ -46,8 +48,8 @@ remain. Health checks inspect key presence only and hide malformed secret URLs.
 
 Real loopback TCP mocks drive the CLI through custom API path, model and key name
 in all three output modes. Environment base URL is tested. Negative endpoint
-fixtures reject insecure remote HTTP, URL credentials and accidental full endpoint
-paths. Headless Neovim tests check discovery, explicit-path refusal and argument
+fixtures reject unsupported protocols, URL credentials and accidental full endpoint
+paths; explicit remote HTTP roots are accepted with warnings. Headless Neovim tests check discovery, explicit-path refusal and argument
 forwarding. No real provider request, key capture or personal data transmission was
 performed during this package.
 

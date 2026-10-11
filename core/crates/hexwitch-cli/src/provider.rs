@@ -96,22 +96,20 @@ fn transport(
     }
     let parsed =
         url::Url::parse(endpoint).map_err(|_| error("invalid_input", "invalid endpoint URL"))?;
-    let loopback = match parsed.host() {
-        Some(url::Host::Domain("localhost")) => true,
-        Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
-        Some(url::Host::Ipv6(ip)) => ip.is_loopback(),
-        _ => false,
-    };
-    if !parsed.username().is_empty()
+    if parsed.host_str().is_none()
+        || !parsed.username().is_empty()
         || parsed.password().is_some()
         || parsed.query().is_some()
         || parsed.fragment().is_some()
-        || (parsed.scheme() != "https" && !(parsed.scheme() == "http" && loopback))
+        || !matches!(parsed.scheme(), "http" | "https")
     {
         return Err(error(
             "invalid_input",
-            "insecure or credential-bearing endpoint",
+            "endpoint must use HTTP(S) without credentials, query or fragment",
         ));
+    }
+    if parsed.scheme() == "http" {
+        eprintln!("warning: HTTP API connection is unencrypted; credentials and prompts can be read or modified in transit");
     }
     let config = format!("url = {}\nrequest = \"POST\"\nheader = {}\nheader = \"Content-Type: application/json\"\ndata-binary = {}\n",quote(endpoint)?,quote(&format!("Authorization: Bearer {key}"))?,quote(payload)?);
     let mut child = Command::new("curl")

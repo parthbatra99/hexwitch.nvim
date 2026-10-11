@@ -42,14 +42,8 @@ pub fn endpoint(base_url: &str) -> Result<String, String> {
     {
         return Err("base URL cannot include credentials, query or fragment".into());
     }
-    let local = match url.host() {
-        Some(url::Host::Domain("localhost")) => true,
-        Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
-        Some(url::Host::Ipv6(ip)) => ip.is_loopback(),
-        _ => false,
-    };
-    if url.scheme() != "https" && !(url.scheme() == "http" && local) {
-        return Err("base URL requires HTTPS; HTTP is allowed only on loopback for local compatible servers".into());
+    if !matches!(url.scheme(), "http" | "https") {
+        return Err("base URL must use HTTP or HTTPS".into());
     }
     let path = url.path().trim_end_matches('/');
     if path.ends_with("/chat/completions") {
@@ -124,8 +118,11 @@ mod tests {
         );
         assert!(endpoint("http://127.0.0.1:8000/v1").is_ok());
         assert!(endpoint("http://[::1]:8000/v1").is_ok());
+        assert_eq!(
+            endpoint("http://gateway.example:8000/v1").unwrap(),
+            "http://gateway.example:8000/v1/chat/completions"
+        );
         for invalid in [
-            "http://example.com/v1",
             "https://user:secret@example.com/v1",
             "https://example.com/v1?api_key=secret",
             "https://example.com/v1#x",

@@ -101,7 +101,7 @@ pub fn capabilities() -> serde_json::Value {
         "evaluation_features": ["state_setup", "sequential_cases", "acceptable_alternatives", "paired_consistency", "proposal_guards", "scorecard_denominators"],
         "operations": ["import", "interpret", "revise", "validate", "emit", "eval_interpretation"],
         "edit_spec_versions": [0, 1],
-        "provider_transport": {"api":"openai_compatible_chat_completions","base_url_configurable":true,"api_key_env_configurable":true,"structured_output":["json_schema","json_object","none"],"automatic_retry":false},
+        "provider_transport": {"api":"openai_compatible_chat_completions","base_url_configurable":true,"url_schemes":["http","https"],"http_warning":true,"api_key_env_configurable":true,"structured_output":["json_schema","json_object","none"],"automatic_retry":false},
         "editors": ["nvim"],
         "offline": true,
         "limitations": ["Scene calculations are not real-editor render verification", "Live provider and human preference evaluations are opt-in", "Cancellation is not yet supported; structured-output capability must be selected explicitly", "Neovim cannot faithfully express modifier conjunctions or all priority interactions"]

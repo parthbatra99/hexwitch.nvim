@@ -130,7 +130,8 @@ Live interpretation uses OpenAI-compatible Chat Completions only. --base-url
 --api-key-env names the credential environment variable (default OPENAI_API_KEY),
 never accepts a literal key. --response-format is json_schema/json_object/none;
 validation is strict in every mode, and non-schema modes include schema guidance
-in the prompt. Remote URLs require HTTPS; local loopback HTTP is supported.
+in the prompt. Both HTTP and HTTPS roots are accepted; HTTP warns because
+credentials and prompts are transmitted unencrypted.
 Legacy --provider aliases set convenience defaults only. Clients discover profiles
 via capabilities.provider_transport. No credential-file discovery or automatic
 network format retry is performed.
