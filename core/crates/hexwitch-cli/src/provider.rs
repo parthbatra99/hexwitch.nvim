@@ -195,6 +195,7 @@ pub fn call_provider_v1(
     system: &str,
     user: &str,
     format: OutputFormat,
+    request: &str,
 ) -> Result<hexwitch_core::interpret_v1::ModelInterpretation, ProviderError> {
     if key.is_empty() || key.chars().any(char::is_control) {
         return Err(error("invalid_input", "invalid credential"));
@@ -203,7 +204,7 @@ pub fn call_provider_v1(
         model,
         system,
         user,
-        hexwitch_core::interpret_v1::response_schema(),
+        hexwitch_core::interpret_v1::response_schema_for_request(request),
         format,
     );
     let body = transport(endpoint, key, &payload.to_string(), 120)?;

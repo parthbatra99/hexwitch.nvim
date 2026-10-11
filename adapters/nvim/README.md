@@ -5,6 +5,23 @@ Requires **Neovim 0.10+** and a matching `hexwitch` binary. Live interpretation
 also requires curl and an API key in Neovim's launch environment. All live
 calls use OpenAI-compatible Chat Completions; base URL and model are configurable. Offline replay and explicit edit specs need neither key.
 
+## Standalone playground (no personal config/plugins)
+
+With the release engine built and your key environment already set:
+
+```sh
+OPENAI_BASE_URL='http://your-compatible-gateway' \
+HEXWITCH_API_KEY_ENV='YOUR_KEY_ENV' \
+HEXWITCH_MODEL='your-model' \
+sh scripts/nvim-standalone.sh
+```
+
+This launches `nvim --clean`, isolates state under `hexwitch-standalone`, loads
+only this wrapper, a bundled reference and sample Lua buffer, and uses v1.
+Try `:Hexwitch no italics anywhere`, review with `:HexwitchStatus`, then
+`:HexwitchApply`. Use `:HexwitchUndo`/`:HexwitchRedo` or `:HexwitchDiscard`.
+You do not need lazy.nvim, Telescope, Plenary, or your normal Neovim config.
+
 ## Local installation
 
 From the repository:
@@ -24,6 +41,7 @@ Configure the adapter directory as a local plugin (not the monorepo root):
     require("hexwitch").setup({
       cmd = "/absolute/path/to/hexwitch.nvim/core/target/debug/hexwitch",
       auto_apply = false, -- review candidates first (default)
+      interpretation = "v1", -- property-aware path, verified with live API calls
       report = "short",  -- "full" shows the full engine report
       base_url = "https://api.openai.com/v1",
       api_key_env = "OPENAI_API_KEY", -- name only, never paste the key here
@@ -128,7 +146,8 @@ require("hexwitch").refine("Keep the background color, but remove its transparen
 
 `opts.context` can point to reviewed prior requests/actions. Clarification is
 shown in notifications and `:HexwitchStatus`; supply a corrected request to
-continue. The v1 path is not yet the default. Persistent recovery, cancellation
+continue. The wrapper's compatibility default remains legacy; set interpretation="v1"
+to make ordinary :Hexwitch use v1. The standalone launcher already does this. Persistent recovery, cancellation
 and complete rendered-scene application gates remain unfinished.
 
 ## Safety and current limits

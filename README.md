@@ -124,7 +124,13 @@ hexwitch interpret eval/themes/gruvbox-dark-medium.json \
 
 ## Neovim
 
-See [the adapter setup and workflow](adapters/nvim/README.md). Configure
+See [the adapter setup and workflow](adapters/nvim/README.md). For an isolated
+playground with no personal config or installed plugins, run
+`sh scripts/nvim-standalone.sh` after setting the compatible API environment.
+Live smoke tests verified no-italics, readable comments, protection, review and
+undo/redo against the configured gateway; this is not a full model benchmark.
+
+Configure
 `adapters/nvim/` as the plugin directory, build the Rust binary, and set
 `cmd` to its path. `:HexwitchReference`, `:Hexwitch`, `:HexwitchStatus`,
 `:HexwitchApply`, and `:HexwitchUndo` form the working loop.

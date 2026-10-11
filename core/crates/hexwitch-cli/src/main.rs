@@ -568,6 +568,7 @@ fn run_interpret_v1(
                 &system,
                 &user,
                 connection.format,
+                &prompt,
             )
             .map_err(|e| e.to_string())?
         }

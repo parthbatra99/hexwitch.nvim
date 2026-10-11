@@ -10,7 +10,8 @@ Planning source: `FUTURE_PLAN.md`. This file is the live evidence ledger.
 - Import/semantic fidelity checkpoint: `b72fabe` on `work/p2-import-fidelity`.
 - Property-aware interpretation checkpoint: `abca8f7` on `work/p2-interpretation-quality`.
 - Evaluation matrix checkpoint: `13430b3` on `work/p2-eval-matrix`.
-- Active branch: `work/openai-compatible-config`. Delegated branches/worktrees were created
+- Compatible API checkpoint: `f339193`, HTTP allowance `48ed075`.
+- Active branch: `work/nvim-standalone-live`. Delegated branches/worktrees were created
   from the baseline, but all agent launches failed before execution because no
   deployment was available. No delegated package is counted as implemented.
 
@@ -29,19 +30,20 @@ Planning source: `FUTURE_PLAN.md`. This file is the live evidence ledger.
 | P2.3 | Initial implementation | Bidirectional fixed-hue lightness search, quantized crossing refinement, actual best achieved, multiple backdrop/alpha solver; final legacy requirement recheck; transactional v1 requirements, dynamic role/overlay backdrops and bounded semantic-combination floor checks. Rollback is explicit in reports. No global optimality claim |
 | P2.4 | Initial implementation | Calculated scene matrix, inheritance, alpha, foreground replacement, explicit unverified states. Semantic scene contexts and explicit terminal default/background mapping added; real target priority validation and terminal background-combination matrix remain pending |
 | P2.5 | Partial | Extracted curl transport sends config/credential/payload over stdin only, no disk/argv credentials; redirects disabled, timeout/exit/status/size/refusal/truncation checks, redacted errors, real TCP mock test. OpenAI-compatible base URL/key-env/model configuration and explicit json_schema/json_object/none profiles added with real loopback CLI tests. Explicit HTTP roots are accepted with unencrypted-transport warnings; HTTPS remains recommended. Interrupt/cancellation ownership remains pending |
-| P2.6 | Executable evaluation foundation | Property-aware interpretation v1 with strict boundaries, explicit clarification/unsupported decisions, trusted opaque user anchors, preflight feasibility and iteration context. Original 12-case suite retained; 74-case matrix now covers all 50 request IDs, 15 state/context variants, eight sequential turns and three paired checks. Thirteen known-bad mutations verify evaluator sensitivity. Reports distinguish proposed operations, preservation/readability/strength, missing checks and edit/clarification/refusal buckets. Checked-in runs are canned replay; inspected held_out labels are not independent unseen evidence. Live model comparison and independent labels remain pending |
+| P2.6 | Executable evaluation foundation | Property-aware interpretation v1 with strict boundaries, explicit clarification/unsupported decisions, trusted opaque user anchors, preflight feasibility and iteration context. Original 12-case suite retained; 74-case matrix now covers all 50 request IDs, 15 state/context variants, eight sequential turns and three paired checks. Thirteen known-bad mutations verify evaluator sensitivity. Reports distinguish proposed operations, preservation/readability/strength, missing checks and edit/clarification/refusal buckets. Checked-in runs are canned replay; inspected held_out labels are not independent unseen evidence. Bounded live standalone smoke exposed/fixed schema issues; broad live model comparison and independent labels remain pending |
 | P3.1–P3.6 | Pending | Identity model, richer design relations, image handling, synthesis, candidates, light/dark families |
-| P4.1–P4.5 | Pending | Existing thin-client loop retained; explicit saved-version application guards fixed. Opt-in HexwitchV1 uses versioned responses, clarification display and rollback blocking, with real-binary headless replay tests. Capture/comparison/persistence/cancellation and new-editor acceptance still pending |
+| P4.1–P4.5 | Pending | Existing thin-client loop retained; explicit saved-version application guards fixed. Opt-in HexwitchV1 uses versioned responses, clarification display and rollback blocking, with real-binary headless replay tests. Standalone --clean launcher and opt-in real-provider smoke added; setup interpretation=v1 selects the tested ordinary-command path. Capture/comparison/persistence/cancellation and new-editor acceptance still pending |
 | P5.1–P5.3 | Pending | CI token scope/timeouts improved; release matrix, fuzz/security release gate and human evaluation not delivered |
 
 ## Verification
 
-- `cargo test --manifest-path core/Cargo.toml --all --locked`: 146 Rust tests pass; 7 Python metadata/corpus/rebuild tests pass.
+- `cargo test --manifest-path core/Cargo.toml --all --locked`: 147 Rust tests pass; 7 Python metadata/corpus/rebuild tests pass.
 - `cargo fmt --manifest-path core/Cargo.toml --all --check`: pass.
 - `cargo clippy --manifest-path core/Cargo.toml --all-targets --locked -- -D warnings`: pass.
 - Real local Neovim round-trips, thin client lifecycle regression and TCP mock transport included.
 - `python3 core/eval/verify-fixtures.py`: exact hashes and metadata verified for 5 import artifacts and 3 evaluation states.
-- No live VS Code conformance, live provider evaluation or human preference study performed.
+- Bounded live clean-Neovim smoke performed on the configured gateway/model: schema failures reproduced/fixed; two consecutive final extended runs passed typography, readability, preserved colors, clarification and undo/redo. Not a live model-quality benchmark.
+- No live VS Code conformance or human preference study performed.
 
 ## Gates
 

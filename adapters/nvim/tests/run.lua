@@ -191,6 +191,22 @@ local ok, err = xpcall(function()
     eq(#hx.state().versions, #before.versions)
   end)
 
+  test("v1 mode routes the ordinary Hexwitch command and preserves legacy replay", function()
+    reference()
+    hx.setup({ cmd = vim.env.HEXWITCH_BINARY, interpretation = "v1" })
+    success(function(cb)
+      hx.refine("Keep the background color, but remove its transparency.", {
+        from_llm = fixtures .. "llm/property-opaque-background.json",
+      }, cb)
+    end)
+    assert(session.pending.v1)
+    hx.discard()
+    vim.cmd("HexwitchReplay " .. fixtures .. "llm/darker-readable-comments.json")
+    assert(vim.wait(15000, function() return not session.busy end, 10))
+    assert(session.pending and not session.pending.v1, "legacy replay was redirected into v1 schema")
+    hx.discard()
+  end)
+
   test("invalid model replay never creates a candidate", function()
     reference()
     local before = hx.state()

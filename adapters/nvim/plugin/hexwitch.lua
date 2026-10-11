@@ -13,7 +13,7 @@ command("HexwitchReference", function(o) api().reference(o.args) end,
   { nargs = 1, complete = "file", desc = "Load an IR or VS Code JSON reference" })
 command("HexwitchSpec", function(o) api().refine("Edit spec", { spec = o.args }) end,
   { nargs = 1, complete = "file", desc = "Prepare a revision from a reviewed EditSpec" })
-command("HexwitchReplay", function(o) api().refine("Offline replay", { from_llm = o.args }) end,
+command("HexwitchReplay", function(o) api().refine("Offline replay", { from_llm = o.args, v1 = false }) end,
   { nargs = 1, complete = "file", desc = "Interpret a saved model response offline" })
 command("HexwitchApply", function(o) api().apply(o.args ~= "" and o.args or nil) end,
   { nargs = "?", desc = "Accept a pending or saved version" })

@@ -92,7 +92,10 @@ identity preferences, not yet optimized. Outcomes are distinct from parse errors
 
 `interpret --v1` is opt-in; legacy replay remains supported. A model response has
 version, decision, notes, questions, actions. Every action names role collection,
-property, include_semantic and required nullable operation fields. Unknown/missing
+property, include_semantic and required nullable operation fields. Provider schema
+revision 2 uses per-operation branches: unused fields must be null; used fields
+must be concrete. Request-specific set_color enums contain only admitted user
+anchors, and that branch is removed when the request supplied none. Unknown/missing
 fields and unused non-null parameters fail validation. ready requires actions;
 unchanged/needs_clarification/unsupported require no actions. Clarification needs
 questions. CLI stdout returns the interpretation/report; `--out` writes only an

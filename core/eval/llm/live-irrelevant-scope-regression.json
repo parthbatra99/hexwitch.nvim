@@ -1,0 +1,9 @@
+{
+  "version":1,
+  "decision":"ready",
+  "notes":"Reproduces a live model response that attached a scope to a bool edit. Must be rejected, not silently normalized.",
+  "questions":[],
+  "actions":[
+    {"op":"set_bool","roles":["*"],"property":"italic","include_semantic":true,"scope":"request","color":null,"number":null,"boolean":false,"underline":null,"state":null,"backgrounds":null,"min":null,"direction":null,"persistent":null}
+  ]
+}

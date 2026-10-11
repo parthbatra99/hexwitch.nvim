@@ -219,7 +219,7 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                     if dry_run {
                         return Ok((
                             Outcome::Unchanged,
-                            json!({"system":system,"user":user,"schema":hexwitch_core::interpret_v1::response_schema()}),
+                            json!({"system":system,"user":user,"schema":hexwitch_core::interpret_v1::response_schema_for_request(&request)}),
                         ));
                     }
                     let response = match from_llm {
@@ -238,6 +238,7 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                                 &system,
                                 &user,
                                 connection.format,
+                                &request,
                             )
                             .map_err(provider_error)?
                         }

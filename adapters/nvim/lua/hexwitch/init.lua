@@ -130,7 +130,10 @@ end
 -- model response instead of making a provider call. opts.spec accepts an
 -- already-reviewed EditSpec. Neither bypasses revision or emission.
 function M.refine(prompt, opts, cb)
-  opts = opts or {}
+  opts = vim.tbl_extend("force", {}, opts or {})
+  if opts.v1 == nil and not opts.spec then
+    opts.v1 = require("hexwitch.config").get().interpretation == "v1"
+  end
   if not guard(cb) then return end
   if session.pending then
     return complete(cb, "Apply or discard the pending candidate before refining again")

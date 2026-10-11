@@ -88,7 +88,21 @@ fn custom_base_url_key_environment_and_output_modes_reach_chat_completions() {
             "model-specific unsupported sampling parameter injected"
         );
         match mode {
-            "json_schema" => assert_eq!(payload["response_format"]["type"], "json_schema"),
+            "json_schema" => {
+                assert_eq!(payload["response_format"]["type"], "json_schema");
+                let variants = payload["response_format"]["json_schema"]["schema"]["properties"]
+                    ["actions"]["items"]["anyOf"]
+                    .as_array()
+                    .unwrap();
+                assert!(variants
+                    .iter()
+                    .all(|v| v["properties"]["op"]["enum"][0] != "set_color"));
+                let boolean = variants
+                    .iter()
+                    .find(|v| v["properties"]["op"]["enum"][0] == "set_bool")
+                    .unwrap();
+                assert_eq!(boolean["properties"]["scope"]["type"], "null");
+            }
             "json_object" => assert_eq!(payload["response_format"]["type"], "json_object"),
             _ => assert!(payload.get("response_format").is_none()),
         }

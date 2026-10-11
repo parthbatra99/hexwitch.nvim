@@ -20,6 +20,7 @@ M.defaults = {
   -- accept or :HexwitchDiscard to reject. Opt into auto-apply if desired;
   -- refused or failed edits still require explicit review.
   auto_apply = false,
+  interpretation = "legacy", -- "v1" for property-aware :Hexwitch requests
   -- Notification level: "short" (one line per step) or "full" (report
   -- summaries with every moved role).
   report = "short",
@@ -57,6 +58,9 @@ function M.setup(user)
   end
   if cfg.base_url and cfg.base_url:gsub("/+$", ""):match("/chat/completions$") then
     error("hexwitch: base_url is the API root, not /chat/completions")
+  end
+  if cfg.interpretation ~= "legacy" and cfg.interpretation ~= "v1" then
+    error("hexwitch: interpretation must be legacy or v1")
   end
   if cfg.report ~= "short" and cfg.report ~= "full" then
     error("hexwitch: report must be 'short' or 'full'")

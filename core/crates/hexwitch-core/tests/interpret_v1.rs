@@ -104,6 +104,15 @@ fn user_anchors_are_admitted_but_model_and_inventory_colors_are_not() {
 }
 #[test]
 fn malformed_and_missing_properties_do_not_become_empty_success() {
+    let live = interpret_v1::parse_model_output(include_str!(
+        "../../../eval/llm/live-irrelevant-scope-regression.json"
+    ))
+    .unwrap();
+    assert!(
+        interpret_v1::validate(&live, &theme(), "No italics anywhere.")
+            .unwrap_err()
+            .contains("irrelevant")
+    );
     assert!(interpret_v1::parse_model_output("{}").is_err());
     let mut missing_field = action("unlock", &["syntax.keyword"], "fg");
     missing_field.as_object_mut().unwrap().remove("number");
@@ -314,9 +323,38 @@ fn prompt_contains_properties_locks_context_and_trusted_anchors() {
     ] {
         assert!(prompt.contains(text), "{text}");
     }
+    let schema = interpret_v1::response_schema();
+    let variants = schema["schema"]["properties"]["actions"]["items"]["anyOf"]
+        .as_array()
+        .unwrap();
+    assert_eq!(variants.len(), interpret_v1::ACTIONS.len());
+    assert!(variants.iter().all(|v| v["additionalProperties"] == false));
+    let boolean = variants
+        .iter()
+        .find(|v| v["properties"]["op"]["enum"][0] == "set_bool")
+        .unwrap();
+    assert_eq!(boolean["properties"]["scope"]["type"], "null");
+    assert_eq!(boolean["properties"]["boolean"]["type"], "boolean");
+    let contrast = variants
+        .iter()
+        .find(|v| v["properties"]["op"]["enum"][0] == "contrast")
+        .unwrap();
+    assert_eq!(contrast["properties"]["persistent"]["type"], "boolean");
+    assert_eq!(contrast["properties"]["direction"]["type"], "string");
+    let no_anchor = interpret_v1::response_schema_for_request("Make comments readable.");
     assert!(
-        interpret_v1::response_schema()["schema"]["properties"]["actions"]["items"]
-            ["additionalProperties"]
-            == false
+        no_anchor["schema"]["properties"]["actions"]["items"]["anyOf"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|v| v["properties"]["op"]["enum"][0] != "set_color")
     );
+    let with_anchor = interpret_v1::response_schema_for_request("Use #123456.");
+    let variant = with_anchor["schema"]["properties"]["actions"]["items"]["anyOf"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|v| v["properties"]["op"]["enum"][0] == "set_color")
+        .unwrap();
+    assert_eq!(variant["properties"]["color"]["enum"], json!(["#123456"]));
 }
