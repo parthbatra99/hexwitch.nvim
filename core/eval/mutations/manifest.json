@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "purpose": "Known-bad evaluator sensitivity, not model results",
+  "mutations": [
+    {
+      "file": "wrong-role.json",
+      "case_id": "i01",
+      "expected_check": "unrelated_changes"
+    },
+    {
+      "file": "implicit-whole-style-unlock.json",
+      "case_id": "i46",
+      "expected_check": "protection"
+    },
+    {
+      "file": "unrelated-palette-change.json",
+      "case_id": "i29",
+      "expected_check": "unrelated_changes"
+    },
+    {
+      "file": "missed-semantic-italics.json",
+      "case_id": "i29",
+      "expected_check": "property_correctness"
+    },
+    {
+      "file": "unnecessary-clarification.json",
+      "case_id": "i02",
+      "expected_check": "strength"
+    },
+    {
+      "file": "invented-anchor.json",
+      "case_id": "i40",
+      "expected_check": "interpretation_validation"
+    },
+    {
+      "file": "overbroad-lock.json",
+      "case_id": "i06",
+      "expected_check": "protection"
+    },
+    {
+      "file": "pair-only-strength-gap.json",
+      "case_id": "i16",
+      "expected_check": "pair_only",
+      "expected_pair": "slightly-versus-much"
+    },
+    {
+      "file": "weak-much-change.json",
+      "case_id": "i17",
+      "expected_check": "strength",
+      "expected_pair": "slightly-versus-much"
+    },
+    {
+      "file": "lost-sequential-lock.json",
+      "case_id": "seq-refused",
+      "expected_check": "protection"
+    },
+    {
+      "file": "base-only-selection-floor.json",
+      "case_id": "i23",
+      "expected_check": "readability"
+    },
+    {
+      "file": "omitted-persistent-floor.json",
+      "case_id": "seq-readable",
+      "expected_check": "readability"
+    },
+    {
+      "file": "cleared-unrelated-decoration.json",
+      "case_id": "i49",
+      "expected_check": "preservation"
+    }
+  ]
+}

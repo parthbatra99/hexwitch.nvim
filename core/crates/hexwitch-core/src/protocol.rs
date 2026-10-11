@@ -98,6 +98,7 @@ pub fn capabilities() -> serde_json::Value {
         "interpretation_versions": [0,1],
         "interpretation_prompt_version": crate::interpret_v1::PROMPT_VERSION,
         "interpretation_eval": "recorded_semantic_outcomes",
+        "evaluation_features": ["state_setup", "sequential_cases", "acceptable_alternatives", "paired_consistency", "proposal_guards", "scorecard_denominators"],
         "operations": ["import", "interpret", "revise", "validate", "emit", "eval_interpretation"],
         "edit_spec_versions": [0, 1],
         "provider_transport": {"requires_explicit_provider":true,"structured_output":"json_schema","automatic_retry":false},

@@ -268,10 +268,10 @@ fn run(command: Command) -> Result<(), String> {
                 "{}",
                 serde_json::to_string_pretty(&report).map_err(|e| e.to_string())?
             );
-            if report.failed > 0 {
+            if report.failed > 0 || report.pair_failures > 0 {
                 return Err(format!(
-                    "{} interpretation evaluation cases failed",
-                    report.failed
+                    "{} interpretation cases and {} pair checks failed",
+                    report.failed, report.pair_failures
                 ));
             }
         }

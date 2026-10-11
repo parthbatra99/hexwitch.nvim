@@ -13,6 +13,7 @@ spec.loader.exec_module(module)
 class FixtureMetadataTest(unittest.TestCase):
     def test_checked_in_manifest(self):
         self.assertEqual(module.verify(Path(__file__).parent / "import/manifest.json"), 5)
+        self.assertEqual(module.verify(Path(__file__).parent / "states/manifest.json"), 3)
 
     def test_invalid_metadata_and_escaping_paths_fail(self):
         original = json.loads((Path(__file__).parent / "import/manifest.json").read_text())

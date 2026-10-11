@@ -11,7 +11,7 @@ OPTIONAL = {"license_file"}
 
 def verify(manifest_path: Path) -> int:
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if set(data) != {"version", "suite", "references"} or data["version"] != 1 or data["suite"] != "import_fidelity":
+    if set(data) != {"version", "suite", "references"} or data["version"] != 1 or data["suite"] not in {"import_fidelity", "interpretation_quality"}:
         raise ValueError("invalid fixture manifest contract")
     if not isinstance(data["references"], list) or not data["references"]:
         raise ValueError("fixture references must be a nonempty list")
@@ -44,5 +44,6 @@ def verify(manifest_path: Path) -> int:
 
 
 if __name__ == "__main__":
-    count = verify(Path(__file__).parent / "import/manifest.json")
-    print(f"Verified metadata and exact hashes for {count} import fixtures")
+    root = Path(__file__).parent
+    counts = {name: verify(root / name / "manifest.json") for name in ("import", "states")}
+    print(f"Verified metadata and exact hashes: {counts['import']} import fixtures, {counts['states']} evaluation states")

@@ -15,6 +15,8 @@ pub mod backdrop;
 pub mod color;
 pub mod emit;
 pub mod eval;
+mod eval_contract;
+mod eval_pairs;
 pub mod import_path;
 pub mod ingest;
 pub mod intent;

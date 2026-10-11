@@ -50,7 +50,7 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                 let value = json!(report);
                 write_spec_value(&value, out).map_err(io)?;
                 Ok((
-                    if report.failed == 0 {
+                    if report.failed == 0 && report.pair_failures == 0 {
                         Outcome::Satisfied
                     } else {
                         Outcome::Infeasible

@@ -74,6 +74,35 @@ network provider; absent responses are failures, not silently skipped cases.
 Reports include hashes and failure classes; run provenance is caller-supplied.
 Do not describe the canned 12/12 as model accuracy or full held-out coverage.
 
+## Full semantic state matrix
+
+`interpretation-matrix-v1.json` covers all 50 original requests plus 15 state/context
+variants, one paraphrase and eight sequential turns (74 cases total). Use its
+separate `interpretation-matrix-replay.json` to exercise the evaluator. Three pair
+checks verify strength order, paraphrase equivalence and unrelated-role invariance.
+
+```sh
+hexwitch --machine eval-interpretation core/eval/interpretation-matrix-v1.json \
+  --run core/eval/interpretation-matrix-replay.json --out evaluation.json
+```
+
+`build-eval-matrix.py` and `build-eval-mutations.py` reproduce authored fixtures.
+Thirteen known-bad runs in `mutations/` must trip specific detectors; those are
+sensitivity probes, not alternate provider benchmarks. Case setup is authored
+initial state; previous references carry actual sequential results and context.
+Never silently reset a sequence after a missing model response.
+
+Scorecard dimensions and edit/clarification/refusal buckets are separate. Counts
+include failed and not_evaluated checks; do not hide parse failures by shrinking
+the denominator. Pair failures affect the overall CLI outcome even if all isolated
+cases pass. New predicates check forbidden proposed unlocks, requested background
+contexts/lifetime, hierarchy proxies and complete alternative acceptable answers.
+
+Original held_out split labels are retained but these cases have been inspected;
+they are not a fresh blind holdout. All canned passes establish test machinery,
+not model accuracy, subjective identity preservation or visual quality. Details:
+`docs/packages/P2.6-eval-matrix.md`.
+
 ## Human evaluation protocol (not yet run)
 
 Ask separately: preserved loved treatments, understood requested change, rounds

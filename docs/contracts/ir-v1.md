@@ -105,6 +105,15 @@ history. `eval-interpretation` judges recorded responses against executable sema
 predicates with SHA-256 reproducibility and categorized failures. A canned replay
 is contract evidence, not a live model-quality benchmark.
 
+Evaluation v1 now accepts optional setup (authored IntentSpec), previous (earlier
+actual turn result), source_id and expectation. Optional pairs check property
+equivalence or ordered strength. any_of alternatives require one whole branch to
+pass; operation predicates distinguish an unsafe proposed unlock from rollback.
+Reports expose pair_failures, checks/evaluated and not_evaluated denominators,
+upstream_failed, and separate expectation buckets. Pair-only failures must qualify
+application/result even if isolated case counts are green. The original 12-case
+format remains accepted; feature discovery names the extended evaluator.
+
 ## Protocol
 
 `hexwitch --machine --request-id my-request capabilities` discovers versions.

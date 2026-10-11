@@ -1,0 +1,2196 @@
+{
+  "version": 1,
+  "label": "Known-bad evaluator sensitivity probe: implicit-whole-style-unlock",
+  "provider": "offline",
+  "model": "none",
+  "prompt_version": "property-intent-1",
+  "kind": "canned_replay",
+  "responses": [
+    {
+      "case_id": "i01",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i02",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i03",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "chroma",
+            "roles": [
+              "syntax.string"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.025,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i04",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_color",
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": "#aa7744",
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i05",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i06",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i07",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_number",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 1,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i08",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "syntax.*"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": "request",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i09",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          },
+          {
+            "op": "set_bool",
+            "roles": [
+              "*"
+            ],
+            "property": "italic",
+            "include_semantic": true,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i10",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Do you mean lower selection background opacity and stronger search background, or different foreground treatment?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i11",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "chroma",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.025,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i12",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_color",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": "#888888",
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "bold",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i13",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Which blue role do you mean?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i14",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Which previous version should be the reference?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i15",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Do you mean syntax or interaction highlights?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i18",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "What was the previous saturation change?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i20",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Should the background be black or white?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i24",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Which previous keyword foreground should be restored?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i25",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "The base surface has no foreground; which role's foreground do you want to unlock?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i37",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Do you mean neutral temperature or syntax accents?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i38",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Which red role or color should be protected?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i39",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Do you mean bold typography or color prominence?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i44",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "What was the previous comment italic setting?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i45",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "What was the previous saturation change?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i47",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Hue-only protection is not represented; should the whole keyword foreground stay locked?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i16",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.02,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i17",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.08,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i19",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "May the comment foreground be changed, or should the protection win?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i21",
+      "response": {
+        "version": 1,
+        "decision": "unsupported",
+        "notes": "Font size is an editor setting, not a theme property.",
+        "questions": [],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i22",
+      "response": {
+        "version": 1,
+        "decision": "unsupported",
+        "notes": "Music playback is outside theme operations.",
+        "questions": [],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i43",
+      "response": {
+        "version": 1,
+        "decision": "unsupported",
+        "notes": "Animated text is not a static theme property.",
+        "questions": [],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i23",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              },
+              {
+                "surface": "surface.base",
+                "overlays": [
+                  "interaction.selection"
+                ]
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i26",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "unlock",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i27",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i28",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "surface.gutter"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i29",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_bool",
+            "roles": [
+              "*"
+            ],
+            "property": "italic",
+            "include_semantic": true,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i30",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "bold",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": true,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "bold",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i31",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.float"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i32",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_color",
+            "roles": [
+              "syntax.string"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": "#4f9077",
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i33",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_number",
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 1,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i34",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "*"
+            ],
+            "property": "fg",
+            "include_semantic": true,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "lock",
+            "roles": [
+              "*"
+            ],
+            "property": "bg",
+            "include_semantic": true,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "lock",
+            "roles": [
+              "*"
+            ],
+            "property": "special",
+            "include_semantic": true,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "italic",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": true,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i35",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Should crisp errors mean stronger decoration or a different color contrast floor?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i36",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "bold",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              },
+              {
+                "surface": "surface.base",
+                "overlays": [
+                  "interaction.selection"
+                ]
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i40",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "chroma",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i41",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "Should every property remain locked, or may italic styling be changed?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i42",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 7,
+            "direction": "both",
+            "persistent": false
+          },
+          {
+            "op": "lightness",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -1,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i46",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "unlock",
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i48",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "diagnostic.error.text"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i49",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "state",
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "underline",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": "clear",
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i50",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "bold",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "italic",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "state",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "underline",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": "clear",
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "strikethrough",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i05-already-readable",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i05-light",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i05-locked",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i05-missing",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The reference or request does not identify one safe interpretation.",
+        "questions": [
+          "The comment foreground is absent; should Hexwitch complete it first?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i05-alpha",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i01-at-black",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i02-at-white",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i03-neutral",
+      "response": {
+        "version": 1,
+        "decision": "unchanged",
+        "notes": "Strings are neutral; there is no meaningful chroma to reduce.",
+        "questions": [],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i29-locked-typography",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_bool",
+            "roles": [
+              "*"
+            ],
+            "property": "italic",
+            "include_semantic": true,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i23-foreground-replacement",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              },
+              {
+                "surface": "surface.base",
+                "overlays": [
+                  "interaction.selection"
+                ]
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i33-already-opaque",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_number",
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 1,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i04-locked",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_color",
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": "#aa7744",
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i01-added-role",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i05-extra-unrelated",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i45-with-context",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "chroma",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.02,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "paraphrase-background",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "seq-lock",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "seq-opacity",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_number",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 1,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "seq-readable",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": true
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "seq-refused",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "seq-unlock",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "unlock",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "seq-idempotent",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": true
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "seq-local-lock",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": "request",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "lightness",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "seq-local-released",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    }
+  ]
+}

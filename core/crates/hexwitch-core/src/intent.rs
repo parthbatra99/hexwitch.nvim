@@ -24,7 +24,7 @@ pub struct Target {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub include_semantic: bool,
 }
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Scope {
     Request,

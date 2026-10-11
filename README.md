@@ -66,7 +66,9 @@ See [FUTURE_PLAN.md](FUTURE_PLAN.md) for acceptance gates.
   interpretation accuracy still need evaluation; prebuilt binaries are
   not yet distributed. Opt-in `interpret --v1` / `:HexwitchV1` supports property
   targeting, explicit clarification and trusted user anchors. An offline
-  semantic-outcome evaluator now complements schema and replay tests.
+  semantic-outcome evaluator now complements schema and replay tests. Its
+  74-case authored matrix covers all 50 requests plus state and sequential
+  variants; known-bad probes verify detection. These are not live model scores.
 - **M4 — portability proof (VS Code adapter).**
 - **M5 — image references, candidate sets, lineage.**
 

@@ -105,6 +105,24 @@ fn v1_rejects_untrusted_anchor_and_requires_original_request() {
     assert_eq!(result["errors"][0]["code"], "invalid_input");
 }
 #[test]
+fn pair_only_failure_is_not_reported_as_success() {
+    let (ok, result) = call(&[
+        "eval-interpretation",
+        eval("interpretation-matrix-v1.json").to_str().unwrap(),
+        "--run",
+        eval("mutations/pair-only-strength-gap.json")
+            .to_str()
+            .unwrap(),
+    ]);
+    assert!(
+        ok,
+        "domain evaluation failure is structured, not a transport error"
+    );
+    assert_eq!(result["result"]["failed"], 0);
+    assert_eq!(result["result"]["pair_failures"], 1);
+    assert_eq!(result["outcome"], "infeasible");
+}
+#[test]
 fn executable_semantic_eval_reports_reproducibility_and_honest_replay_kind() {
     let (ok, result) = call(&[
         "eval-interpretation",
