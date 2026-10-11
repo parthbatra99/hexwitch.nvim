@@ -123,6 +123,18 @@ outcomes are successful transport responses; malformed/IO/provider errors exit 1
 Clap argument errors occur before protocol execution and remain ordinary CLI errors.
 Artifact replacement is atomic per file, not one transaction across all outputs.
 
+## API connection
+
+Live interpretation uses OpenAI-compatible Chat Completions only. --base-url
+(or OPENAI_BASE_URL) selects the API root; /chat/completions is appended.
+--api-key-env names the credential environment variable (default OPENAI_API_KEY),
+never accepts a literal key. --response-format is json_schema/json_object/none;
+validation is strict in every mode, and non-schema modes include schema guidance
+in the prompt. Remote URLs require HTTPS; local loopback HTTP is supported.
+Legacy --provider aliases set convenience defaults only. Clients discover profiles
+via capabilities.provider_transport. No credential-file discovery or automatic
+network format retry is performed.
+
 ## Precision and validation
 
 Contrast works on rounded sRGB output. Fixed-hue gamut-mapped lightness search

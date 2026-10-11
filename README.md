@@ -113,10 +113,10 @@ cargo run -q -p hexwitch-cli -- revise eval/themes/gruvbox-dark-medium.json \
 # darker base, readable comments, protected syntax — minimal diff, with a
 # per-role report of every color that moved
 
-# with an API key (OPENAI_API_KEY or OPENROUTER_API_KEY):
+# with OPENAI_API_KEY set (or your configured --api-key-env):
 hexwitch interpret eval/themes/gruvbox-dark-medium.json \
   "darker background and readable comments, keep the syntax colors" \
-  --provider openai --out spec.json
+  --base-url https://api.openai.com/v1 --model gpt-4o-mini --out spec.json
 # shows the model's notes, writes a validated edit spec; then revise as
 # above. --dry-run prints the exact prompt; --from-llm validates a saved
 # model response offline.

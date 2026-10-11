@@ -3,6 +3,41 @@ use hexwitch_core::interpret::{self, LlmSpec};
 use std::io::Write;
 use std::process::{Command, Stdio};
 
+#[derive(Debug, Clone, Copy, clap::ValueEnum, Default)]
+#[value(rename_all = "snake_case")]
+pub enum OutputFormat {
+    #[default]
+    JsonSchema,
+    JsonObject,
+    None,
+}
+
+fn payload(
+    model: &str,
+    system: &str,
+    user: &str,
+    schema: serde_json::Value,
+    format: OutputFormat,
+) -> serde_json::Value {
+    let system = if matches!(format, OutputFormat::JsonSchema) {
+        system.to_string()
+    } else {
+        format!("{system}\nReturn a JSON object matching this exact schema (required nullable fields must be present): {}",schema["schema"])
+    };
+    let mut payload = serde_json::json!({"model":model,"messages":[{"role":"system","content":system},{"role":"user","content":user}]});
+    match format {
+        OutputFormat::JsonSchema => {
+            payload["response_format"] =
+                serde_json::json!({"type":"json_schema","json_schema":schema})
+        }
+        OutputFormat::JsonObject => {
+            payload["response_format"] = serde_json::json!({"type":"json_object"})
+        }
+        OutputFormat::None => {}
+    }
+    payload
+}
+
 const MAX_PAYLOAD: usize = 1024 * 1024;
 const MAX_RESPONSE: usize = 2 * 1024 * 1024;
 
@@ -40,15 +75,13 @@ pub fn call_provider(
     model: &str,
     system: &str,
     user: &str,
+    format: OutputFormat,
 ) -> Result<LlmSpec, ProviderError> {
     if key.is_empty() || key.chars().any(char::is_control) {
         return Err(error("invalid_input", "invalid credential"));
     }
-    if !endpoint.starts_with("https://") {
-        return Err(error("invalid_input", "provider requires HTTPS"));
-    }
-    let payload = serde_json::json!({"model":model,"temperature":0,"messages":[{"role":"system","content":system},{"role":"user","content":user}],"response_format":{"type":"json_schema","json_schema":interpret::response_schema()}});
-    let body = transport(endpoint, key, &payload.to_string(), 120, false)?;
+    let payload = payload(model, system, user, interpret::response_schema(), format);
+    let body = transport(endpoint, key, &payload.to_string(), 120)?;
     decode_response(&body)
 }
 
@@ -57,15 +90,28 @@ fn transport(
     key: &str,
     payload: &str,
     timeout: u32,
-    local_test: bool,
 ) -> Result<String, ProviderError> {
     if payload.len() > MAX_PAYLOAD {
         return Err(error("payload_too_large", "request exceeds 1 MiB"));
     }
-    if !endpoint.starts_with("https://")
-        && !(local_test && endpoint.starts_with("http://127.0.0.1:"))
+    let parsed =
+        url::Url::parse(endpoint).map_err(|_| error("invalid_input", "invalid endpoint URL"))?;
+    let loopback = match parsed.host() {
+        Some(url::Host::Domain("localhost")) => true,
+        Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
+        Some(url::Host::Ipv6(ip)) => ip.is_loopback(),
+        _ => false,
+    };
+    if !parsed.username().is_empty()
+        || parsed.password().is_some()
+        || parsed.query().is_some()
+        || parsed.fragment().is_some()
+        || (parsed.scheme() != "https" && !(parsed.scheme() == "http" && loopback))
     {
-        return Err(error("invalid_input", "insecure endpoint"));
+        return Err(error(
+            "invalid_input",
+            "insecure or credential-bearing endpoint",
+        ));
     }
     let config = format!("url = {}\nrequest = \"POST\"\nheader = {}\nheader = \"Content-Type: application/json\"\ndata-binary = {}\n",quote(endpoint)?,quote(&format!("Authorization: Bearer {key}"))?,quote(payload)?);
     let mut child = Command::new("curl")
@@ -84,7 +130,11 @@ fn transport(
             "--write-out",
             "\n%{http_code}",
             "--proto",
-            if local_test { "=http,https" } else { "=https" },
+            if parsed.scheme() == "http" {
+                "=http"
+            } else {
+                "=https"
+            },
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -146,12 +196,19 @@ pub fn call_provider_v1(
     model: &str,
     system: &str,
     user: &str,
+    format: OutputFormat,
 ) -> Result<hexwitch_core::interpret_v1::ModelInterpretation, ProviderError> {
     if key.is_empty() || key.chars().any(char::is_control) {
         return Err(error("invalid_input", "invalid credential"));
     }
-    let payload = serde_json::json!({"model":model,"temperature":0,"messages":[{"role":"system","content":system},{"role":"user","content":user}],"response_format":{"type":"json_schema","json_schema":hexwitch_core::interpret_v1::response_schema()}});
-    let body = transport(endpoint, key, &payload.to_string(), 120, false)?;
+    let payload = payload(
+        model,
+        system,
+        user,
+        hexwitch_core::interpret_v1::response_schema(),
+        format,
+    );
+    let body = transport(endpoint, key, &payload.to_string(), 120)?;
     let content = decode_content(&body)?;
     hexwitch_core::interpret_v1::parse_model_output(&content)
         .map_err(|_| error("invalid_response", "model output failed v1 schema parsing"))
@@ -261,7 +318,6 @@ mod tests {
             "mock-secret",
             r#"{"test":true}"#,
             5,
-            true,
         )
         .unwrap_err();
         assert_eq!(error.code, "rate_limited");

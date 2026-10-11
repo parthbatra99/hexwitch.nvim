@@ -9,7 +9,8 @@ Planning source: `FUTURE_PLAN.md`. This file is the live evidence ledger.
 - First-wave implementation: `c7de02c` on `work/p1-contracts`.
 - Import/semantic fidelity checkpoint: `b72fabe` on `work/p2-import-fidelity`.
 - Property-aware interpretation checkpoint: `abca8f7` on `work/p2-interpretation-quality`.
-- Active branch: `work/p2-eval-matrix`. Delegated branches/worktrees were created
+- Evaluation matrix checkpoint: `13430b3` on `work/p2-eval-matrix`.
+- Active branch: `work/openai-compatible-config`. Delegated branches/worktrees were created
   from the baseline, but all agent launches failed before execution because no
   deployment was available. No delegated package is counted as implemented.
 
@@ -27,7 +28,7 @@ Planning source: `FUTURE_PLAN.md`. This file is the live evidence ledger.
 | P2.2 | Partial | JSONC lexer; bounded sandboxed include API; alpha and source retained; duplicate rule property merging, typography resets; border/gutter slots corrected. Limited representative dotted/ancestor resolution and per-property precedence implemented; unsupported source keys/selectors named in loss records. Standard semantic selectors/type distinctions, source-order/property precedence and single-modifier Neovim lowering implemented; complete pinned Dark+ plus include/license and explicit stack probes added. Multi-reference held-out corpus, custom registries and real VS Code/LSP priority conformance remain pending |
 | P2.3 | Initial implementation | Bidirectional fixed-hue lightness search, quantized crossing refinement, actual best achieved, multiple backdrop/alpha solver; final legacy requirement recheck; transactional v1 requirements, dynamic role/overlay backdrops and bounded semantic-combination floor checks. Rollback is explicit in reports. No global optimality claim |
 | P2.4 | Initial implementation | Calculated scene matrix, inheritance, alpha, foreground replacement, explicit unverified states. Semantic scene contexts and explicit terminal default/background mapping added; real target priority validation and terminal background-combination matrix remain pending |
-| P2.5 | Partial | Extracted curl transport sends config/credential/payload over stdin only, no disk/argv credentials; redirects disabled, timeout/exit/status/size/refusal/truncation checks, redacted errors, real TCP mock test. Interrupt/cancellation ownership and structured-output fallback profiles remain pending |
+| P2.5 | Partial | Extracted curl transport sends config/credential/payload over stdin only, no disk/argv credentials; redirects disabled, timeout/exit/status/size/refusal/truncation checks, redacted errors, real TCP mock test. OpenAI-compatible base URL/key-env/model configuration and explicit json_schema/json_object/none profiles added with real loopback CLI tests. Interrupt/cancellation ownership remains pending |
 | P2.6 | Executable evaluation foundation | Property-aware interpretation v1 with strict boundaries, explicit clarification/unsupported decisions, trusted opaque user anchors, preflight feasibility and iteration context. Original 12-case suite retained; 74-case matrix now covers all 50 request IDs, 15 state/context variants, eight sequential turns and three paired checks. Thirteen known-bad mutations verify evaluator sensitivity. Reports distinguish proposed operations, preservation/readability/strength, missing checks and edit/clarification/refusal buckets. Checked-in runs are canned replay; inspected held_out labels are not independent unseen evidence. Live model comparison and independent labels remain pending |
 | P3.1–P3.6 | Pending | Identity model, richer design relations, image handling, synthesis, candidates, light/dark families |
 | P4.1–P4.5 | Pending | Existing thin-client loop retained; explicit saved-version application guards fixed. Opt-in HexwitchV1 uses versioned responses, clarification display and rollback blocking, with real-binary headless replay tests. Capture/comparison/persistence/cancellation and new-editor acceptance still pending |
@@ -35,7 +36,7 @@ Planning source: `FUTURE_PLAN.md`. This file is the live evidence ledger.
 
 ## Verification
 
-- `cargo test --manifest-path core/Cargo.toml --all --locked`: 143 Rust tests pass; 7 Python metadata/corpus/rebuild tests pass.
+- `cargo test --manifest-path core/Cargo.toml --all --locked`: 146 Rust tests pass; 7 Python metadata/corpus/rebuild tests pass.
 - `cargo fmt --manifest-path core/Cargo.toml --all --check`: pass.
 - `cargo clippy --manifest-path core/Cargo.toml --all-targets --locked -- -D warnings`: pass.
 - Real local Neovim round-trips, thin client lifecycle regression and TCP mock transport included.

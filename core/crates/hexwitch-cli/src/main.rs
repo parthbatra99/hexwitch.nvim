@@ -5,6 +5,7 @@
 //! subcommands arrive with their milestones and must stay scriptable —
 //! the Neovim adapter (and later VS Code/Zed) drive this same binary.
 
+mod api_config;
 mod artifact;
 mod machine;
 mod provider;
@@ -154,13 +155,9 @@ enum Command {
         /// Write the validated edit spec here (IR EditSpec JSON).
         #[arg(short, long)]
         out: Option<std::path::PathBuf>,
-        /// Explicit provider: `openai` or `openrouter`. Only its configured
-        /// OPENAI_API_KEY / OPENROUTER_API_KEY is used.
-        #[arg(long)]
-        provider: Option<String>,
-        /// Model name (default gpt-4o-mini / openai/gpt-4o-mini).
-        #[arg(short, long)]
-        model: Option<String>,
+        /// OpenAI-compatible API connection; keys stay in the named environment variable.
+        #[command(flatten)]
+        api: api_config::ApiOptions,
         /// Property-aware interpretation with explicit clarification outcomes.
         #[arg(long)]
         v1: bool,
@@ -478,15 +475,12 @@ fn run(command: Command) -> Result<(), String> {
             dry_run,
             from_llm,
             out,
-            provider,
-            model,
+            api,
             v1,
             context,
         } => {
             if v1 {
-                return run_interpret_v1(
-                    path, prompt, dry_run, from_llm, out, provider, model, context,
-                );
+                return run_interpret_v1(path, prompt, dry_run, from_llm, out, api, context);
             }
             use hexwitch_core::interpret as interp;
 
@@ -520,11 +514,16 @@ fn run(command: Command) -> Result<(), String> {
                 return Ok(());
             }
 
-            let (endpoint, api_key, default_model) = pick_provider(provider.as_deref())?;
-            let model = model.unwrap_or_else(|| default_model.to_string());
-
-            let llm = provider::call_provider(endpoint, &api_key, &model, &system, &user)
-                .map_err(|e| e.to_string())?;
+            let connection = api.resolve()?;
+            let llm = provider::call_provider(
+                &connection.endpoint,
+                &connection.key,
+                &connection.model,
+                &system,
+                &user,
+                connection.format,
+            )
+            .map_err(|e| e.to_string())?;
             let spec = interp::llm_spec_to_edit_spec(&llm).map_err(|e| e.to_string())?;
             spec.validate(&theme).map_err(|e| e.to_string())?;
             if let Some(notes) = llm.notes {
@@ -543,8 +542,7 @@ fn run_interpret_v1(
     dry_run: bool,
     from_llm: Option<std::path::PathBuf>,
     out: Option<std::path::PathBuf>,
-    provider_name: Option<String>,
-    model: Option<String>,
+    api: api_config::ApiOptions,
     context: Option<std::path::PathBuf>,
 ) -> Result<(), String> {
     let theme = hexwitch_core::import_path::load_theme_path(&path).map_err(|e| e.to_string())?;
@@ -562,13 +560,14 @@ fn run_interpret_v1(
     let response = match from_llm {
         Some(p) => hexwitch_core::interpret_v1::parse_model_output(&read_input(&p)?)?,
         None => {
-            let (endpoint, key, default_model) = pick_provider(provider_name.as_deref())?;
+            let connection = api.resolve()?;
             provider::call_provider_v1(
-                endpoint,
-                &key,
-                model.as_deref().unwrap_or(default_model),
+                &connection.endpoint,
+                &connection.key,
+                &connection.model,
                 &system,
                 &user,
+                connection.format,
             )
             .map_err(|e| e.to_string())?
         }
@@ -681,29 +680,6 @@ fn write_spec(
     Ok(())
 }
 
-const OPENAI_ENDPOINT: &str = "https://api.openai.com/v1/chat/completions";
-const OPENROUTER_ENDPOINT: &str = "https://openrouter.ai/api/v1/chat/completions";
-
-fn pick_provider(flag: Option<&str>) -> Result<(&'static str, String, &'static str), String> {
-    let key = |name: &str| {
-        std::env::var(name)
-            .ok()
-            .filter(|k| !k.is_empty())
-            .ok_or_else(|| format!("{name} is not set"))
-    };
-    match flag {
-        Some("openai") => Ok((OPENAI_ENDPOINT, key("OPENAI_API_KEY")?, "gpt-4o-mini")),
-        Some("openrouter") => Ok((
-            OPENROUTER_ENDPOINT,
-            key("OPENROUTER_API_KEY")?,
-            "openai/gpt-4o-mini",
-        )),
-        Some(other) => Err(format!("unknown provider {other:?} (openai | openrouter)")),
-        None => Err(
-            "explicit --provider openai|openrouter required; no automatic credential discovery"
-                .into(),
-        ),
-    }
-}
+// OpenAI-compatible connection resolution is centralized in api_config.rs.
 
 // Provider transport lives in provider.rs; no credential-bearing temporary files.

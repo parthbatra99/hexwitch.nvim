@@ -1,9 +1,21 @@
 -- Argument-list process calls only: no shell quoting, color math or API keys here.
 local M = {}
 
+local source = debug.getinfo(1, "S").source:gsub("^@", "")
+local checkout = vim.fn.fnamemodify(source, ":p:h:h:h:h:h")
+
+function M.candidates()
+  local cfg = require("hexwitch.config").get()
+  if cfg.cmd then return { vim.fn.expand(cfg.cmd) } end
+  local suffix = vim.fn.has("win32") == 1 and ".exe" or ""
+  return { "hexwitch", checkout .. "/core/target/release/hexwitch" .. suffix,
+    checkout .. "/core/target/debug/hexwitch" .. suffix }
+end
+
 function M.find()
-  local cmd = require("hexwitch.config").get().cmd
-  return vim.fn.executable(cmd) == 1 and cmd or nil
+  for _, cmd in ipairs(M.candidates()) do
+    if vim.fn.executable(cmd) == 1 then return cmd end
+  end
 end
 
 -- cb(err, stdout, stderr); callbacks always run on Neovim's main loop.
@@ -11,7 +23,8 @@ function M.exec(args, cb)
   local cmd = M.find()
   if not cmd then
     vim.schedule(function()
-      cb("hexwitch binary not found; build core/ and set setup({ cmd = '/path/to/hexwitch' })", "", "")
+      cb("hexwitch binary not found. Tried: " .. table.concat(M.candidates(), ", ")
+        .. ". Run cargo build --release --manifest-path " .. checkout .. "/core/Cargo.toml -p hexwitch-cli, or set cmd to your built executable.", "", "")
     end)
     return
   end
@@ -74,6 +87,9 @@ function M.interpret(theme_path, prompt, spec_path, cb, opts)
     if cfg.model then
       vim.list_extend(args, { "--model", cfg.model })
     end
+    if cfg.base_url then vim.list_extend(args, { "--base-url", cfg.base_url }) end
+    if cfg.api_key_env then vim.list_extend(args, { "--api-key-env", cfg.api_key_env }) end
+    vim.list_extend(args, { "--response-format", cfg.response_format })
   end
   vim.list_extend(args, { "--out", spec_path })
   if not (opts and opts.from_llm) or (opts and opts.v1) then

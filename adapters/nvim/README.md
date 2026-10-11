@@ -2,8 +2,8 @@
 
 A thin client for the Rust engine. No Telescope or Plenary dependencies.
 Requires **Neovim 0.10+** and a matching `hexwitch` binary. Live interpretation
-also requires curl, an explicit provider setting and its `OPENAI_API_KEY` or
-`OPENROUTER_API_KEY` in Neovim's launch environment. Offline replay and explicit edit specs need neither key.
+also requires curl and an API key in Neovim's launch environment. All live
+calls use OpenAI-compatible Chat Completions; base URL and model are configurable. Offline replay and explicit edit specs need neither key.
 
 ## Local installation
 
@@ -25,17 +25,52 @@ Configure the adapter directory as a local plugin (not the monorepo root):
       cmd = "/absolute/path/to/hexwitch.nvim/core/target/debug/hexwitch",
       auto_apply = false, -- review candidates first (default)
       report = "short",  -- "full" shows the full engine report
-      -- provider = "openrouter",
-      -- model = "openai/gpt-4o-mini",
+      base_url = "https://api.openai.com/v1",
+      api_key_env = "OPENAI_API_KEY", -- name only, never paste the key here
+      model = "gpt-4o-mini",
+      response_format = "json_schema", -- "json_object" or "none" if unsupported
     })
   end,
 }
 ```
 
+If `cmd` is omitted, the wrapper checks PATH then this checkout's release/debug
+binary. It never downloads or builds automatically. An explicit missing cmd is
+reported rather than silently replaced. `~` in cmd paths is expanded. For a release
+binary run `cargo build --release --manifest-path core/Cargo.toml -p hexwitch-cli`.
+
 Or add `adapters/nvim` to runtimepath directly and run
 `runtime plugin/hexwitch.lua`. Use `:checkhealth hexwitch` to check the binary.
 Prebuilt release binaries are not set up yet; building/installing the engine
 is currently a separate step. No automatic downloads or installs occur.
+
+## OpenAI-compatible live APIs
+
+Use an API root, not a full completion endpoint; the engine appends
+`/chat/completions`. For example:
+
+```lua
+require("hexwitch").setup({
+  base_url = vim.env.OPENAI_BASE_URL or "https://api.openai.com/v1",
+  api_key_env = "OPENAI_API_KEY",
+  model = vim.env.HEXWITCH_MODEL or "gpt-4o-mini",
+  response_format = "json_schema",
+  auto_apply = false,
+})
+```
+
+Set the named key environment variable before launching Neovim. For another API,
+change base_url (e.g. `https://openrouter.ai/api/v1`) and use that provider's model
+identifier and key. `OPENAI_BASE_URL` is supported when base_url is omitted.
+Local compatible servers may use HTTP on localhost/loopback; remote URLs require
+HTTPS. URL credentials, query strings and fragments are rejected.
+
+Response formats are explicit: `json_schema` for strict structured output,
+`json_object` for JSON-mode servers, `none` when the server only supports ordinary
+Chat Completions. Local schema/semantic validation remains strict in every mode;
+there are no automatic retry/fallback requests or credential-file discovery.
+`:checkhealth hexwitch` shows resolved binary/API root and whether the key is set,
+never its value. Legacy provider aliases remain available for older configs.
 
 ## Workflow
 
@@ -78,7 +113,7 @@ EditSpec, skipping interpretation but not revision or emission.
 `:HexwitchV1 no italics anywhere` uses the v1 interpretation/report protocol.
 Unlike legacy replay it can name individual fg/bg/opacity/typography properties,
 show clarification questions without creating a candidate, and block required
-constraint rollback. It still requires an explicitly configured provider for
+constraint rollback. It still requires an explicitly configured API key for
 live calls; no network call happens for saved replay:
 
 ```lua

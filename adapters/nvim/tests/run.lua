@@ -55,7 +55,8 @@ end
 
 local ok, err = xpcall(function()
   test("config and commands", function()
-    for _, opt in ipairs({ { cmd = "" }, { auto_apply = "yes" }, { provider = "wrong" }, { model = false } }) do
+    for _, opt in ipairs({ { cmd = "" }, { auto_apply = "yes" }, { provider = "wrong" }, { model = false },
+      { base_url = "https://user:secret@host/v1" }, { api_key_env = "paste-key-here" }, { response_format = "wrong" } }) do
       assert(not pcall(hx.setup, opt), "invalid config accepted")
     end
     hx.setup({ cmd = vim.env.HEXWITCH_BINARY })
@@ -261,6 +262,23 @@ local ok, err = xpcall(function()
     eq(hx.state().history, { 1, b.id })
     eq(hx.state().versions[a.id].id, a.id)
     eq(hx.redo(), nil)
+  end)
+
+  test("binary discovery and compatible API settings are explicit argument data", function()
+    hx.setup({ base_url = "https://gateway.example/api/v1/", api_key_env = "TEST_COMPAT_KEY", model = "provider/model", response_format = "json_object" })
+    assert(engine.find(), "checkout binary not discovered")
+    local argv
+    engine.exec = function(args, cb) argv = args; cb(nil, "", "") end
+    engine.interpret("theme.json", "test request", "spec.json", function(e) assert(not e) end)
+    local function value(flag)
+      for i, arg in ipairs(argv) do if arg == flag then return argv[i + 1] end end
+    end
+    eq(value("--base-url"), "https://gateway.example/api/v1/")
+    eq(value("--api-key-env"), "TEST_COMPAT_KEY")
+    eq(value("--model"), "provider/model")
+    eq(value("--response-format"), "json_object")
+    hx.setup({ cmd = tmp .. "/missing-explicit" })
+    eq(engine.find(), nil, "explicit missing path silently replaced")
   end)
 
   test("leading-hyphen prompt remains one argument", function()

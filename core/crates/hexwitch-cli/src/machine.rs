@@ -198,8 +198,7 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                 from_llm,
                 dry_run,
                 prompt,
-                provider: provider_name,
-                model,
+                api,
                 out,
                 v1,
                 context,
@@ -229,15 +228,16 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                         )
                         .map_err(invalid)?,
                         None => {
-                            let (endpoint, key, default_model) =
-                                pick_provider(provider_name.as_deref())
-                                    .map_err(|e| (ErrorCode::ProviderUnavailable, e))?;
+                            let connection = api
+                                .resolve()
+                                .map_err(|e| (ErrorCode::ProviderUnavailable, e))?;
                             provider::call_provider_v1(
-                                endpoint,
-                                &key,
-                                model.as_deref().unwrap_or(default_model),
+                                &connection.endpoint,
+                                &connection.key,
+                                &connection.model,
                                 &system,
                                 &user,
+                                connection.format,
                             )
                             .map_err(provider_error)?
                         }
@@ -265,14 +265,16 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                     if prompt.trim().is_empty() {
                         return Err(invalid("non-empty prompt required".into()));
                     }
-                    let (endpoint, key, default_model) = pick_provider(provider_name.as_deref())
+                    let connection = api
+                        .resolve()
                         .map_err(|e| (ErrorCode::ProviderUnavailable, e))?;
                     provider::call_provider(
-                        endpoint,
-                        &key,
-                        model.as_deref().unwrap_or(default_model),
+                        &connection.endpoint,
+                        &connection.key,
+                        &connection.model,
                         &hexwitch_core::interpret::system_prompt(),
                         &hexwitch_core::interpret::user_prompt(&theme, &prompt),
+                        connection.format,
                     )
                     .map_err(|e| {
                         let code = match e.code {
