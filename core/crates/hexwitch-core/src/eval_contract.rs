@@ -1,5 +1,3 @@
-//! Validate annotations independently of recorded responses. A malformed gold
-//! contract is an authoring error, not evidence that a model failed.
 use crate::interpret_eval::{styles, Case, Metric, Pair, Predicate};
 use crate::ir::{Property, Theme};
 use std::collections::BTreeSet;

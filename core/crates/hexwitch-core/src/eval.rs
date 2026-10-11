@@ -1,22 +1,3 @@
-//! Eval set: ingest + analyze real reference themes and compare against
-//! independently derived golden numbers.
-//!
-//! The goldens for contrast ratios come from measurements made *outside
-//! this codebase* during the research phase (hand-computed WCAG values for
-//! the published colors of Gruvbox, Tokyo Night, Catppuccin, Dracula,
-//! Solarized, Nord). That makes this a real cross-validation of the color
-//! math and ingest mapping, not a self-consistency check.
-//!
-//! Layout of an eval directory:
-//!
-//! ```text
-//! eval/
-//!   manifest.json          { "cases": [ { "file": "...", "expect": {...} } ] }
-//!   themes/*.json          VS Code-format reference fixtures
-//! ```
-//!
-//! Run via the CLI (`hexwitch eval <dir>`) or the integration test.
-
 use serde::Deserialize;
 use std::fs;
 use std::path::Path;
@@ -26,7 +7,6 @@ use crate::analyze::{fingerprint, Fingerprint};
 use crate::ingest::ingest_vscode_json;
 use crate::ir::theme::Theme;
 
-/// Contrast goldens are compared with this tolerance.
 const RATIO_TOLERANCE: f64 = 0.02;
 
 #[derive(Debug, Error)]
@@ -80,8 +60,6 @@ pub struct EvalOutcome {
 }
 
 impl EvalOutcome {
-    /// Structural invariants every theme in the set must satisfy,
-    /// independent of per-theme goldens.
     fn invariant_checks(theme: &Theme, fp: &Fingerprint) -> Vec<Check> {
         let mut checks = Vec::new();
         checks.push(Check {
@@ -114,7 +92,6 @@ impl EvalOutcome {
     }
 }
 
-/// Run the eval set in `dir`, returning one outcome per case.
 pub fn run_eval_dir(dir: &Path) -> Result<Vec<EvalOutcome>, EvalError> {
     let manifest: Manifest = serde_json::from_str(&fs::read_to_string(dir.join("manifest.json"))?)?;
     let mut outcomes = Vec::with_capacity(manifest.cases.len());
@@ -178,7 +155,6 @@ pub fn run_eval_dir(dir: &Path) -> Result<Vec<EvalOutcome>, EvalError> {
     Ok(outcomes)
 }
 
-/// Render a human-readable report (used by CLI and tests on failure).
 pub fn render_report(outcomes: &[EvalOutcome]) -> String {
     let mut out = String::new();
     for o in outcomes {

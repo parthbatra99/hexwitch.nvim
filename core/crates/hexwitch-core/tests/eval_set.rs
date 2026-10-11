@@ -1,10 +1,3 @@
-//! End-to-end eval set: ingest + analyze the reference fixtures and check
-//! them against independently derived goldens plus structural invariants.
-//!
-//! The contrast goldens were computed outside this codebase during the
-//! research phase from the themes' published colors. If this test fails
-//! after a color-math or ingest change, the engine moved — not the goal.
-
 use hexwitch_core::eval::run_eval_dir;
 
 fn eval_dir() -> std::path::PathBuf {
@@ -30,9 +23,6 @@ fn eval_set_passes() {
 
 #[test]
 fn eval_goldens_are_actually_independent_numbers() {
-    // Guard against goldens drifting into self-consistency: the six themes
-    // span a wide, *distinct* range of body/comment contrast, which is the
-    // signature of the research measurements (not of one formula's output).
     let outcomes = run_eval_dir(&eval_dir()).unwrap();
     let primaries: Vec<f64> = outcomes
         .iter()
@@ -55,9 +45,6 @@ fn eval_goldens_are_actually_independent_numbers() {
 
 #[test]
 fn themes_ingest_with_distinct_identities() {
-    // Same test as the product thesis, mechanically: six references must
-    // produce six distinguishable fingerprints (accent hue sets), not six
-    // variations of one engine aesthetic.
     let outcomes = run_eval_dir(&eval_dir()).unwrap();
     let hue_sets: Vec<Vec<f64>> = outcomes
         .iter()

@@ -1,18 +1,9 @@
-//! sRGB color type, transfer functions, and WCAG contrast.
-//!
-//! `Srgb` stores gamma-encoded 8-bit values (what editors actually consume).
-//! `LinearRgb` is the linear-light form used for correct math.
-
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use thiserror::Error;
 
 use crate::color::ok::{Oklab, Oklch};
 
-/// A gamma-encoded 8-bit sRGB color. Ordered for deterministic serialization.
-///
-/// Serializes as a lowercase hex string (`"#282828"`) — the form IR JSON,
-/// fixtures, and edit specs all share.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Srgb {
     pub r: u8,
@@ -33,9 +24,6 @@ impl<'de> Deserialize<'de> for Srgb {
     }
 }
 
-/// A linear-light sRGB color with channels in `[0, 1]` (before gamut clamping
-/// of out-of-range intermediate values, channels may exceed this range and
-/// are clamped on conversion back to [`Srgb`]).
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct LinearRgb {
     pub r: f64,
@@ -57,7 +45,6 @@ impl Srgb {
     pub const BLACK: Srgb = Srgb::new(0, 0, 0);
     pub const WHITE: Srgb = Srgb::new(255, 255, 255);
 
-    /// Parse `#rrggbb` or `rrggbb` (case-insensitive).
     pub fn from_hex(hex: &str) -> Result<Self, HexParseError> {
         let s = hex.strip_prefix('#').unwrap_or(hex);
         if s.len() != 6 || !s.bytes().all(|b| b.is_ascii_hexdigit()) {
@@ -69,12 +56,10 @@ impl Srgb {
         Ok(Srgb::new(byte(0), byte(2), byte(4)))
     }
 
-    /// Format as `#rrggbb` (lowercase).
     pub fn to_hex(self) -> String {
         format!("#{:02x}{:02x}{:02x}", self.r, self.g, self.b)
     }
 
-    /// Encoded channels as `f64` in `[0, 1]`.
     pub fn encoded(self) -> LinearRgb {
         LinearRgb {
             r: self.r as f64 / 255.0,
@@ -83,8 +68,6 @@ impl Srgb {
         }
     }
 
-    /// Convert to linear light using the sRGB inverse transfer function
-    /// (IEC 61966-2-1, as referenced by CSS Color 4).
     pub fn to_linear(self) -> LinearRgb {
         fn decode(c: f64) -> f64 {
             if c <= 0.04045 {
@@ -101,10 +84,6 @@ impl Srgb {
         }
     }
 
-    /// Build from linear light, clamping out-of-gamut channels and rounding
-    /// to the nearest 8-bit encoded values. This is the single documented
-    /// place where clamping (not gamut mapping) happens; prefer
-    /// [`gamut_map`](crate::color::gamut_map) for perceptual intent.
     pub fn from_linear_clamped(lin: LinearRgb) -> Self {
         fn encode(c: f64) -> u8 {
             let c = c.clamp(0.0, 1.0);
@@ -126,9 +105,6 @@ impl Srgb {
         self.to_oklab().to_oklch()
     }
 
-    /// WCAG 2.x relative luminance: linear-light channels weighted by
-    /// 0.2126 / 0.7152 / 0.0722. This is *not* OKLab lightness and not a
-    /// comfort metric; it exists to compute contrast ratios.
     pub fn relative_luminance(self) -> f64 {
         let l = self.to_linear();
         0.2126 * l.r + 0.7152 * l.g + 0.0722 * l.b
@@ -141,8 +117,6 @@ impl fmt::Display for Srgb {
     }
 }
 
-/// WCAG 2.x contrast ratio between two colors. Symmetric; polarity-blind
-/// by design. `>= 4.5` passes AA for normal text, `>= 7` passes AAA.
 pub fn contrast_ratio(a: Srgb, b: Srgb) -> f64 {
     let la = a.relative_luminance();
     let lb = b.relative_luminance();
@@ -150,19 +124,11 @@ pub fn contrast_ratio(a: Srgb, b: Srgb) -> f64 {
     (hi + 0.05) / (lo + 0.05)
 }
 
-/// Classification of a contrast ratio against WCAG 2.2 thresholds.
-/// Thresholds are floors for *typical* body text, not proof of comfort or
-/// of whole-editor accessibility; decorations and non-text indicators have
-/// their own rules.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContrastVerdict {
-    /// >= 7:1 — AAA for normal text.
     Aaa,
-    /// >= 4.5:1 — AA for normal text, AAA for large text.
     Aa,
-    /// >= 3:1 — AA for large text and many non-text indicators.
     LargeTextOnly,
-    /// Below all thresholds.
     Fail,
 }
 
@@ -186,15 +152,12 @@ impl ContrastVerdict {
     }
 }
 
-/// Convenience: ratio plus verdict in one call.
 pub fn contrast_verdict(a: Srgb, b: Srgb) -> (f64, ContrastVerdict) {
     let ratio = contrast_ratio(a, b);
     (ratio, ContrastVerdict::from_ratio(ratio))
 }
 
 impl LinearRgb {
-    /// True when all channels are within `[0, 1]` (allowing `eps` slack for
-    /// floating-point noise at the gamut boundary).
     pub fn in_gamut(self, eps: f64) -> bool {
         self.r >= -eps
             && self.r <= 1.0 + eps
@@ -228,25 +191,20 @@ mod tests {
 
     #[test]
     fn wcag_known_values() {
-        // The canonical extremes: 21:1.
         assert!((contrast_ratio(Srgb::WHITE, Srgb::BLACK) - 21.0).abs() < 1e-9);
-        // Identical colors: 1:1.
         assert!(
             (contrast_ratio(Srgb::new(0x28, 0x2a, 0x36), Srgb::new(0x28, 0x2a, 0x36)) - 1.0).abs()
                 < 1e-9
         );
-        // #767676 on white is the classic "just passes AA" gray (~4.54).
         let ratio = contrast_ratio(Srgb::from_hex("#767676").unwrap(), Srgb::WHITE);
         assert!((ratio - 4.54).abs() < 0.01, "got {ratio}");
         assert_eq!(ContrastVerdict::from_ratio(ratio), ContrastVerdict::Aa);
-        // #777777 just fails AA (~4.48).
         let ratio = contrast_ratio(Srgb::from_hex("#777777").unwrap(), Srgb::WHITE);
         assert!(ratio < 4.5, "got {ratio}");
         assert_eq!(
             ContrastVerdict::from_ratio(ratio),
             ContrastVerdict::LargeTextOnly
         );
-        // Ratio is symmetric under polarity reversal.
         let a = Srgb::from_hex("#839496").unwrap();
         let b = Srgb::from_hex("#002b36").unwrap();
         assert!((contrast_ratio(a, b) - contrast_ratio(b, a)).abs() < 1e-12);

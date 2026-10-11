@@ -1,4 +1,3 @@
-//! Protocol operations; all outputs remain structured and errors have stable codes.
 use super::*;
 use hexwitch_core::protocol::{ErrorCode, Outcome, Response};
 use serde_json::{json, Value};
@@ -21,7 +20,6 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
         Command::Interpret { .. } => "interpret",
         Command::Revise { .. } => "revise",
         Command::Validate { .. } => "validate",
-        Command::Emit { .. } => "emit",
         Command::EvalInterpretation { .. } => "eval_interpretation",
         _ => "unsupported",
     };
@@ -108,11 +106,10 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                 path,
                 spec,
                 out,
-                emit_nvim,
                 report_json,
                 ..
             } => {
-                ensure_distinct(&[out.as_deref(), emit_nvim.as_deref(), report_json.as_deref()])
+                ensure_distinct(&[out.as_deref(), report_json.as_deref()])
                     .map_err(invalid)?;
                 let original = theme(&path)?;
                 let raw = read_input(&spec).map_err(io)?;
@@ -147,16 +144,6 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                     };
                     (revised, json!(report), outcome)
                 };
-                // Prepare every artifact before writing any of them.
-                let emitted = emit_nvim
-                    .as_ref()
-                    .map(|_| hexwitch_core::emit::emit_nvim(&revised))
-                    .transpose()
-                    .map_err(|e| invalid(e.to_string()))?;
-                if let Some(p) = emit_nvim {
-                    artifact::write_atomic(&p, emitted.as_ref().unwrap().lua.as_bytes())
-                        .map_err(|e| io(e.to_string()))?;
-                }
                 if let Some(p) = report_json {
                     artifact::write_atomic(&p, report.to_string().as_bytes())
                         .map_err(|e| io(e.to_string()))?;
@@ -166,31 +153,6 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                 Ok((
                     outcome,
                     json!({"theme":value,"revision":report,"atomicity":"per artifact, not a multi-file transaction"}),
-                ))
-            }
-            Command::Emit {
-                path, target, out, ..
-            } => {
-                let theme = theme(&path)?;
-                let emitted = match target {
-                    Editor::Nvim => hexwitch_core::emit::emit_nvim(&theme)
-                        .map_err(|e| invalid(e.to_string()))?,
-                };
-                if let Some(path) = out {
-                    artifact::write_atomic(&path, emitted.lua.as_bytes())
-                        .map_err(|e| io(e.to_string()))?;
-                }
-                let outcome = if emitted.report.losses.is_empty()
-                    && emitted.report.unconsumed_roles.is_empty()
-                    && emitted.report.skipped.is_empty()
-                {
-                    Outcome::Satisfied
-                } else {
-                    Outcome::Partial
-                };
-                Ok((
-                    outcome,
-                    json!({"artifact":emitted.lua,"report":emitted.report}),
                 ))
             }
             Command::Interpret {
@@ -302,7 +264,7 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
             }
             _ => Err((
                 ErrorCode::UnsupportedCapability,
-                "machine mode supports import/interpret/revise/validate/emit/capabilities".into(),
+                "machine mode supports import/interpret/revise/validate/eval-interpretation/capabilities".into(),
             )),
         }
     })();

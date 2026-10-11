@@ -1,16 +1,3 @@
-//! Ingest: turn reference themes into IR.
-//!
-//! First (and most useful) source format: VS Code theme JSON — it is plain
-//! data, widely available for nearly every famous theme, and exercises both
-//! halves of what a theme *is*: workbench `colors` (UI surfaces/states) and
-//! `tokenColors` (TextMate scopes → syntax styles).
-//!
-//! Deliberate limits: selected workbench mappings and a restricted dotted
-//! selector/ancestor grammar, not full TextMate. Source rules and opacity are
-//! preserved; unsupported semantics are recorded in import losses.
-//! Explicit standard semantic rules are preserved separately and resolved per
-//! property; extension type hierarchies/defaults still require editor context.
-
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::BTreeMap;
@@ -31,10 +18,6 @@ pub enum IngestError {
     #[error("invalid source: {0}")]
     InvalidSource(String),
 }
-
-/// VS Code workbench key -> (role, slot) mapping lives in
-/// [`workbench_role`]; kept as a function so the table stays private and
-/// testable.
 
 #[derive(Debug, Deserialize)]
 struct TokenColorEntry {
@@ -67,9 +50,6 @@ fn parse_hex_maybe_alpha(s: &str) -> Result<Srgb, String> {
     crate::semantic::parse_color(s).map(|(rgb, _)| rgb)
 }
 
-/// Ordered selector -> role table lives in [`scope_rules`]. First rule
-/// whose selector is `scope` or a dot-boundary prefix of it wins; specific
-/// selectors precede general ones ("keyword.operator" before "keyword").
 fn selector_matches(selector: &str, scope: &str) -> bool {
     scope == selector
         || scope
@@ -117,14 +97,11 @@ fn ingest_token_colors(
     theme: &mut Theme,
     token_colors: &[TokenColorEntry],
 ) -> Result<(), IngestError> {
-    // Resolve a deliberately limited selector grammar: dotted scopes, comma
-    // alternatives and ordered ancestor stacks. This is not full TextMate.
     let mut rules: Vec<(String, &TokenSettings, usize)> = vec![];
     let mut representatives: BTreeMap<Role, (String, usize)> = BTreeMap::new();
     let mut represented_stacks: BTreeMap<Role, std::collections::BTreeSet<String>> =
         BTreeMap::new();
     for (order, entry) in token_colors.iter().enumerate() {
-        // Validate even unmapped/shadowed rules; malformed input is not a silent loss.
         for value in [&entry.settings.foreground, &entry.settings.background]
             .into_iter()
             .flatten()
@@ -419,7 +396,6 @@ fn workbench_role(key: &str) -> Option<(Role, bool)> {
     if additional.is_some() {
         return additional;
     }
-    // (key, role, is_background_slot)
     let table: &[(&str, Role, bool)] = &[
         ("editor.background", Role::Surface(Surface::Base), true),
         ("editor.foreground", Role::Text(TextRole::Primary), false),
@@ -492,12 +468,6 @@ fn workbench_role(key: &str) -> Option<(Role, bool)> {
         .map(|(_, role, is_bg)| (role.clone(), *is_bg))
 }
 
-/// Load a theme from JSON, accepting either format:
-/// * engine IR (has `meta` + `styles`)
-/// * VS Code theme JSON (has `colors` and/or `tokenColors`)
-///
-/// This is what the CLI (and later the Neovim client) feed to analyze,
-/// revise, and emit, so revisions round-trip through IR files.
 pub fn load_theme(json: &str) -> Result<Theme, IngestError> {
     let v = crate::jsonc::parse(json).map_err(IngestError::InvalidSource)?;
     if v.get("hexwitchSemanticLayers").is_some() {
@@ -517,7 +487,6 @@ pub(crate) fn load_resolved_theme(v: Value) -> Result<Theme, IngestError> {
     }
 }
 
-/// Ingest a VS Code theme JSON document into the IR.
 pub fn ingest_vscode_json(json: &str) -> Result<Theme, IngestError> {
     let root = crate::jsonc::parse(json).map_err(IngestError::InvalidSource)?;
     if root.get("hexwitchSemanticLayers").is_some() {
@@ -581,7 +550,6 @@ fn ingest_vscode_value(root: Value) -> Result<Theme, IngestError> {
     theme.meta.ir_version = IR_VERSION;
 
     if let Some(colors) = root.get("colors").and_then(Value::as_object) {
-        // Explicit completion widget values outrank generic list fallbacks.
         let mut entries: Vec<_> = colors.iter().collect();
         entries.sort_by_key(|(key, _)| usize::from(key.starts_with("editorSuggestWidget.")));
         for (key, value) in entries {
@@ -647,7 +615,6 @@ fn ingest_vscode_value(root: Value) -> Result<Theme, IngestError> {
         .unwrap_or_default();
 
     ingest_token_colors(&mut theme, &token_colors)?;
-    // Preserve the entire source, including unsupported rules; do not claim portability.
     let mut losses = theme
         .extensions
         .remove("hexwitch.import.scope-losses.v1")
@@ -773,11 +740,9 @@ mod tests {
             ]
         }"##;
         let t = ingest_vscode_json(json).unwrap();
-        // "comment.line..." matched selector "comment" as dot-prefix.
         let comment = t.get(&Role::Syntax(SyntaxRole::Comment)).unwrap();
         assert_eq!(comment.fg, Some(Srgb::from_hex("#928374").unwrap()));
         assert_eq!(comment.italic, Some(true));
-        // Keywords and the more specific operator rule both resolved.
         assert_eq!(
             t.fg(&Role::Syntax(SyntaxRole::Keyword)),
             Some(Srgb::from_hex("#fb4934").unwrap())
@@ -793,8 +758,6 @@ mod tests {
 
     #[test]
     fn specific_selectors_beat_general_ones() {
-        // variable.parameter must win over variable for the parameter role,
-        // and must not clobber the plain variable role.
         let json = r##"{
             "name": "Prec", "type": "dark",
             "tokenColors": [
@@ -839,7 +802,7 @@ mod tests {
             ]
         }"##;
         let t = ingest_vscode_json(json).unwrap();
-        assert_eq!(t.styles.len(), 2); // base plus the newly supported cursor
+        assert_eq!(t.styles.len(), 2);
         assert!(t.extensions["hexwitch.import.losses.v1"]
             .as_array()
             .unwrap()

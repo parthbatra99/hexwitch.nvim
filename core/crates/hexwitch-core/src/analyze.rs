@@ -1,15 +1,3 @@
-//! Analyze: measure what a theme *is* numerically.
-//!
-//! This is the evaluation lens from the first-principles review: themes
-//! are compared not by taste but by measurable structure — the contrast
-//! ladder (how foreground hierarchy relates to the base surface), the
-//! accent budget (how lightness/chroma/hue are spent on syntax), and
-//! simple polarity invariants.
-//!
-//! What these numbers are NOT: proof of readability, comfort, or
-//! superiority. They are diagnostics that make design decisions explicit
-//! and revision effects visible.
-
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -23,15 +11,12 @@ pub enum AnalyzeError {
     MissingBase(String),
 }
 
-/// One rung of the contrast ladder: a foreground-bearing role and its
-/// WCAG ratio against the theme's base background.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoleContrast {
     pub role: String,
     pub ratio: f64,
 }
 
-/// OKLCH view of a syntax accent, for the accent-budget picture.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccentStats {
     pub role: String,
@@ -40,22 +25,15 @@ pub struct AccentStats {
     pub h: f64,
 }
 
-/// A theme's measurable fingerprint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Fingerprint {
     pub name: String,
     pub appearance: Appearance,
     pub base_bg: String,
-    /// Foreground-bearing roles vs base background, highest ratio first.
     pub contrast_ladder: Vec<RoleContrast>,
-    /// Syntax roles with a foreground color.
     pub syntax_roles: usize,
-    /// OKLCH decomposition of syntax accents (identity lives here).
     pub accents: Vec<AccentStats>,
-    /// Highest accent chroma — one number for "how vivid" a theme is.
     pub max_accent_chroma: f64,
-    /// Spread of accent lightness — one number for "how much hierarchy is
-    /// carried by color lightness vs hue".
     pub accent_lightness_spread: f64,
 }
 
@@ -75,7 +53,6 @@ impl Fingerprint {
     }
 }
 
-/// Compute a theme's fingerprint.
 pub fn fingerprint(theme: &Theme) -> Result<Fingerprint, AnalyzeError> {
     let base = theme
         .base_bg()
@@ -139,9 +116,6 @@ pub fn fingerprint(theme: &Theme) -> Result<Fingerprint, AnalyzeError> {
     })
 }
 
-/// Polarity sanity: in a dark theme the base background should be darker
-/// than the primary foreground (and vice versa). A cheap invariant that
-/// catches ingest bugs and accidental inversions during revision.
 pub fn polarity_is_consistent(theme: &Theme) -> bool {
     let (Some(base), Some(primary)) = (theme.base_bg(), theme.fg(&Role::Text(TextRole::Primary)))
     else {
@@ -153,8 +127,6 @@ pub fn polarity_is_consistent(theme: &Theme) -> bool {
     }
 }
 
-/// Secondary information (comments) should not outshine primary text.
-/// Almost every serious theme obeys this; violations are worth seeing.
 pub fn comment_not_brighter_than_primary(theme: &Theme) -> bool {
     let Some(base) = theme.base_bg() else {
         return false;
@@ -167,7 +139,6 @@ pub fn comment_not_brighter_than_primary(theme: &Theme) -> bool {
     }
 }
 
-/// Roles every dark-vs-light comparison and diff view leans on.
 pub fn core_surfaces() -> Vec<Role> {
     vec![
         Role::Surface(Surface::Base),
@@ -208,7 +179,6 @@ mod tests {
         let f = fingerprint(&tiny()).unwrap();
         assert_eq!(f.syntax_roles, 2);
         assert_eq!(f.base_bg, "#282828");
-        // Primary tops the ladder, comments below — gruvbox numbers again.
         assert!((f.primary_contrast().unwrap() - 10.75).abs() < 0.05);
         assert!((f.comment_contrast().unwrap() - 4.02).abs() < 0.05);
         assert_eq!(f.contrast_ladder[0].role, "text.primary");
@@ -234,7 +204,7 @@ mod tests {
     #[test]
     fn invariants_catch_inversion() {
         let mut t = tiny();
-        t.meta.appearance = Appearance::Light; // same colors, wrong claim
+        t.meta.appearance = Appearance::Light;
         assert!(!polarity_is_consistent(&t));
     }
 
@@ -246,7 +216,6 @@ mod tests {
             .iter()
             .find(|a| a.role == "syntax.string")
             .unwrap();
-        // Gruvbox green (#b8bb26) is a *yellow*-green — OKLCH hue ~111°.
         assert!((0.75..0.85).contains(&string_accent.l));
         assert!(string_accent.c > 0.05 && string_accent.c < 0.2);
         assert!(

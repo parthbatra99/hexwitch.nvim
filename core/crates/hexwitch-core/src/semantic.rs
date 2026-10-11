@@ -1,8 +1,3 @@
-//! Semantic token rules, independent of editor transport.
-//!
-//! Matching uses the VS Code 1.95 selector score: exact type +100, each
-//! modifier +100, language +10; ties use later source order per property.
-//! Custom extension type hierarchies and fallback scope maps are not inferred.
 use crate::color::Srgb;
 use crate::ir::{
     Origin, Property, PropertyState, Role, SemanticStyle, SourceInfo, Style, SyntaxRole, Theme,
@@ -138,8 +133,6 @@ pub struct SemanticResolution {
     pub limitations: Vec<String>,
 }
 
-/// Resolve rules over an explicitly supplied lexical/base style. No grammar or
-/// provider is fabricated when semantic highlighting enablement is unknown.
 pub fn resolve_semantic(
     theme: &Theme,
     role: &Role,
@@ -234,7 +227,6 @@ pub fn resolve_semantic(
     Ok(result)
 }
 
-/// Validated hex values shared by source importers (3/4/6/8 hexadecimal digits).
 pub(crate) fn parse_color(value: &str) -> Result<(Srgb, Option<f64>), String> {
     let hex = value
         .strip_prefix('#')
@@ -304,7 +296,6 @@ fn parse_settings(value: &Value, selector: &str, losses: &mut Vec<Value>) -> Res
             _ => losses.push(serde_json::json!({"property":format!("semanticTokenColors.{selector}.{key}"),"reason":"unsupported semantic property; retained in source"})),
         }
     }
-    // VS Code fontStyle overrides individual boolean settings regardless of key order.
     if let Some(value) = object.get("fontStyle") {
         let typography = font_style(value.as_str().unwrap())?;
         for p in [

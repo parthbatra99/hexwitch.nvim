@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Authored eval annotations and contract responses, not a model benchmark.
-
-Expected predicates are authored independently of execution results. The builder
-never calls the engine or derives expected colors from its output. Cases already
-inspected here are not a fresh independent holdout, regardless of original split.
-"""
 import copy
 import json
 from pathlib import Path
@@ -74,7 +68,6 @@ def floor(role="syntax.comment", backgrounds=None, min=4.5, semantic=False, pers
 
 
 def setup(*actions):
-    # The engine's direct setup spec is explicit authored state, not interpretation.
     result = []
     for a in actions:
         entry = dict(op=a["op"], target=target(a["roles"], a["property"], a["include_semantic"]))
@@ -106,9 +99,6 @@ def font_reset(role):
             action("set_bool", role, "strikethrough", boolean=False)]
 
 
-# Base fixture bytes are authored, not recolored from a shipped palette. They
-# deliberately expose different colors, both typography values and semantic
-# overrides so a no-op/partial edit cannot trivially satisfy many predicates.
 def base_theme(light=False):
     return {
         "meta": dict(name="Eval paper" if light else "Eval ink", appearance="light" if light else "dark", ir_version=1),
@@ -158,8 +148,6 @@ def build():
         cases.append(record)
         responses[id] = response
 
-    # All 50 requests have authored checks. Approximate aesthetic relations
-    # (hierarchy/prominence) are labeled color proxies, never human preference.
     add("i01", [metric("lightness", "surface.base", -.12, -.005, "bg"), *permitted_edit(target("surface.base", "bg"))], ready(action("lightness", "surface.base", "bg", number=-.04)))
     add("i02", [metric("lightness", "syntax.comment", .005, .15), *permitted_edit(target("syntax.comment"))], ready(action("lightness", "syntax.comment", number=.04)))
     add("i03", [metric("chroma", "syntax.string", -.12, -.005), *permitted_edit(target("syntax.string"))], ready(action("chroma", "syntax.string", number=-.025)))
@@ -199,7 +187,6 @@ def build():
     add("i49", [check("state", "syntax.function", "underline", value="clear"), preserved("syntax.function"), preserved("syntax.function", "bold"), preserved("syntax.function", "strikethrough"), *permitted_edit(target("syntax.function", "underline"))], ready(action("state", "syntax.function", "underline", state="clear")))
     add("i50", [check("bool", "syntax.comment", "bold", value=False), check("bool", "syntax.comment", "italic", value=False), check("state", "syntax.comment", "underline", value="clear"), check("bool", "syntax.comment", "strikethrough", value=False), *permitted_edit(*[target("syntax.comment", p) for p in ("bold", "italic", "underline", "strikethrough")])], ready(*font_reset("syntax.comment")))
 
-    # State matrix, same language intent against different actual constraints.
     add("i05-already-readable", [preserved("syntax.comment"), outcome("unchanged"), dict(check="no_mutation")], ready(floor()), "mixed", source="i05", state=setup(action("set_color", "syntax.comment", color="#cbd5e1")))
     add("i05-light", [preserved("surface.base", "bg"), check("contrast", "syntax.comment", backgrounds=BG, min=4.5), *permitted_edit(target("syntax.comment"))], ready(floor()), source="i05", theme=LIGHT)
     add("i05-locked", [dict(check="any_of", alternatives=[clarification_checks(), [outcome("infeasible", "refused"), dict(check="no_mutation")]])], ready(floor()), "refusal", source="i05", state=setup(action("lock", "syntax.comment", scope="persistent")))
@@ -215,7 +202,6 @@ def build():
     add("i01-added-role", [metric("lightness","surface.base",-.12,-.005,"bg"),*permitted_edit(target("surface.base","bg"))], copy.deepcopy(responses["i01"]),source="i01",theme="states/dark-extra-role.json")
     add("i05-extra-unrelated", [preserved("surface.float", "bg"), check("contrast", "syntax.comment", backgrounds=BG, min=4.5), *permitted_edit(target("syntax.comment"))], ready(floor()), source="i05", state=setup(action("set_color", "surface.float", "bg", color="#394556")))
 
-    # Contextual repetition is executable, not a fabricated previous palette.
     prior=setup(action("chroma", "syntax.keyword", number=-.04))["actions"]
     add("i45-with-context", [metric("chroma", "syntax.keyword", -.027, -.013), *permitted_edit(target("syntax.keyword"))], ready(action("chroma", "syntax.keyword", number=-.02)), source="i45", context=dict(previous_requests=["Reduce keyword chroma by 0.04."],previous_actions=prior))
 
@@ -224,7 +210,6 @@ def build():
     pairs.extend([dict(check="equivalent",id="background-paraphrase",left="i01",right="paraphrase-background",targets=[target("surface.base","bg")]),
                   dict(check="strength_ordered",id="slightly-versus-much",smaller="i16",larger="i17",target=target("surface.base","bg"),metric="lightness",min_gap=.05)])
 
-    # Multi-turn protection / alpha / readability / explicit unlock chain.
     shared_setup=setup(action("set_number", "surface.base", "bg_opacity", number=.5))
     add("seq-lock", [check("locked", "surface.base", "bg", value=True), only(), locks(target("surface.base","bg"))], ready(action("lock","surface.base","bg",scope="persistent")), request="Lock only the background color.",category="iteration",state=shared_setup)
     add("seq-opacity", [check("number","surface.base","bg_opacity",value=1), preserved("surface.base","bg"),check("locked","surface.base","bg",value=True),only(target("surface.base","bg_opacity")),locks()], ready(action("set_number","surface.base","bg_opacity",number=1)), request="Now remove background transparency without unlocking its color.",category="iteration",previous="seq-lock")

@@ -1,5 +1,3 @@
-//! Dynamic backgrounds for contrast constraints. Literal v1 backgrounds remain
-//! compatible; role references are resolved against the current candidate.
 use crate::color::{composite_over, Srgb};
 use crate::ir::{Property, PropertyState, Role, Theme};
 use serde::{Deserialize, Serialize};
@@ -54,8 +52,6 @@ impl Backdrop {
                     {
                         return Err(format!("unverified background semantics for {role}"));
                     }
-                    // A color floor cannot guarantee readability when an interaction
-                    // replaces the syntax foreground. Such scenes need target validation.
                     if overlay.fg.is_some() {
                         return Err(format!("overlay {role} replaces foreground; contrast requires scene validation"));
                     }

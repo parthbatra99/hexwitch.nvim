@@ -1,21 +1,3 @@
-//! Revise: apply an edit spec to a theme with minimal diff and maximal
-//! identity preservation.
-//!
-//! An [`EditSpec`] is the structured, reviewable output the interpretation
-//! layer (LLM bridge, M3) must produce — the engine never guesses intent.
-//! The revision contract:
-//!
-//! * **Minimal diff.** Roles not named by the spec stay bit-identical.
-//! * **Identity preservation.** Color work happens in OKLCH: lightness
-//!   edits keep hue and chroma, contrast solves keep hue. Gamut mapping is
-//!   explicit, never per-channel clipping.
-//! * **Protection wins.** Roles in `protect` (and any role with `Locked`
-//!   provenance) refuse changes; refusals are reported, never silently
-//!   applied.
-//! * **Order matters.** `changes` apply sequentially; a contrast solve
-//!   against `surface.base` sees the *revised* base if it was changed
-//!   earlier in the list.
-
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
 use thiserror::Error;
@@ -37,8 +19,6 @@ pub enum ReviseError {
     InvalidSpec(String),
 }
 
-/// What a contrast solve is measured against: another role's background,
-/// or a literal hex color.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Against {
     Role(String),
@@ -76,36 +56,18 @@ impl Against {
     }
 }
 
-/// A single operation, applied in OKLCH unless noted.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Op {
-    /// Raise OKLCH lightness by `amount` (0-1).
     Lighter { amount: f64 },
-    /// Lower OKLCH lightness by `amount` (0-1).
     Darker { amount: f64 },
-    /// Raise OKLCH chroma by `amount` (capped by gamut mapping).
     Saturate { amount: f64 },
-    /// Lower OKLCH chroma by `amount`.
     Desaturate { amount: f64 },
-    /// Rotate hue by `shift` degrees.
     Hue { shift: f64 },
-    /// Solve for the smallest lightness change (hue/chroma preserved)
-    /// that reaches at least `min` WCAG contrast against `against`.
     MinContrast { against: Against, min: f64 },
-    /// Mark as protected; no color change. (Equivalent to listing the role
-    /// in `protect`.)
     Protect,
 }
 
-/// One change: an operation applied to every role matching `target`.
-/// Targets are exact role strings (`syntax.comment`) or a trailing
-/// wildcard (`surface.*`, `*`). Serializes flat:
-/// `{"target": "syntax.comment", "op": "min_contrast", ...}`.
-///
-/// Note: `Change` itself cannot `deny_unknown_fields` (incompatible with
-/// `flatten`), but unknown keys still fail inside `Op`'s own strict
-/// deserialization.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Change {
     pub target: String,
@@ -113,11 +75,9 @@ pub struct Change {
     pub op: Op,
 }
 
-/// The edit spec: the only way colors change.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EditSpec {
-    /// Roles that must not change. Combined with `Locked` provenance.
     #[serde(default)]
     pub protect: Vec<String>,
     #[serde(default)]
@@ -178,22 +138,18 @@ impl EditSpec {
     }
 }
 
-/// One applied color move.
 #[derive(Debug, Clone, Serialize)]
 pub struct Applied {
     pub target: String,
     pub role: String,
-    /// Which slot moved: `fg` or `bg`.
     pub slot: &'static str,
     pub op: String,
     pub before: String,
     pub after: String,
     pub delta_e_ok: f64,
-    /// Extra context (e.g. achieved contrast).
     pub note: Option<String>,
 }
 
-/// A change that was refused — protection always wins.
 #[derive(Debug, Clone, Serialize)]
 pub struct Refused {
     pub target: String,
@@ -201,7 +157,6 @@ pub struct Refused {
     pub reason: String,
 }
 
-/// A change that could not be satisfied; the original color stands.
 #[derive(Debug, Clone, Serialize)]
 pub struct Failed {
     pub target: String,
@@ -214,7 +169,6 @@ pub struct RevisionReport {
     pub applied: Vec<Applied>,
     pub refused: Vec<Refused>,
     pub failed: Vec<Failed>,
-    /// Roles checked and left bit-identical (explicitly or by omission).
     pub untouched: usize,
 }
 
@@ -261,8 +215,6 @@ fn matches(target: &str, role: &Role) -> bool {
     }
 }
 
-/// True for dotted names in a known role namespace (surface. syntax. ...),
-/// used to separate "typo inside a namespace" from free-form no-ops.
 fn has_known_namespace(target: &str) -> bool {
     [
         "surface.",
@@ -285,8 +237,6 @@ fn op_name(op: &Op) -> String {
         .unwrap_or_else(|| "op".into())
 }
 
-/// Move a color's lightness by `delta`, preserving hue and chroma, through
-/// explicit gamut mapping.
 fn shift_lightness(color: Srgb, delta: f64) -> Srgb {
     let ok = color.to_oklch();
     gamut_map(Oklch::new((ok.l + delta).clamp(0.0, 1.0), ok.c, ok.h))
@@ -302,8 +252,6 @@ fn shift_hue(color: Srgb, degrees: f64) -> Srgb {
     gamut_map(Oklch::new(ok.l, ok.c, ok.h + degrees))
 }
 
-/// Bounded fixed-hue lightness search; validate the rounded output and
-/// refine observed crossings. This does not prove global color-space optimality.
 fn solve_min_contrast(fg: Srgb, backdrop: Srgb, min: f64, alpha: f64) -> Result<Srgb, String> {
     crate::solver::solve_contrast(fg, &[backdrop], min, crate::solver::Direction::Both, alpha)
         .map(|r| r.color)
@@ -320,17 +268,13 @@ fn describe_op(op: &Op) -> String {
     }
 }
 
-/// Apply an edit spec, returning the revised theme and an honest report.
-/// The input theme is never mutated.
 pub fn revise(theme: &Theme, spec: &EditSpec) -> Result<(Theme, RevisionReport), ReviseError> {
     theme.validate().map_err(ReviseError::InvalidSpec)?;
     spec.validate(theme)?;
     let mut revised = theme.clone();
     let mut report = RevisionReport::default();
 
-    // ---- protection ----
     let mut protected: Vec<Role> = Vec::new();
-    // Locked provenance from the IR is always protection.
     for (role, style) in &revised.styles {
         if style.provenance == Provenance::Locked {
             protected.push(role.clone());
@@ -346,9 +290,6 @@ pub fn revise(theme: &Theme, spec: &EditSpec) -> Result<(Theme, RevisionReport),
                 }
             }
         }
-        // Wildcards matching nothing are fine; an exact, well-formed role
-        // name matching nothing is almost certainly a typo (likely from an
-        // LLM-written spec) and deserves a hard error.
         if !any && !target.ends_with(".*") && target != "*" && target.parse::<Role>().is_ok() {
             return Err(ReviseError::UnknownProtectRole(target.clone()));
         }
@@ -359,7 +300,6 @@ pub fn revise(theme: &Theme, spec: &EditSpec) -> Result<(Theme, RevisionReport),
         }
     }
 
-    // ---- changes ----
     for change in &spec.changes {
         let mut targets: Vec<Role> = revised
             .styles
@@ -368,9 +308,6 @@ pub fn revise(theme: &Theme, spec: &EditSpec) -> Result<(Theme, RevisionReport),
             .cloned()
             .collect();
         if targets.is_empty() {
-            // Distinguish failure modes: a namespaced but unparseable
-            // target ("syntax.nonexistent") is a typo and a hard error; a
-            // bare word or wildcard matching nothing is a recorded no-op.
             if has_known_namespace(&change.target) {
                 return Err(ReviseError::UnknownTargetRole {
                     target: change.target.clone(),
@@ -413,7 +350,6 @@ pub fn revise(theme: &Theme, spec: &EditSpec) -> Result<(Theme, RevisionReport),
                 continue;
             }
 
-            // Resolve the backdrop for contrast solves before borrowing.
             let backdrop = match &change.op {
                 Op::MinContrast { against, .. } => match against {
                     Against::Role(r) => {
@@ -527,7 +463,6 @@ pub fn revise(theme: &Theme, spec: &EditSpec) -> Result<(Theme, RevisionReport),
         }
     }
 
-    // Requirements implied by contrast operations must still hold at the end.
     for change in &spec.changes {
         if let Op::MinContrast { against, min } = &change.op {
             let backdrop = match against {
@@ -564,7 +499,6 @@ pub fn revise(theme: &Theme, spec: &EditSpec) -> Result<(Theme, RevisionReport),
         }
     }
 
-    // A legacy edit must also preserve constraints saved by v1 requests.
     if theme.extensions.contains_key("hexwitch.constraints.v1") {
         let check = crate::intent::IntentSpec {
             version: 1,
@@ -590,7 +524,6 @@ pub fn revise(theme: &Theme, spec: &EditSpec) -> Result<(Theme, RevisionReport),
         }
     }
 
-    // ---- bookkeeping ----
     let changed: std::collections::HashSet<String> = report
         .applied
         .iter()
@@ -618,7 +551,6 @@ mod tests {
     use crate::ir::style::Style;
 
     fn nordish() -> Theme {
-        // Nord numbers: base/text/comment contrast 9.25 / 2.44.
         let mut t = Theme::new("nordish", crate::ir::theme::Appearance::Dark);
         t.set(
             Role::Surface(Surface::Base),
@@ -683,7 +615,6 @@ mod tests {
         assert_eq!(report.applied.len(), 0);
         assert_eq!(report.refused.len(), 1);
         assert!(report.refused[0].reason.contains("protected"));
-        // Protection is recorded as Locked provenance for future rounds.
         assert_eq!(
             out.get(&Role::Syntax(SyntaxRole::Comment))
                 .unwrap()
@@ -744,8 +675,6 @@ mod tests {
         let solved = out.fg(&Role::Syntax(SyntaxRole::Comment)).unwrap();
         let ratio = contrast_ratio(solved, base);
         assert!(ratio >= 4.5, "got {ratio}");
-        // Minimal movement: one scan step below the solution must fail —
-        // that's what "smallest lightness change" means.
         let (l0, l1) = (comment.to_oklch().l, solved.to_oklch().l);
         assert!(l1 - l0 < 0.2, "moved L {l0} -> {l1}");
         let c0 = comment.to_oklch();
@@ -754,9 +683,7 @@ mod tests {
             contrast_ratio(below, base) < 4.5,
             "solution was not minimal"
         );
-        // Identity: hue preserved, chroma nearly so.
         let (c0, c1) = (comment.to_oklch(), solved.to_oklch());
-        // 8-bit output may move recovered hue by a degree at low chroma.
         assert!((c0.h - c1.h).abs() < 1.0, "hue {} -> {}", c0.h, c1.h);
         assert!((c0.c - c1.c).abs() < 0.02);
         assert!(report.applied[0]
@@ -797,7 +724,6 @@ mod tests {
             out.bg(&Role::Surface(Surface::Panel)),
             nordish().bg(&Role::Surface(Surface::Panel))
         );
-        // Syntax untouched.
         assert_eq!(
             out.fg(&Role::Syntax(SyntaxRole::Keyword)),
             nordish().fg(&Role::Syntax(SyntaxRole::Keyword))
@@ -867,7 +793,6 @@ mod tests {
         )
         .unwrap_err();
         assert!(matches!(err, ReviseError::UnknownTargetRole { .. }));
-        // All malformed targets are rejected consistently.
         let error = revise(
             &nordish(),
             &spec(

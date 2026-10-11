@@ -1,14 +1,8 @@
-//! Visual treatment attached to a role, plus where it came from.
-
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::color::Srgb;
 
-/// Underline family. Adapters lower this to what the editor supports
-/// (VS Code has a single underline; Neovim has the full set) and *report*
-/// the degradation — curl vs line can matter for diagnostics that must not
-/// rely on color alone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UnderlineStyle {
@@ -20,34 +14,18 @@ pub enum UnderlineStyle {
     Strikethrough,
 }
 
-/// Why a style has the value it has. The revise engine consults this:
-/// `Ingested` colors are the reference identity, `Locked` ones are
-/// user-protected and must survive revision untouched, `Derived` styles are
-/// recomputed when their inputs change, `Generated` styles were
-/// synthesized. Changing provenance silently is forbidden.
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Serialize, Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum Provenance {
-    /// Carried over unchanged from the ingested reference.
     #[default]
     Ingested,
-    /// Explicitly protected by the user ("don't touch the background").
     Locked,
-    /// Computed from other roles (e.g. a selection bg derived from an accent).
     Derived,
-    /// Synthesized during revision or generation.
     Generated,
 }
 
-/// The full visual treatment for one role.
-///
-/// Omitted concrete properties are unspecified unless `states` explicitly
-/// selects inherit or clear. Opacity is independent from color; omitted
-/// opacity is opaque. `locked` is independent from source origin.
-///
-/// Unknown fields are rejected: the IR is a contract, not a suggestion.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Style {
@@ -67,8 +45,6 @@ pub struct Style {
     pub fg: Option<Srgb>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bg: Option<Srgb>,
-    /// Decoration color (underline/undercurl/sign bars), where the editor
-    /// separates it from the foreground.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub special: Option<Srgb>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -77,11 +53,8 @@ pub struct Style {
     pub italic: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub underline: Option<UnderlineStyle>,
-    /// Independent from underline so both decorations can coexist.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub strikethrough: Option<bool>,
-    /// Floating-window blend (Neovim `winblend`-style, 0-100), where
-    /// supported.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub blend: Option<u8>,
     #[serde(default, skip_serializing_if = "Provenance::is_ingested")]
@@ -197,8 +170,6 @@ impl Style {
         }
         Ok(())
     }
-    /// Copy exactly one visual property, including explicit state semantics.
-    /// Locks and source metadata are not inherited through this operation.
     pub fn copy_property_from(&mut self, other: &Style, property: Property) {
         self.clear_value(property);
         self.states.remove(&property);
@@ -252,21 +223,18 @@ impl Style {
         }
     }
 
-    /// A foreground-only style, the most common shape in a theme.
     pub fn fg(fg: Srgb) -> Self {
         let mut s = Style::new();
         s.fg = Some(fg);
         s
     }
 
-    /// A background-only style (surfaces, line tints).
     pub fn bg(bg: Srgb) -> Self {
         let mut s = Style::new();
         s.bg = Some(bg);
         s
     }
 
-    /// Foreground + background pair.
     pub fn pair(fg: Srgb, bg: Srgb) -> Self {
         let mut s = Style::fg(fg);
         s.bg = Some(bg);
@@ -323,8 +291,6 @@ mod tests {
     fn unspecified_fields_stay_absent() {
         let json = serde_json::to_string(&Style::default()).unwrap();
         assert_eq!(json, "{}");
-        // Unknown-but-tolerated extras are rejected loudly rather than
-        // silently dropped.
         assert!(serde_json::from_str::<Style>(r##"{"fg":"#123456","bold":true}"##).is_ok());
         assert!(serde_json::from_str::<Style>(r#"{"nonsense":1}"#).is_err());
     }

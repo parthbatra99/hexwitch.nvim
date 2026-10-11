@@ -1,4 +1,3 @@
-//! Resolved color scenes. These are calculated profiles, not editor screenshots.
 use crate::color::{composite_over, contrast_ratio, Srgb};
 use crate::ir::{Property, PropertyState, RelationshipKind, Role, Style, Theme};
 use serde::{Deserialize, Serialize};
@@ -147,7 +146,6 @@ pub fn validate_scenes(theme: &Theme, scenes: &[Scene]) -> Result<ValidationRepo
                     if style.blend.is_some_and(|b| b > 0) {
                         reasons.push(format!("window blend ordering unverified for {overlay}"));
                     }
-                    // Decoration-only diagnostics do not replace syntax foreground.
                     if style.fg.is_none() && style.bg.is_none() && style.special.is_none() {
                         reasons.push(format!("overlay has no color treatment {overlay}"));
                     }

@@ -1,167 +1,131 @@
 # hexwitch
 
-**A theme engine, not a theme.** Hexwitch is building an editor-independent
-engine for adapting references into a personal editor theme. Today the
-prototype imports a selected subset of VS Code theme JSON, applies
-structured revisions, and emits Neovim colorschemes. Image references,
-description synthesis, and other editors are planned, not proven capabilities.
+An editor-independent theme engine and local browser playground. Start from a
+reference, make a deliberate change, inspect its property diff and validation,
+then accept or reject it. Rust computes the colors; a language model proposes
+intent, not a replacement palette.
 
-The intended design treats a theme as a system of relationships (surfaces,
-hierarchy, syntax roles, interaction states). This is the target pipeline;
-not every stage or editor below is implemented yet:
+**Current scope: engine, experiments, and evaluations only.** Editor adapters,
+colorscheme emitters, editor installation and release packaging have been removed.
+Theme-file import remains a reference-input format, not an editor integration.
 
+## Run the playground
+
+Requires a Rust toolchain and a browser. Live interpretation also requires `curl`.
+No JavaScript build, plugins, or personal editor configuration are needed.
+
+```sh
+cargo run --manifest-path core/Cargo.toml -p hexwitch-cli -- playground
 ```
-reference (theme / image / description)
-   → interpret   intent + protected choices   ("keep the background, warm the accents")
-   → revise      constraint-guided, minimal-diff color work in OKLCH
-   → validate    rendered scenes: selections, diffs, diagnostics, overlays
-   → emit        Neovim / VS Code / Zed artifacts
+
+Open **http://127.0.0.1:7331**. Use `--port 0` for an available port; the host prints
+the URL. The host is loopback-only, keeps one experiment in memory, and stops with
+Ctrl-C. Export before stopping if you want to resume.
+
+### Connect a model
+
+Nudges, checks and history work offline. To describe changes in plain words,
+open **Connect a model** (from the welcome card, the model chip, or
+**More → Providers & models**) and follow the three steps:
+
+1. **Pick a provider:** OpenAI, OpenRouter, a server on this machine (Ollama,
+   LM Studio), or any OpenAI-compatible API root such as a team gateway.
+2. **Add your key:** name an environment variable the engine can read
+   (recommended; the page tells you whether it is set), or paste a key that the
+   engine keeps in memory until it stops. Local servers need no key.
+3. **Build your model list:** the engine fetches the provider's catalog (no prompt
+   data is sent); pick the models you use and star a default. They appear under
+   the model chip next to the composer.
+
+Providers are saved to `~/.config/hexwitch/providers.json` (or
+`$XDG_CONFIG_HOME`, `$HEXWITCH_PROVIDERS_FILE`, `--providers-file`) with key
+**variable names only**; pasted keys are never written to disk, sent to the
+browser, or exported. `/chat/completions` and `/models` are appended to the API
+root; no `/v1` is added. HTTP is supported but unencrypted. Nothing is sent until
+you pick a model and press send, and the composer always names the host it sends
+to. Automatic retries are disabled.
+
+Launch flags still work and appear as a read-only provider, selected on start:
+
+```sh
+cargo run --manifest-path core/Cargo.toml -p hexwitch-cli -- playground \
+  --base-url http://slingring.procol.tech \
+  --api-key-env SLINGRING_API_KEY \
+  --model FAST_SMALLER
 ```
 
-Three design boundaries:
+## What you can test
 
-1. **The engine computes final colors.** Interpretation turns language into
-   a structured, reviewable edit spec. Trusted user/reference colors are
-   legitimate inputs; color computation remains deterministic.
-2. **The IR is the product.** Canonical roles (`syntax.keyword`,
-   `diagnostic.error.virtual-text`, …) separate design from editor mappings.
-   The current role map is not yet a complete relationship graph.
-3. **Emission needs verification.** Current tests resolve selected emitted
-   highlights in real Neovim. Base-background contrast calculations are not
-   a rendered-code audit or proof of overlay readability.
+The workspace has two halves: the theme preview on the left, the session on the
+right.
 
-## Repository layout
+- **Talk:** describe a change in the composer. The model chip picks the provider
+  and model, or **Offline**, which shows the exact prompt instead of sending it.
+  Clarifying questions appear in the session; answer them in the composer.
+- **Nudge:** click any token, swatch or the background to open a popover with
+  lighter/darker, more vivid/muted, warmer/cooler, a 4.5:1 readability floor,
+  an exact color, typography, underline, opacity and locks. Optionally include
+  semantic rules. Nudges stack onto the pending change until you keep it.
+- **Review:** changed tokens are outlined; toggle Before/After or hold Space.
+  The review card lists property changes and compares validation against the
+  current theme, so pre-existing failures are not blamed on the edit. Keep
+  needs a second look ("Keep anyway") only when a check got worse.
+- **History:** every kept change is a step in the session; **Go back** jumps to
+  any step, and ⌘Z / ⇧⌘Z step through them.
+- **Watching a request:** while a model works, the session shows a live card
+  with the elapsed time (confirmed by the engine every second), what it is
+  waiting on, and a **Stop** button that really kills the request. Failures
+  become cards that say what went wrong (bad key, unknown model, timeout,
+  unreachable host...) with **Try again**, **Change model** and **Providers**.
+- **References:** the built-in Eval ink/paper states plus all 23 official
+  [Omarchy](https://github.com/basecamp/omarchy) themes in a searchable picker;
+  import IR or theme JSON/JSONC. Preview TypeScript, Rust, Python or Go
+  under normal, selection, search, added-line and floating scenes.
+- **More menu:** save/open sessions (export/restore including pending
+  candidates and questions), contrast checker, providers, and developer tools:
+  engine inspector with explicit IntentSpecs, replay of saved model JSON, and the
+  74-case regression matrix with three paired checks.
 
-| Path | What it is |
+Browser rendering is a portable role visualization, **not editor conformance**.
+Model output is not automatically proven to preserve intent; a schema-valid wrong
+edit can still become a reviewable candidate. Check the diff before accepting.
+
+## Engine boundaries
+
+```text
+reference → IR → intent → deterministic revision → validation → candidate review
+                         ↑                                  ↓
+                 optional language model              accept / reject
+```
+
+| Path | Purpose |
 |---|---|
-| `core/` | Rust workspace: the engine (color science, IR, analysis, revision, validation, emission) |
-| `adapters/nvim/` | Thin Neovim client: reference, prompt, candidate review, apply, undo/redo |
-| `adapters/nvim-legacy/` | Original v1 Lua plugin, preserved separately for reference |
+| `core/crates/hexwitch-core/` | Color math, IR, import, semantic resolution, intent, validation, experiment sessions, evaluators |
+| `core/crates/hexwitch-cli/` | Scriptable engine operations, compatible API transport, loopback playground host |
+| `playground/` | Browser controls/preview and opt-in browser smoke test |
+| `core/eval/` | Authored references, semantic contracts, replay runs, mutations, fixture verification |
+| `docs/contracts/` | Versioned engine and experiment contracts |
 
-## Status
+Legacy CLI edit/replay formats remain for regression compatibility. The playground
+uses property-aware intent v1. Neither mode emits editor artifacts.
 
-**M0–M3 are working prototype slices, not production-complete capabilities.**
-See [FUTURE_PLAN.md](FUTURE_PLAN.md) for acceptance gates.
-
-- **M0 — foundations:** sRGB/OKLab/OKLCH, WCAG contrast, compositing,
-  and IR v0. Gamut mapping uses deterministic fixed-hue chroma reduction;
-  it is not a complete implementation of the CSS gamut-mapping specification.
-- **M1 — ingest + analyze:** selected VS Code workbench colors and token
-  scopes, contrast ladders, and accent budgets. The six fixtures are curated
-  excerpts with independently calculated metrics, not complete pinned theme
-  imports. JSONC and sandboxed includes are now supported; alpha and source
-  rules are retained. Standard semantic selectors resolve per property;
-  class/interface distinctions and single-modifier Neovim groups are emitted.
-  Full TextMate resolution, custom semantic registries, and editor priority
-  conformance remain incomplete.
-- **M2 — revise + emit:** seven operations and whole-role protection,
-  reports, Neovim emission, and headless round-trips. The replacement
-  contrast solver searches both lightness directions and validates quantized
-  crossings without claiming global optimality. Calculated scene validation
-  covers overlays but explicitly marks unknown editor ordering unverified.
-- **M3 — interpretation + thin Neovim client (initial slice):** natural
-  language -> edit specs -> candidate review -> apply/undo/redo. The
-  adapter uses the Rust binary and built-in Neovim UI, with offline
-  replay tests across the full loop. Live provider behavior and broader
-  interpretation accuracy still need evaluation; prebuilt binaries are
-  not yet distributed. Opt-in `interpret --v1` / `:HexwitchV1` supports property
-  targeting, explicit clarification and trusted user anchors. An offline
-  semantic-outcome evaluator now complements schema and replay tests. Its
-  74-case authored matrix covers all 50 requests plus state and sequential
-  variants; known-bad probes verify detection. These are not live model scores.
-- **M4 — portability proof (VS Code adapter).**
-- **M5 — image references, candidate sets, lineage.**
-
-## Versioned contracts
-
-See [IR/intent/protocol v1](docs/contracts/ir-v1.md) and the
-[implementation evidence ledger](docs/IMPLEMENTATION_STATUS.md). New clients
-can use `hexwitch --machine --request-id r1 capabilities`. Existing IR v0 files
-require explicit `hexwitch import old.json --migrate-v0 --out migrated.json`.
-The legacy CLI/client loop remains available; property-targeted intent v1 is
-currently exposed through machine revision. Use `interpret --v1` with the
-original request (including offline replay), and `:HexwitchV1` for opt-in
-property-aware refinement. Clarification returns questions without writing an
-action spec.
-
-## Using the CLI
+## Verify
 
 ```sh
-cd core
-cargo run -q -p hexwitch-cli -- contrast '#ebdbb2' '#282828'
-# #ebdbb2 on #282828: 10.75:1  (AAA)
-
-cargo run -q -p hexwitch-cli -- convert '#fb4934'
-# oklch(0.65969 0.21751 30.39)
-
-cargo run -q -p hexwitch-cli -- map 0.7 0.4 29
-# chroma reduction keeps the hue, drops saturation to reach sRGB
-
-cargo run -q -p hexwitch-cli -- eval eval
-# 6 reference themes vs independently derived goldens: all pass
-
-cargo run -q -p hexwitch-cli -- analyze eval/themes/tokyo-night.json
-# contrast ladder + accent budget for any theme
-
-cargo run -q -p hexwitch-cli -- emit eval/themes/gruvbox-dark-medium.json \
-  --out ~/.config/nvim/colors/hexwitch-gruvbox.lua --report
-# a real colorscheme + a report of what was skipped or collapsed
-
-cargo run -q -p hexwitch-cli -- revise eval/themes/gruvbox-dark-medium.json \
-  --spec eval/editspecs/gruvbox-focus.json \
-  --out revised.json --emit-nvim colors/hexwitch-gruvbox-focus.lua
-# darker base, readable comments, protected syntax — minimal diff, with a
-# per-role report of every color that moved
-
-# with OPENAI_API_KEY set (or your configured --api-key-env):
-hexwitch interpret eval/themes/gruvbox-dark-medium.json \
-  "darker background and readable comments, keep the syntax colors" \
-  --base-url https://api.openai.com/v1 --model gpt-4o-mini --out spec.json
-# shows the model's notes, writes a validated edit spec; then revise as
-# above. --dry-run prints the exact prompt; --from-llm validates a saved
-# model response offline.
-```
-
-## Neovim
-
-See [the adapter setup and workflow](adapters/nvim/README.md). For an isolated
-playground with no personal config or installed plugins, run
-`sh scripts/nvim-standalone.sh` after setting the compatible API environment.
-Live smoke tests verified no-italics, readable comments, protection, review and
-undo/redo against the configured gateway; this is not a full model benchmark.
-
-Configure
-`adapters/nvim/` as the plugin directory, build the Rust binary, and set
-`cmd` to its path. `:HexwitchReference`, `:Hexwitch`, `:HexwitchStatus`,
-`:HexwitchApply`, and `:HexwitchUndo` form the working loop.
-
-The original Lua plugin is preserved in `adapters/nvim-legacy/`; do not
-load both adapters, which share the `hexwitch` module/command namespace.
-
-## Testing the whole loop
-
-```sh
+cargo fmt --manifest-path core/Cargo.toml --all --check
+cargo clippy --manifest-path core/Cargo.toml --all-targets --locked -- -D warnings
 cargo test --manifest-path core/Cargo.toml --all --locked
+python3 core/eval/verify-fixtures.py
+python3 -m unittest discover -s core/eval -p 'test_*.py'
 ```
 
-With Neovim installed, this includes the new adapter's headless tests
-against the real binary: offline interpretation, revision reports,
-candidate acceptance, undo/redo, branching, and failure recovery. CI
-installs Neovim so these tests cannot silently skip there. This verifies
-functionality, not subjective theme quality or live model accuracy.
+Optional real-browser checks use Playwright; see [playground verification and
+limitations](docs/packages/engine-playground.md). Live testing is opt-in and separate
+from offline CI. The configured small model has demonstrated valid-but-wrong
+saturation/opacity interpretations; this is an open quality issue, regardless
+of canned replay scores.
 
-## Design notes
-
-Foundational decisions came from a review of perception/readability
-research (display polarity, syntax-highlighting comprehension studies,
-WCAG), the design systems of Solarized/Gruvbox/Nord/Catppuccin/Dracula/
-Tokyo Night, and the highlighting mechanisms of the three target editors.
-Two honest conclusions shaped the engine:
-
-- There is no scientifically established "best theme" — so the engine
-  optimizes for *intent fidelity* and *dependability*, and treats
-  readability constraints as explicit, measurable floors rather than
-  taste.
-- Famous themes disagree on almost everything except structure — so the
-  IR models structure (roles, hierarchy, provenance) and leaves the
-  aesthetic choices to you.
+[Implementation status](docs/IMPLEMENTATION_STATUS.md) ·
+[IR/intent contract](docs/contracts/ir-v1.md) ·
+[Experiment contract](docs/contracts/experiment-v1.md) ·
+[Evaluation methodology](core/eval/README.md)

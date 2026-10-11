@@ -1,10 +1,4 @@
 #!/usr/bin/env python3
-"""Known-bad perturbations test whether the evaluator detects regressions.
-
-They are not alternate model runs and must never appear as benchmark evidence.
-Each mutation copies the entire authored replay and names the checks it should
-fail. Source annotations are never changed to accommodate these outputs.
-"""
 import copy
 import json
 from pathlib import Path
@@ -37,8 +31,6 @@ def build():
     mutate("unnecessary-clarification", "i02", lambda r: r.update(decision="needs_clarification", questions=["Do you really want lighter comments?"], actions=[]), "strength")
     mutate("invented-anchor", "i40", lambda r: r["actions"][0].update(op="set_color", number=None, color="#0000ff"), "interpretation_validation")
     mutate("overbroad-lock", "i06", lambda r: r["actions"][0].update(roles=["*"]), "protection")
-    # The individual strength intervals still pass, but the required pair gap
-    # does not. This confirms pair failure changes the CLI's top-level outcome.
     mutate("pair-only-strength-gap", "i16", lambda r: r["actions"][0].update(number=-0.039), "pair_only", pair="slightly-versus-much")
     mutate("weak-much-change", "i17", lambda r: r["actions"][0].update(number=-0.02), "strength", pair="slightly-versus-much")
     mutate("lost-sequential-lock", "seq-refused", lambda r: r["actions"].insert(0, dict(r["actions"][0], op="unlock", number=None)), "protection")

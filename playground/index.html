@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hexwitch playground</title>
+<link rel="stylesheet" href="/style.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true"><path d="M13 2.5l9.1 5.25v10.5L13 23.5l-9.1-5.25V7.75z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M13 8.2l1.3 3.5 3.5 1.3-3.5 1.3-1.3 3.5-1.3-3.5-3.5-1.3 3.5-1.3z" fill="currentColor"/></svg>
+    <span>hexwitch</span>
+  </div>
+
+  <div class="anchor">
+    <button type="button" id="theme-button" class="pill" aria-haspopup="menu" aria-expanded="false">
+      <span class="dots" id="theme-dots" aria-hidden="true"></span>
+      <span id="theme-name">Loading…</span>
+      <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div id="theme-menu" class="menu menu-center theme-menu" role="menu" hidden>
+      <input id="theme-search" placeholder="Find a theme" aria-label="Find a theme" autocomplete="off" spellcheck="false">
+      <div id="theme-list" class="theme-list"></div>
+      <div class="menu-rule"></div>
+      <button type="button" role="menuitem" data-action="import"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M12 12v6M9 15h6"/></svg><span class="grow">Import a theme file…</span></button>
+    </div>
+  </div>
+
+  <div class="anchor">
+    <button type="button" id="more-button" class="icon-button" aria-label="More" aria-haspopup="menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="fill"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+    </button>
+    <div id="more-menu" class="menu menu-right" role="menu" hidden>
+      <button type="button" role="menuitem" data-action="export"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg><span class="grow">Save session</span><kbd>⌘S</kbd></button>
+      <button type="button" role="menuitem" data-action="restore"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21V9M7 14l5-5 5 5M4 4h16"/></svg><span class="grow">Open saved session…</span></button>
+      <button type="button" role="menuitem" data-action="import"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a1 1 0 00-1 1v16a1 1 0 001 1h12a1 1 0 001-1V8z"/><path d="M14 3v5h5M12 12v6M9 15h6"/></svg><span class="grow">Import a theme file…</span></button>
+      <div class="menu-rule"></div>
+      <button type="button" role="menuitem" data-action="contrast"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg><span class="grow">Contrast checker</span></button>
+      <button type="button" role="menuitem" data-action="providers"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg><span class="grow">Providers &amp; models</span></button>
+      <div class="menu-rule"></div>
+      <span class="menu-label">Developer</span>
+      <button type="button" role="menuitem" data-action="inspector"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg><span class="grow">Engine inspector</span></button>
+      <button type="button" role="menuitem" data-action="replay"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0113.7-5.7L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 01-13.7 5.7L4 15.5M4 20v-4.5h4.5"/></svg><span class="grow">Replay a saved response</span></button>
+      <button type="button" role="menuitem" data-action="matrix"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg><span class="grow">Run regression matrix</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="workspace">
+  <section class="stage" aria-label="Theme preview">
+    <div class="preview-card" id="preview-card">
+      <div class="preview-bar">
+        <div class="tabs" role="tablist" aria-label="Preview language" id="languages">
+          <button type="button" role="tab" data-language="ts" aria-selected="true">TypeScript</button>
+          <button type="button" role="tab" data-language="rust" aria-selected="false">Rust</button>
+          <button type="button" role="tab" data-language="python" aria-selected="false">Python</button>
+          <button type="button" role="tab" data-language="go" aria-selected="false">Go</button>
+        </div>
+        <div class="preview-tools">
+          <div class="anchor">
+            <button type="button" id="scene-button" class="ghost-button" aria-haspopup="menu" aria-expanded="false"><span class="faint">Scene</span> <span id="scene-name">Normal</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div id="scene-menu" class="menu menu-right" role="menu" hidden>
+              <button type="button" role="menuitemradio" data-scene="normal">Normal</button>
+              <button type="button" role="menuitemradio" data-scene="selection">Selection</button>
+              <button type="button" role="menuitemradio" data-scene="search">Search match</button>
+              <button type="button" role="menuitemradio" data-scene="diff">Added line</button>
+              <button type="button" role="menuitemradio" data-scene="float">Floating window</button>
+            </div>
+          </div>
+          <div class="compare" role="group" aria-label="Compare" id="compare" hidden>
+            <button type="button" data-view="before" aria-pressed="false">Before</button>
+            <button type="button" data-view="after" aria-pressed="true">After</button>
+          </div>
+        </div>
+      </div>
+      <div id="preview" class="code" role="group" aria-label="Code preview. Click a token to nudge it."></div>
+      <div class="preview-foot">
+        <div class="palette" id="palette" aria-label="Palette"></div>
+        <span class="preview-hint">Click any token or swatch to nudge it<span id="space-hint"> · hold <kbd>Space</kbd> to compare</span></span>
+      </div>
+    </div>
+  </section>
+
+  <aside class="session" aria-label="Session">
+    <div class="session-head">
+      <h2>Session</h2>
+      <span id="session-meta" class="faint"></span>
+    </div>
+    <div class="timeline" id="timeline" aria-live="polite"></div>
+    <form class="composer" id="composer">
+      <div class="composer-box">
+        <label class="sr-only" for="request">Describe a change</label>
+        <textarea id="request" rows="2" placeholder="Describe a change…"></textarea>
+        <div class="composer-row">
+          <div class="anchor">
+            <button type="button" id="model-button" class="chip" aria-haspopup="listbox" aria-expanded="false"><span class="dot" id="model-dot"></span><span id="model-name">Offline</span><svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+            <div id="model-menu" class="menu menu-up model-menu" hidden></div>
+          </div>
+          <button type="submit" id="send" class="send" aria-label="Send"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg></button>
+        </div>
+      </div>
+      <p class="composer-note" id="composer-note"></p>
+    </form>
+  </aside>
+</main>
+
+<div id="nudge" class="popover nudge" role="dialog" aria-labelledby="nudge-title" hidden>
+  <div class="nudge-head">
+    <div class="nudge-title">
+      <strong id="nudge-title">Comments</strong>
+      <span id="nudge-role" class="mono faint"></span>
+    </div>
+    <div class="segmented" role="tablist" aria-label="What to change">
+      <button type="button" role="tab" data-nudge-tab="color" aria-selected="true">Color</button>
+      <button type="button" role="tab" data-nudge-tab="style" aria-selected="false">Style</button>
+      <button type="button" role="tab" data-nudge-tab="lock" aria-selected="false">Lock</button>
+    </div>
+    <button type="button" class="icon-button small" id="nudge-close" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+
+  <div class="nudge-body" data-nudge-panel="color">
+    <div class="property-switch" id="property-switch" role="group" aria-label="Property"></div>
+    <div class="current-color">
+      <span class="big-swatch" id="nudge-swatch"></span>
+      <div class="current-color-text">
+        <span class="mono" id="nudge-hex">#000000</span>
+        <span id="nudge-contrast" class="faint"></span>
+      </div>
+    </div>
+    <div class="nudge-grid">
+      <button type="button" data-nudge="lighter">Lighter</button>
+      <button type="button" data-nudge="darker">Darker</button>
+      <button type="button" data-nudge="vivid">More vivid</button>
+      <button type="button" data-nudge="muted">More muted</button>
+      <button type="button" data-nudge="warmer">Warmer</button>
+      <button type="button" data-nudge="cooler">Cooler</button>
+    </div>
+    <button type="button" class="accent-button" data-nudge="readable" id="nudge-readable">Make readable everywhere · 4.5:1</button>
+    <form class="inline-field" id="exact-form">
+      <label for="exact-color">Exact color</label>
+      <input id="exact-color" class="mono" spellcheck="false" autocomplete="off">
+      <button type="submit" class="ghost-button">Set</button>
+    </form>
+  </div>
+
+  <div class="nudge-body" data-nudge-panel="style" hidden>
+    <div class="toggle-list">
+      <button type="button" class="toggle-row" data-toggle="bold"><span>Bold</span><span class="switch"></span></button>
+      <button type="button" class="toggle-row" data-toggle="italic"><span>Italic</span><span class="switch"></span></button>
+      <button type="button" class="toggle-row" data-toggle="strikethrough"><span>Strikethrough</span><span class="switch"></span></button>
+    </div>
+    <label class="inline-field">Underline
+      <select id="underline-style">
+        <option value="none">None</option>
+        <option value="single">Single</option>
+        <option value="double">Double</option>
+        <option value="curl">Curly</option>
+        <option value="dot">Dotted</option>
+        <option value="dash">Dashed</option>
+      </select>
+    </label>
+    <form class="inline-field" id="opacity-form">
+      <label for="opacity-value">Opacity</label>
+      <input id="opacity-value" type="number" min="0" max="1" step="0.05">
+      <button type="submit" class="ghost-button">Set</button>
+    </form>
+  </div>
+
+  <div class="nudge-body" data-nudge-panel="lock" hidden>
+    <p class="faint">A locked property keeps its value through later edits, including model requests.</p>
+    <div class="nudge-grid">
+      <button type="button" data-nudge="lock">Lock</button>
+      <button type="button" data-nudge="unlock">Unlock</button>
+    </div>
+    <button type="button" class="ghost-button wide" data-nudge="clear">Clear override · inherit again</button>
+  </div>
+
+  <div class="nudge-foot">
+    <button type="button" class="toggle-row compact" id="semantic-toggle" aria-pressed="false"><span class="switch"></span><span>Semantic rules too</span></button>
+    <span class="faint" id="nudge-status">Nudges stack until you keep them</span>
+  </div>
+</div>
+
+<div id="roles-menu" class="menu roles-menu" role="menu" hidden>
+  <input id="roles-search" placeholder="Find a role" aria-label="Find a role" autocomplete="off" spellcheck="false">
+  <div id="roles-list"></div>
+</div>
+
+<dialog id="connect" class="sheet" aria-labelledby="connect-title"></dialog>
+<dialog id="providers" class="sheet wide-sheet" aria-labelledby="providers-title"></dialog>
+
+<dialog id="contrast-dialog" class="sheet small-sheet" aria-labelledby="contrast-title">
+  <form method="dialog" class="sheet-body">
+    <h2 id="contrast-title">Contrast checker</h2>
+    <p class="faint">Rounded sRGB contrast and OKLCH for any pair.</p>
+    <div class="color-pair">
+      <label>Text<input id="color-fg" type="color" value="#92a2b7"></label>
+      <label>Background<input id="color-bg" type="color" value="#151c25"></label>
+    </div>
+    <output id="color-result" class="result-box mono"></output>
+    <div class="sheet-actions"><button class="ghost-button" value="close">Close</button><button type="button" class="primary" id="measure">Measure</button></div>
+  </form>
+</dialog>
+
+<dialog id="inspector-dialog" class="sheet wide-sheet" aria-labelledby="inspector-title">
+  <form method="dialog" class="sheet-body">
+    <div class="sheet-title-row">
+      <h2 id="inspector-title">Engine inspector</h2>
+      <select id="inspect-kind" aria-label="What to inspect">
+        <option value="prompt">Exact prompt</option>
+        <option value="current">Current theme</option>
+        <option value="candidate">Candidate and report</option>
+        <option value="last_result">Last result</option>
+        <option value="events">Experiment log</option>
+      </select>
+    </div>
+    <pre id="inspect-output" class="result-box mono tall"></pre>
+    <details>
+      <summary>Compute an explicit IntentSpec</summary>
+      <textarea id="spec" rows="6" class="mono" spellcheck="false">{"version":1,"actions":[]}</textarea>
+      <button type="button" class="ghost-button" id="submit-spec">Compute</button>
+    </details>
+    <div class="sheet-actions"><button class="ghost-button" value="close">Close</button></div>
+  </form>
+</dialog>
+
+<dialog id="replay-dialog" class="sheet" aria-labelledby="replay-title">
+  <form method="dialog" class="sheet-body">
+    <h2 id="replay-title">Replay a saved response</h2>
+    <p class="faint">Runs a saved version 1 model response through the same engine path. Nothing leaves this machine.</p>
+    <label class="stack-field">Request<textarea id="replay-request" rows="2" placeholder="The request the response answers"></textarea></label>
+    <label class="stack-field">Model response JSON<textarea id="replay-response" rows="7" class="mono" spellcheck="false"></textarea></label>
+    <div class="sheet-actions"><button class="ghost-button" value="close">Cancel</button><button type="button" class="primary" id="replay-run">Replay</button></div>
+  </form>
+</dialog>
+
+<dialog id="matrix-dialog" class="sheet wide-sheet" aria-labelledby="matrix-title">
+  <form method="dialog" class="sheet-body">
+    <h2 id="matrix-title">Regression matrix</h2>
+    <p class="faint">Runs the authored matrix and paired checks against this build. Replay scores prove evaluator behavior, not model accuracy.</p>
+    <pre id="eval-output" class="result-box mono tall">Not run yet.</pre>
+    <div class="sheet-actions"><button class="ghost-button" value="close">Close</button><button type="button" class="primary" id="evaluate">Run matrix</button></div>
+  </form>
+</dialog>
+
+<input id="import" type="file" accept=".json,.jsonc" hidden>
+<input id="restore" type="file" accept=".json" hidden>
+<div id="toast" role="status" hidden></div>
+
+</body>
+</html>

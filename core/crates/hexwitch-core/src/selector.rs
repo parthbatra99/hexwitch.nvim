@@ -1,4 +1,3 @@
-//! Validated role selectors. Prefix syntax is not arbitrary glob matching.
 use crate::ir::Role;
 
 pub fn valid_selector(selector: &str) -> bool {

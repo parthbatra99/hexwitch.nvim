@@ -1,7 +1,18 @@
-//! Curl transport: credentials and request data only pass over stdin, never disk/argv.
 use hexwitch_core::interpret::{self, LlmSpec};
 use std::io::Write;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
+use std::sync::Mutex;
+
+pub type CancelSlot = Mutex<Option<Child>>;
+
+pub fn cancel(slot: &CancelSlot) -> bool {
+    let Some(mut child) = slot.lock().ok().and_then(|mut held| held.take()) else {
+        return false;
+    };
+    let _ = child.kill();
+    let _ = child.wait();
+    true
+}
 
 #[derive(Debug, Clone, Copy, clap::ValueEnum, Default)]
 #[value(rename_all = "snake_case")]
@@ -81,17 +92,19 @@ pub fn call_provider(
         return Err(error("invalid_input", "invalid credential"));
     }
     let payload = payload(model, system, user, interpret::response_schema(), format);
-    let body = transport(endpoint, key, &payload.to_string(), 120)?;
+    let body = transport(endpoint, key, "POST", Some(&payload.to_string()), 120, None)?;
     decode_response(&body)
 }
 
 fn transport(
     endpoint: &str,
     key: &str,
-    payload: &str,
+    method: &str,
+    payload: Option<&str>,
     timeout: u32,
+    cancel_slot: Option<&CancelSlot>,
 ) -> Result<String, ProviderError> {
-    if payload.len() > MAX_PAYLOAD {
+    if payload.is_some_and(|p| p.len() > MAX_PAYLOAD) {
         return Err(error("payload_too_large", "request exceeds 1 MiB"));
     }
     let parsed =
@@ -111,7 +124,20 @@ fn transport(
     if parsed.scheme() == "http" {
         eprintln!("warning: HTTP API connection is unencrypted; credentials and prompts can be read or modified in transit");
     }
-    let config = format!("url = {}\nrequest = \"POST\"\nheader = {}\nheader = \"Content-Type: application/json\"\ndata-binary = {}\n",quote(endpoint)?,quote(&format!("Authorization: Bearer {key}"))?,quote(payload)?);
+    let mut config = format!(
+        "url = {}\nrequest = \"{}\"\nheader = \"Content-Type: application/json\"\n",
+        quote(endpoint)?,
+        method
+    );
+    if !key.is_empty() {
+        config.push_str(&format!(
+            "header = {}\n",
+            quote(&format!("Authorization: Bearer {key}"))?
+        ));
+    }
+    if let Some(payload) = payload {
+        config.push_str(&format!("data-binary = {}\n", quote(payload)?));
+    }
     let mut child = Command::new("curl")
         .args([
             "-q",
@@ -145,14 +171,30 @@ fn transport(
         let _ = child.wait();
         return Err(error("network", "request stream failed"));
     }
-    // Bound memory independently of curl version/content-length handling.
     use std::io::Read;
     let mut stdout = child.stdout.take().unwrap();
+    let mut child = match cancel_slot {
+        Some(slot) => {
+            if let Ok(mut held) = slot.lock() {
+                *held = Some(child);
+            }
+            None
+        }
+        None => Some(child),
+    };
     let mut bytes = Vec::new();
     let read = stdout
         .by_ref()
         .take(MAX_RESPONSE as u64 + 9)
         .read_to_end(&mut bytes);
+    drop(stdout);
+    if let Some(slot) = cancel_slot {
+        child = slot.lock().ok().and_then(|mut held| held.take());
+        if child.is_none() {
+            return Err(error("cancelled", "request cancelled"));
+        }
+    }
+    let mut child = child.expect("transport keeps its child unless cancelled");
     if read.is_err() || bytes.len() > MAX_RESPONSE + 8 {
         let _ = child.kill();
         let _ = child.wait();
@@ -161,7 +203,6 @@ fn transport(
             "response exceeds 2 MiB or stream failed",
         ));
     }
-    drop(stdout);
     let status = child
         .wait()
         .map_err(|_| error("network", "cannot wait for HTTP process"))?;
@@ -184,6 +225,12 @@ fn transport(
             "provider rate limit; retry explicitly later",
         )),
         401 | 403 => Err(error("authentication", "provider rejected credentials")),
+        400 | 422 => Err(error(
+            "bad_request",
+            "provider rejected the request; check the model id and response format",
+        )),
+        404 => Err(error("not_found", "provider has no such endpoint or model")),
+        500..=599 => Err(error("server_error", "provider had a server error")),
         _ => Err(error("http", "provider returned unsuccessful HTTP status")),
     }
 }
@@ -197,7 +244,21 @@ pub fn call_provider_v1(
     format: OutputFormat,
     request: &str,
 ) -> Result<hexwitch_core::interpret_v1::ModelInterpretation, ProviderError> {
-    if key.is_empty() || key.chars().any(char::is_control) {
+    call_provider_v1_cancellable(endpoint, key, model, system, user, format, request, None)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn call_provider_v1_cancellable(
+    endpoint: &str,
+    key: &str,
+    model: &str,
+    system: &str,
+    user: &str,
+    format: OutputFormat,
+    request: &str,
+    cancel_slot: Option<&CancelSlot>,
+) -> Result<hexwitch_core::interpret_v1::ModelInterpretation, ProviderError> {
+    if key.chars().any(char::is_control) {
         return Err(error("invalid_input", "invalid credential"));
     }
     let payload = payload(
@@ -207,10 +268,44 @@ pub fn call_provider_v1(
         hexwitch_core::interpret_v1::response_schema_for_request(request),
         format,
     );
-    let body = transport(endpoint, key, &payload.to_string(), 120)?;
+    let body = transport(
+        endpoint,
+        key,
+        "POST",
+        Some(&payload.to_string()),
+        120,
+        cancel_slot,
+    )?;
     let content = decode_content(&body)?;
     hexwitch_core::interpret_v1::parse_model_output(&content)
         .map_err(|_| error("invalid_response", "model output failed v1 schema parsing"))
+}
+
+/// Fetch the provider's model catalog (GET {root}/models). Sends no prompt data.
+pub fn list_models(models_url: &str, key: &str) -> Result<Vec<String>, ProviderError> {
+    if key.chars().any(char::is_control) {
+        return Err(error("invalid_input", "invalid credential"));
+    }
+    let body = transport(models_url, key, "GET", None, 15, None)?;
+    let value = hexwitch_core::jsonc::parse(&body)
+        .map_err(|_| error("invalid_response", "model list is not valid JSON"))?;
+    let mut models: Vec<String> = value
+        .pointer("/data")
+        .and_then(|data| data.as_array())
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| {
+                    item.get("id")
+                        .and_then(|id| id.as_str())
+                        .map(str::to_string)
+                })
+                .collect()
+        })
+        .ok_or_else(|| error("invalid_response", "model list has an unexpected shape"))?;
+    models.sort();
+    models.dedup();
+    Ok(models)
 }
 
 fn decode_content(body: &str) -> Result<String, ProviderError> {
@@ -315,12 +410,82 @@ mod tests {
         let error = transport(
             &format!("http://{address}"),
             "mock-secret",
-            r#"{"test":true}"#,
+            "POST",
+            Some(r#"{"test":true}"#),
             5,
+            None,
         )
         .unwrap_err();
         assert_eq!(error.code, "rate_limited");
         assert!(!error.to_string().contains("mock-secret"));
+        worker.join().unwrap();
+    }
+    #[test]
+    fn cancelling_a_hung_request_returns_promptly() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let hold = std::thread::spawn(move || {
+            let (stream, _) = listener.accept().unwrap();
+            std::thread::sleep(std::time::Duration::from_secs(3));
+            drop(stream);
+        });
+        let slot = std::sync::Arc::new(CancelSlot::new(None));
+        let worker = {
+            let slot = slot.clone();
+            std::thread::spawn(move || {
+                transport(
+                    &format!("http://{address}"),
+                    "mock-secret",
+                    "POST",
+                    Some("{}"),
+                    30,
+                    Some(&slot),
+                )
+            })
+        };
+        let started = std::time::Instant::now();
+        while !cancel(&slot) {
+            assert!(started.elapsed() < std::time::Duration::from_secs(5));
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        let error = worker.join().unwrap().unwrap_err();
+        assert_eq!(error.code, "cancelled");
+        assert!(started.elapsed() < std::time::Duration::from_secs(2));
+        hold.join().unwrap();
+    }
+    #[test]
+    fn models_list_mock_parses_and_sorts_ids() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let body = serde_json::json!({"data":[{"id":"b-model"},{"id":"a-model"}]}).to_string();
+        let worker = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(std::time::Duration::from_secs(3)))
+                .unwrap();
+            let mut request = Vec::new();
+            let mut bytes = [0; 4096];
+            loop {
+                let n = stream.read(&mut bytes).unwrap();
+                request.extend_from_slice(&bytes[..n]);
+                if String::from_utf8_lossy(&request).contains("\r\n\r\n") {
+                    break;
+                }
+            }
+            let request = String::from_utf8_lossy(&request);
+            assert!(
+                request.starts_with("GET /models "),
+                "request line: {request}"
+            );
+            assert!(request.contains("Authorization: Bearer mock-secret"));
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(response.as_bytes()).unwrap();
+        });
+        let models = list_models(&format!("http://{address}/models"), "mock-secret").unwrap();
+        assert_eq!(models, vec!["a-model".to_string(), "b-model".to_string()]);
         worker.join().unwrap();
     }
 }

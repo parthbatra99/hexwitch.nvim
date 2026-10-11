@@ -1,4 +1,3 @@
-//! Sandboxed include resolution; no remote URLs or parent/symlink escapes.
 use crate::ingest::{load_resolved_theme, IngestError};
 use crate::ir::Theme;
 use serde_json::Value;
@@ -53,8 +52,6 @@ pub fn load_theme_path(path: &Path) -> Result<Theme, IngestError> {
                 "reserved internal include field".into(),
             ));
         }
-        // Validate before merging: a child's overrides must not hide malformed
-        // parent values or invalid enablement behind accumulated settings.
         if let Some(enabled) = value.get("semanticHighlighting") {
             if !enabled.is_boolean() {
                 return Err(IngestError::InvalidSource(
@@ -98,8 +95,6 @@ pub fn load_theme_path(path: &Path) -> Result<Theme, IngestError> {
                 return Err(IngestError::InvalidSource("unsafe include path".into()));
             }
             let mut parent = visit(&real.parent().unwrap().join(include), root, seen, budget)?;
-            // Keep semantic rules as an ordered list across includes. Replacing
-            // duplicate selector keys would discard inherited property values.
             let mut semantic_layers = parent
                 .get("hexwitchSemanticLayers")
                 .and_then(Value::as_array)

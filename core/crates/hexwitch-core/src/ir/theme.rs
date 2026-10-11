@@ -1,5 +1,3 @@
-//! The theme: metadata plus a role -> style graph.
-
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -23,17 +21,11 @@ pub struct ThemeMeta {
     pub appearance: Appearance,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    /// Where this theme came from, e.g. `gruvbox (vscode json) @ abc1234`
-    /// or `synthesized from brief v3`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
-    /// IR version this theme was built against. Older IR themes load into
-    /// newer engines via explicit migration steps only.
     pub ir_version: u32,
 }
 
-/// A theme: one appearance mode. Light + dark variants sharing an identity
-/// are two `Theme`s linked by a family concept (added with revise).
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Theme {
@@ -44,7 +36,6 @@ pub struct Theme {
     pub relationships: Vec<Relationship>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub extensions: BTreeMap<String, serde_json::Value>,
-    /// Role -> treatment. `BTreeMap` for deterministic, diff-friendly JSON.
     pub styles: BTreeMap<Role, Style>,
 }
 
@@ -56,10 +47,8 @@ pub struct SemanticStyle {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub language: Option<String>,
     pub style: Style,
-    /// Retains distinctions such as class/interface that share a portable role.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub token_type: Option<String>,
-    /// Source rule order; equal-specificity rules resolve per property.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub priority: u32,
 }
@@ -112,7 +101,6 @@ impl<'de> Deserialize<'de> for Theme {
     }
 }
 
-/// Problems a theme can have before any scene validation runs.
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
 pub enum ThemeError {
     #[error("theme `{0}` is missing required role `{1}`")]
@@ -146,23 +134,18 @@ impl Theme {
         self.styles.insert(role, style);
     }
 
-    /// Foreground color for a role, if specified.
     pub fn fg(&self, role: &Role) -> Option<Srgb> {
         self.styles.get(role).and_then(|s| s.fg)
     }
 
-    /// Background color for a role, if specified.
     pub fn bg(&self, role: &Role) -> Option<Srgb> {
         self.styles.get(role).and_then(|s| s.bg)
     }
 
-    /// The editor base background (what most tokens sit on).
     pub fn base_bg(&self) -> Option<Srgb> {
         self.bg(&Role::Surface(Surface::Base))
     }
 
-    /// Contrast of a role's foreground against a given background color —
-    /// the primitive scene checks are built from.
     pub fn fg_contrast_against(&self, role: &Role, backdrop: Srgb) -> Option<f64> {
         self.fg(role).map(|fg| {
             contrast_ratio(
@@ -176,9 +159,6 @@ impl Theme {
         })
     }
 
-    /// Quick structural sanity: the roles every emitted theme must define
-    /// for an adapter to have something to lower. Not a readability audit —
-    /// that is scene validation's job.
     pub fn check_core_roles(&self) -> Result<(), Vec<ThemeError>> {
         let required: Vec<Role> = vec![
             Role::Surface(Surface::Base),
@@ -213,8 +193,6 @@ impl Theme {
         }
     }
 
-    /// Serialize to pretty, deterministic JSON (map order is fixed by
-    /// `BTreeMap`; `to_string` on keys is stable).
     pub fn to_json_string(&self) -> serde_json::Result<String> {
         serde_json::to_string_pretty(self)
     }
@@ -314,7 +292,6 @@ impl Theme {
         Ok(theme)
     }
 
-    /// Explicit compatibility conversion; never guesses at newer schemas.
     pub fn migrate_v0(json: &str) -> serde_json::Result<Self> {
         let mut value =
             crate::jsonc::parse(json).map_err(<serde_json::Error as serde::de::Error>::custom)?;
@@ -327,8 +304,6 @@ impl Theme {
                 "migration requires an IR object with meta and styles",
             ));
         }
-        // Legacy strikethrough occupied the underline enum. Make it independent
-        // before upgrading so later clear-underline edits preserve strike.
         if let Some(styles) = value
             .get_mut("styles")
             .and_then(serde_json::Value::as_object_mut)
@@ -425,23 +400,19 @@ mod tests {
         let a = t.to_json_string().unwrap();
         let b = t.to_json_string().unwrap();
         assert_eq!(a, b);
-        // Role keys appear as human-readable dotted strings.
         assert!(a.contains("\"syntax.comment\""));
         assert!(a.contains("\"surface.base\""));
-        // And hex colors stay lowercase hex strings.
         assert!(a.contains("\"#282828\""));
     }
 
     #[test]
     fn core_role_check_reports_missing_pieces() {
         let mut t = gruvbox_ish();
-        // Missing plenty of required roles right now.
         let errs = t.check_core_roles().unwrap_err();
         assert!(errs
             .iter()
             .any(|e| e.to_string().contains("syntax.keyword")));
 
-        // Complete the required set -> passes.
         for role in [
             Role::Surface(Surface::Panel),
             Role::Surface(Surface::Float),
@@ -466,7 +437,6 @@ mod tests {
         let comment = t
             .fg_contrast_against(&Role::Syntax(SyntaxRole::Comment), base)
             .unwrap();
-        // Matches the numbers from the theme study: ~10.7 vs ~4.0.
         assert!((text - 10.75).abs() < 0.05, "text {text}");
         assert!((comment - 4.02).abs() < 0.05, "comment {comment}");
     }

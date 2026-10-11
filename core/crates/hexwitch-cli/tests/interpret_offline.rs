@@ -1,8 +1,3 @@
-//! Offline interpretation tests: the full CLI pipeline with a canned
-//! model response, no network. This pins the contract that everything
-//! between "model output" and "installed colorscheme" is deterministic:
-//! interpret (offline) -> revise -> emit, via the real binary.
-
 use std::process::Command;
 
 fn exe() -> &'static str {
@@ -41,7 +36,6 @@ fn dry_run_prints_the_exact_prompt() {
     assert!(stdout.contains("--- system ---"));
     assert!(stdout.contains("never invent colors"));
     assert!(stdout.contains("--- user ---"));
-    // The prompt embeds the real role inventory and the verbatim request.
     assert!(stdout.contains("syntax.comment fg=#928374"));
     assert!(stdout.contains("surface.base bg=#282828"));
     assert!(stdout.contains("make the comments readable but keep the vibe"));
@@ -54,9 +48,7 @@ fn offline_canned_response_flows_through_the_whole_engine() {
     std::fs::create_dir_all(&dir).unwrap();
     let spec_path = dir.join("spec.json");
     let theme_path = dir.join("revised.json");
-    let lua_path = dir.join("colors").join("demo.lua");
 
-    // 1. interpret (offline): canned model response -> validated edit spec
     let (ok, _stdout, stderr) = run(&[
         "interpret",
         &eval_path("themes/gruvbox-dark-medium.json")
@@ -75,12 +67,10 @@ fn offline_canned_response_flows_through_the_whole_engine() {
         "model notes should surface: {stderr}"
     );
 
-    // The written spec is a real EditSpec.
     let spec_json = std::fs::read_to_string(&spec_path).unwrap();
     assert!(spec_json.contains("\"protect\""));
     assert!(spec_json.contains("\"min_contrast\""));
 
-    // 2. revise: apply it
     let (ok, _stdout, stderr) = run(&[
         "revise",
         &eval_path("themes/gruvbox-dark-medium.json")
@@ -90,26 +80,22 @@ fn offline_canned_response_flows_through_the_whole_engine() {
         &spec_path.display().to_string(),
         "--out",
         &theme_path.display().to_string(),
-        "--emit-nvim",
-        &lua_path.display().to_string(),
     ]);
     assert!(ok, "revise failed: {stderr}");
     assert!(stderr.contains("moved"));
-    assert!(stderr.contains("emitted"));
 
-    // 3. the emitted colorscheme carries exactly the revised colors
-    let lua = std::fs::read_to_string(&lua_path).unwrap();
     let revised =
         hexwitch_core::ingest::load_theme(&std::fs::read_to_string(&theme_path).unwrap()).unwrap();
-    let base = revised.base_bg().unwrap().to_hex();
-    assert!(
-        lua.contains(&format!("bg = \"{base}\"")),
-        "emitted lua lacks revised base {base}"
+    assert_eq!(
+        revised
+            .fg(&hexwitch_core::ir::Role::Syntax(
+                hexwitch_core::ir::SyntaxRole::Keyword
+            ))
+            .unwrap()
+            .to_hex(),
+        "#fb4934"
     );
-    // Protected syntax color survived verbatim.
-    assert!(lua.contains("fg = \"#fb4934\""));
 
-    // 4. the revision satisfied the readability floor
     let comment = revised
         .fg(&hexwitch_core::ir::role::Role::Syntax(
             hexwitch_core::ir::role::SyntaxRole::Comment,

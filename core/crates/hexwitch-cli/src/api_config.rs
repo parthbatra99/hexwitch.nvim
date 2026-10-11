@@ -1,22 +1,21 @@
-//! One OpenAI-compatible Chat Completions connection, not provider-specific SDKs.
 use crate::provider::OutputFormat;
 use clap::Args;
 
 #[derive(Debug, Clone, Args)]
 pub struct ApiOptions {
-    /// API root, e.g. https://api.openai.com/v1. Appends /chat/completions.
+    #[arg(help = "API root, e.g. https://api.openai.com/v1. Appends /chat/completions")]
     #[arg(long, alias = "baseurl")]
     pub base_url: Option<String>,
-    /// Name of the environment variable containing the key; never the key itself.
+    #[arg(help = "Name of the environment variable containing the key; never the key itself")]
     #[arg(long)]
     pub api_key_env: Option<String>,
-    /// Provider-specific model identifier on the compatible API.
+    #[arg(help = "Provider-specific model identifier on the compatible API")]
     #[arg(short, long)]
     pub model: Option<String>,
-    /// json_schema, json_object, or none. Validation always stays strict locally.
+    #[arg(help = "json_schema, json_object, or none. Validation always stays strict locally")]
     #[arg(long,value_enum,default_value_t=OutputFormat::JsonSchema)]
     pub response_format: OutputFormat,
-    /// Legacy convenience alias; prefer explicit base URL and key environment.
+    #[arg(help = "Legacy convenience alias; prefer explicit base URL and key environment")]
     #[arg(long)]
     pub provider: Option<String>,
 }
@@ -28,11 +27,11 @@ pub struct Connection {
     pub format: OutputFormat,
 }
 
-pub fn endpoint(base_url: &str) -> Result<String, String> {
+fn validated_base(base_url: &str) -> Result<url::Url, String> {
     if base_url.trim() != base_url || base_url.chars().any(char::is_control) {
         return Err("base URL contains whitespace or control characters".into());
     }
-    let mut url = url::Url::parse(base_url)
+    let url = url::Url::parse(base_url)
         .map_err(|_| "base URL must be an absolute HTTP(S) URL".to_string())?;
     if url.host_str().is_none()
         || !url.username().is_empty()
@@ -45,11 +44,26 @@ pub fn endpoint(base_url: &str) -> Result<String, String> {
     if !matches!(url.scheme(), "http" | "https") {
         return Err("base URL must use HTTP or HTTPS".into());
     }
+    Ok(url)
+}
+
+pub fn endpoint(base_url: &str) -> Result<String, String> {
+    let mut url = validated_base(base_url)?;
     let path = url.path().trim_end_matches('/');
     if path.ends_with("/chat/completions") {
         return Err("base URL must be the API root, not the /chat/completions endpoint".into());
     }
     url.set_path(&format!("{path}/chat/completions"));
+    Ok(url.to_string())
+}
+
+pub fn models_endpoint(base_url: &str) -> Result<String, String> {
+    let mut url = validated_base(base_url)?;
+    let path = url.path().trim_end_matches('/');
+    if path.ends_with("/chat/completions") {
+        return Err("base URL must be the API root, not the /chat/completions endpoint".into());
+    }
+    url.set_path(&format!("{path}/models"));
     Ok(url.to_string())
 }
 
@@ -62,6 +76,43 @@ pub fn key_name_valid(name: &str) -> bool {
 }
 
 impl ApiOptions {
+    pub fn explicit(&self) -> bool {
+        self.base_url.is_some()
+            || self.api_key_env.is_some()
+            || self.model.is_some()
+            || self.provider.is_some()
+            || std::env::var("OPENAI_BASE_URL").is_ok_and(|s| !s.is_empty())
+    }
+    pub fn public_config(&self) -> Result<serde_json::Value, String> {
+        let (base, key, model) = match self.provider.as_deref() {
+            None | Some("openai") => ("https://api.openai.com/v1", "OPENAI_API_KEY", "gpt-4o-mini"),
+            Some("openrouter") => (
+                "https://openrouter.ai/api/v1",
+                "OPENROUTER_API_KEY",
+                "openai/gpt-4o-mini",
+            ),
+            _ => return Err("unknown legacy provider alias".into()),
+        };
+        let key = self.api_key_env.as_deref().unwrap_or(key);
+        if !key_name_valid(key) {
+            return Err(
+                "api-key-env must be an environment variable name, not a credential".into(),
+            );
+        }
+        let base = self
+            .base_url
+            .clone()
+            .or_else(|| {
+                std::env::var("OPENAI_BASE_URL")
+                    .ok()
+                    .filter(|s| !s.is_empty())
+            })
+            .unwrap_or_else(|| base.into());
+        endpoint(&base)?;
+        Ok(
+            serde_json::json!({"base_url":base,"api_key_env":key,"key_present":std::env::var(key).is_ok_and(|s|!s.is_empty()),"model":self.model.as_deref().unwrap_or(model),"response_format":match self.response_format { OutputFormat::JsonSchema=>"json_schema",OutputFormat::JsonObject=>"json_object",OutputFormat::None=>"none" }}),
+        )
+    }
     pub fn resolve(&self) -> Result<Connection, String> {
         let (default_base,default_key,default_model)=match self.provider.as_deref(){
             None|Some("openai")=>("https://api.openai.com/v1","OPENAI_API_KEY","gpt-4o-mini"),

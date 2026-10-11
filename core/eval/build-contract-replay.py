@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Build deliberately hand-authored contract replay, never a model benchmark."""
 import json
 from pathlib import Path
 

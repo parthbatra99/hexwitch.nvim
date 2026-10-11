@@ -1,22 +1,3 @@
-//! Interpretation bridge: natural language -> edit spec.
-//!
-//! The contract, established in the first-principles design:
-//!
-//! * **The LLM never picks colors.** It emits a flat action list
-//!   ([`LlmSpec`]) constrained by a JSON schema (for structured-output
-//!   providers) and translated *deterministically* into an [`EditSpec`].
-//!   All color work stays in the engine.
-//! * **Validation is hard.** Unknown actions, missing fields, nonsense
-//!   ratios — all rejected with precise errors, never repaired by guess.
-//! * **Offline-testable.** Prompt building and translation are pure
-//!   functions; only the provider call (in the CLI) touches the network.
-//!
-//! The wire format is deliberately flatter than [`EditSpec`]: a single
-//! action list where `protect` is just another action. Flat + nullable
-//! fields map cleanly onto strict structured-output schemas, which means
-//! providers can enforce the shape *server-side*, and we enforce it again
-//! client-side.
-
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
 use thiserror::Error;
@@ -28,7 +9,6 @@ use crate::ir::role::Role;
 use crate::ir::theme::Theme;
 use crate::revise::{Against, Change, EditSpec, Op};
 
-/// Valid action names, mirrored in the JSON schema and the system prompt.
 pub const ACTIONS: &[&str] = &[
     "protect",
     "lighter",
@@ -39,8 +19,6 @@ pub const ACTIONS: &[&str] = &[
     "min_contrast",
 ];
 
-/// One action as emitted by the model. All optional fields are nullable
-/// so the shape fits strict structured-output schemas.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LlmAction {
@@ -56,8 +34,6 @@ pub struct LlmAction {
     pub shift: Option<f64>,
 }
 
-/// The model's full response: an action list plus free-form notes the UI
-/// can surface to the user ("here is how I read your request").
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LlmSpec {
@@ -84,8 +60,6 @@ impl From<serde_json::Error> for InterpretError {
     }
 }
 
-/// Translate the model's flat action list into an engine edit spec.
-/// Deterministic, total on valid input, precise on invalid input.
 pub fn llm_spec_to_edit_spec(spec: &LlmSpec) -> Result<EditSpec, InterpretError> {
     let mut out = EditSpec::default();
     for (index, a) in spec.actions.iter().enumerate() {
@@ -198,8 +172,6 @@ pub fn llm_spec_to_edit_spec(spec: &LlmSpec) -> Result<EditSpec, InterpretError>
     Ok(out)
 }
 
-/// Extract an [`LlmSpec`] from raw model output: either the action JSON
-/// itself (optionally fenced) or a full chat-completion envelope.
 pub fn parse_model_output(raw: &str) -> Result<LlmSpec, InterpretError> {
     let trimmed = raw.trim();
     let unfenced = trimmed
@@ -209,7 +181,6 @@ pub fn parse_model_output(raw: &str) -> Result<LlmSpec, InterpretError> {
         .map(str::trim)
         .unwrap_or(trimmed);
 
-    // Try the spec directly first, then a full response envelope.
     if let Ok(spec) = serde_json::from_str::<LlmSpec>(unfenced) {
         return Ok(spec);
     }
@@ -223,8 +194,6 @@ pub fn parse_model_output(raw: &str) -> Result<LlmSpec, InterpretError> {
     serde_json::from_value(v).map_err(InterpretError::from)
 }
 
-/// The JSON schema sent to structured-output providers, enforcing the
-/// flat action shape server-side.
 pub fn response_schema() -> serde_json::Value {
     serde_json::json!({
         "name": "hexwitch_edit_spec",
@@ -256,7 +225,6 @@ pub fn response_schema() -> serde_json::Value {
     })
 }
 
-/// The system prompt: the interpretation contract.
 pub fn system_prompt() -> String {
     r#"You are the interpretation layer of the hexwitch theme engine. You translate a user's request about their editor theme into a structured edit spec. You never invent colors: every action is a named operation on a theme role, and a deterministic engine performs it.
 
@@ -281,7 +249,6 @@ Always answer with JSON matching the schema exactly. Put a one-sentence summary 
         .to_string()
 }
 
-/// The user prompt: theme inventory + measured state + the request.
 pub fn user_prompt(theme: &Theme, request: &str) -> String {
     let mut inventory = String::from("Theme role inventory (all targets must come from here):\n");
     for (role, style) in &theme.styles {
@@ -428,22 +395,17 @@ mod tests {
                 }],
             }
         };
-        // missing amount
         let e = llm_spec_to_edit_spec(&action("darker", None, None, None, None)).unwrap_err();
         assert!(e.to_string().contains("requires `amount`"));
-        // amount out of range
         let e = llm_spec_to_edit_spec(&action("darker", Some(1.5), None, None, None)).unwrap_err();
         assert!(e.to_string().contains("outside 0-1"));
-        // unknown action
         let e = llm_spec_to_edit_spec(&action("recolor", None, None, None, None)).unwrap_err();
         assert!(e.to_string().contains("unknown action"));
-        // min_contrast incomplete
         let e = llm_spec_to_edit_spec(&action("min_contrast", None, None, None, None)).unwrap_err();
         assert!(e.to_string().contains("requires `min`"));
         let e = llm_spec_to_edit_spec(&action("min_contrast", None, Some(4.5), None, None))
             .unwrap_err();
         assert!(e.to_string().contains("requires `against`"));
-        // bad against / bad min / bad shift
         let e = llm_spec_to_edit_spec(&action("min_contrast", None, Some(4.5), None, Some("blue")))
             .unwrap_err();
         assert!(e.to_string().contains("neither a role nor"));
@@ -493,7 +455,7 @@ mod tests {
             props["action"]["enum"].as_array().unwrap().len(),
             ACTIONS.len()
         );
-        assert!(props["amount"]["type"].is_array()); // nullable
+        assert!(props["amount"]["type"].is_array());
         let required = s["schema"]["properties"]["actions"]["items"]["required"]
             .as_array()
             .unwrap();
@@ -502,7 +464,6 @@ mod tests {
 
     #[test]
     fn converted_specs_revise_cleanly() {
-        // The full offline chain: model output -> edit spec -> revise.
         let raw = r#"{"notes":"darker and readable","actions":[
             {"action":"protect","target":"syntax.keyword","amount":null,"against":null,"min":null,"shift":null},
             {"action":"darker","target":"surface.base","amount":0.04,"against":null,"min":null,"shift":null},

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Offline metadata/hash gate; does not judge aesthetic or editor fidelity."""
 import hashlib
 import json
 import re

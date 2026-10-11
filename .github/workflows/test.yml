@@ -1,4 +1,4 @@
-name: CI
+name: Engine and playground
 
 on:
   push:
@@ -10,8 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  rust:
-    name: Core engine
+  engine:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -19,83 +18,28 @@ jobs:
         working-directory: core
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-
-      - name: Install Neovim
-        uses: rhysd/action-setup-vim@v1
-        with:
-          neovim: true
-          version: v0.10.0
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: core
-
-      - name: Check formatting
+      - name: Formatting
         run: cargo fmt --all --check
-
       - name: Lint
-        run: cargo clippy --all-targets -- -D warnings
-
-      - name: Verify evaluation fixture metadata and hashes
+        run: cargo clippy --all-targets --locked -- -D warnings
+      - name: Fixture metadata and authored evaluation rebuilds
         run: |
           python3 eval/verify-fixtures.py
           python3 -m unittest discover -s eval -p 'test_*.py'
-
-      - name: Test engine and thin Neovim adapter
+      - name: Engine and local playground tests (offline)
         run: cargo test --all --locked
-
-  legacy-lua:
-    name: Legacy Neovim plugin
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: adapters/nvim-legacy
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Neovim
-        uses: rhysd/action-setup-vim@v1
+      - uses: actions/setup-node@v4
         with:
-          neovim: true
-          version: v0.10.0
-
-      - name: Install dependencies
+          node-version: '22'
+      - name: Browser controls (offline, isolated profile)
         run: |
-          git clone --depth=1 https://github.com/nvim-lua/plenary.nvim.git ~/.local/share/nvim/lazy/plenary.nvim
-          git clone --depth=1 https://github.com/nvim-telescope/telescope.nvim.git ~/.local/share/nvim/lazy/telescope.nvim
-
-      - name: Run unit tests
-        run: |
-          nvim --headless --noplugin -u tests/minimal_init.lua \
-            -c "PlenaryBustedDirectory tests/hexwitch/ { minimal_init = 'tests/minimal_init.lua' }"
-
-      - name: Test plugin loading
-        run: |
-          nvim --headless -c "
-            set rtp+=.
-            try
-              lua require('hexwitch')
-              print('Plugin loaded successfully')
-            catch
-              print('Plugin failed to load: ' .. vim.inspect(err))
-              os.exit(1)
-            end
-          " -c "qa"
-
-  notify-results:
-    needs: [rust, legacy-lua]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Report
-        if: ${{ needs.rust.result != 'success' || needs.legacy-lua.result != 'success' }}
-        run: |
-          echo "Some jobs failed. Check the job logs."
-          exit 1
+          cargo build --locked
+          npm install --prefix "$RUNNER_TEMP/hexwitch-browser" playwright@1.64.0
+          "$RUNNER_TEMP/hexwitch-browser/node_modules/.bin/playwright" install --with-deps chromium
+          NODE_PATH="$RUNNER_TEMP/hexwitch-browser/node_modules" node ../playground/smoke.cjs

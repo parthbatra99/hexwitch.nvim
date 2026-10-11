@@ -1,11 +1,7 @@
-//! Theme roles: the stable vocabulary of *meaning* a theme assigns styles to.
-
 use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
 
-/// Background surfaces, ordered from lowest to highest elevation.
-/// Identity of a theme lives heavily here (tinted neutrals).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Surface {
     Base,
@@ -17,7 +13,6 @@ pub enum Surface {
     Tabline,
 }
 
-/// Foreground hierarchy for interface text (not syntax).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TextRole {
     Primary,
@@ -27,10 +22,6 @@ pub enum TextRole {
     Accent,
 }
 
-/// Syntax roles. Deliberately broad enough to express modern semantic
-/// tokens, deliberately not one-role-per-parser-capture. Multiple roles may
-/// intentionally share a visual treatment; the distinction graph (which
-/// pairs *must* differ) is a separate concern in analysis/validation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SyntaxRole {
     Comment,
@@ -56,9 +47,6 @@ pub enum SyntaxRole {
     Macro,
 }
 
-/// Interactive editor states that change the background a token sits on.
-/// These are roles (not styles) because validation must compose them with
-/// syntax colors: "comment inside selection", "string on an added line".
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum InteractionRole {
     Selection,
@@ -78,8 +66,6 @@ pub enum DiagnosticKind {
     Hint,
 }
 
-/// Where a diagnostic appears; each needs its own treatment to survive
-/// overlap scenarios (floating text over code, signs over gutter, etc.).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum DiagnosticPart {
     Text,
@@ -102,11 +88,6 @@ pub enum DiffPart {
     Gutter,
 }
 
-/// A role in the canonical vocabulary.
-///
-/// Serialized as a dotted, human-readable string (`syntax.keyword`,
-/// `diagnostic.error.virtual_text`, `terminal.4`, `other.my_custom`) so IR
-/// JSON stays diffable, greppable, and usable inside LLM edit specs.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Role {
     Surface(Surface),
@@ -121,10 +102,7 @@ pub enum Role {
         kind: DiffKind,
         part: DiffPart,
     },
-    /// ANSI terminal slot 0-15.
     Terminal(u8),
-    /// Extension point for roles an ingested theme has but the vocabulary
-    /// does not yet model. Never silently dropped.
     Other(String),
 }
 
@@ -132,8 +110,6 @@ pub enum Role {
 #[error("unknown role `{0}`")]
 pub struct RoleParseError(String);
 
-// Hand-written impls (a macro_rules version fought the parser over
-// `ty` fragments followed by braces; explicitness wins here).
 impl Surface {
     pub const ALL: &'static [Surface] = &[
         Surface::Base,
@@ -474,7 +450,7 @@ mod tests {
     fn rejects_unknown_roles() {
         for bad in [
             "syntax.nonsense",
-            "diagnostic.error", // missing part
+            "diagnostic.error",
             "terminal.16",
             "terminal.x",
             "nope.base",
@@ -487,8 +463,6 @@ mod tests {
 
     #[test]
     fn role_ordering_is_deterministic() {
-        // BTreeMap iteration order depends on Ord; ensure it is total and
-        // stable across runs by checking a fixed slice sorts identically.
         let mut roles: Vec<Role> = vec![
             Role::Terminal(2),
             Role::Syntax(SyntaxRole::Comment),
@@ -501,7 +475,7 @@ mod tests {
         ];
         roles.sort();
         let strings: Vec<String> = roles.iter().map(|r| r.to_string()).collect();
-        assert_eq!(strings, strings.clone()); // sanity
+        assert_eq!(strings, strings.clone());
         assert_eq!(roles, roles.clone());
     }
 

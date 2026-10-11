@@ -1,5 +1,3 @@
-//! Offline semantic-outcome evaluation. Recorded model outputs and annotations
-//! are separate inputs; canned replay is contract evidence, not model quality.
 use crate::backdrop::Backdrop;
 use crate::color::{composite_over, contrast_ratio, Srgb};
 use crate::intent::Target;
@@ -33,10 +31,8 @@ pub struct Case {
     pub checks: Vec<Predicate>,
     #[serde(default)]
     pub context: crate::interpret_v1::IterationContext,
-    /// Previous turn's actual result, not an independent fresh reference.
     #[serde(default)]
     pub previous: Option<String>,
-    /// Explicit authored initial-state transformation, never model output.
     #[serde(default)]
     pub setup: Option<crate::intent::IntentSpec>,
     #[serde(default)]
@@ -58,8 +54,6 @@ pub enum Expectation {
 #[derive(Debug, Deserialize)]
 #[serde(tag = "check", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Predicate {
-    /// At least one complete alternative must pass; do not mix requirements
-    /// from incompatible interpretations to manufacture a passing answer.
     AnyOf {
         alternatives: Vec<Vec<Predicate>>,
     },
@@ -126,8 +120,6 @@ pub enum Predicate {
         backgrounds: Vec<Backdrop>,
         min: f64,
     },
-    /// A floor must be requested, not merely happen to hold in the starting
-    /// theme. Checks all expected background contexts and lifetime.
     ContrastRequested {
         target: Target,
         backgrounds: Vec<Backdrop>,
@@ -205,7 +197,6 @@ pub struct CaseResult {
     pub failure_class: Option<String>,
     pub findings: Vec<String>,
     pub input_sha256: String,
-    /// Includes resolved includes, mappings and protections, not just root bytes.
     pub resolved_theme_sha256: String,
     pub response_sha256: Option<String>,
     pub prompt_sha256: String,
@@ -216,7 +207,6 @@ pub struct CaseResult {
     pub previous: Option<String>,
     pub context_sha256: String,
     pub checks: Vec<CheckResult>,
-    /// A real prior result was evaluated but failed its semantic assertions.
     pub upstream_failed: bool,
 }
 #[derive(Debug, Serialize)]
@@ -935,14 +925,11 @@ pub fn run_suite(suite_path: &Path, run_path: &Path) -> Result<Evaluation, Strin
             }
             let mut next_context = context.clone();
             next_context.previous_requests.push(case.request.clone());
-            // The result theme carries retained locks/constraints. Do not tell
-            // the next turn that refused or rolled-back actions were applied.
             if let Some(spec) = &interpreted.spec {
                 if matches!(
                     interpreted.outcome,
                     crate::protocol::Outcome::Satisfied | crate::protocol::Outcome::Unchanged
                 ) {
-                    // Request-local locks and no-op moves are not retained edits.
                     for action in &spec.actions {
                         if matches!(
                             action,

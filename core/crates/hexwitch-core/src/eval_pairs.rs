@@ -1,4 +1,3 @@
-//! Pairwise relationships complement independent per-case thresholds.
 use super::interpret_eval::{color, property, styles, Metric, Pair, PairResult, Turn};
 use std::collections::{BTreeMap, BTreeSet};
 

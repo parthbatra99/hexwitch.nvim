@@ -327,7 +327,7 @@ fn prompt_contains_properties_locks_context_and_trusted_anchors() {
     let variants = schema["schema"]["properties"]["actions"]["items"]["anyOf"]
         .as_array()
         .unwrap();
-    assert_eq!(variants.len(), interpret_v1::ACTIONS.len());
+    assert_eq!(variants.len(), interpret_v1::ACTIONS.len() + 1);
     assert!(variants.iter().all(|v| v["additionalProperties"] == false));
     let boolean = variants
         .iter()

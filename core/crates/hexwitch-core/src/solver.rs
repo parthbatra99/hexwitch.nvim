@@ -1,4 +1,3 @@
-//! Bounded deterministic lightness search, not a global color-space optimum.
 use crate::color::{composite_over, contrast_ratio, gamut_map, Oklch, Srgb};
 use serde::{Deserialize, Serialize};
 

@@ -1,4 +1,3 @@
-//! Small JSONC lexer: comments and trailing commas, never regex-strips strings.
 pub fn parse(input: &str) -> Result<serde_json::Value, String> {
     if input.len() > 8 * 1024 * 1024 {
         return Err("JSONC exceeds 8 MiB".into());
@@ -80,8 +79,6 @@ pub fn parse(input: &str) -> Result<serde_json::Value, String> {
         }
         out.push(c);
     }
-    // Object order matters for equal-specificity semantic rules. Duplicate keys
-    // would silently overwrite an earlier rule, so reject them at every depth.
     use serde::de::{DeserializeSeed, MapAccess, SeqAccess, Visitor};
     struct StrictValue;
     impl<'de> DeserializeSeed<'de> for StrictValue {

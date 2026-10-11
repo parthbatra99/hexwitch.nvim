@@ -1,4 +1,3 @@
-//! Intent v1: explicit property targets and persistent constraints.
 use crate::color::{contrast_ratio, gamut_map, Oklch, Srgb};
 use crate::ir::{Origin, Property, PropertyState, Role, SourceInfo, Theme, UnderlineStyle};
 use crate::protocol::Outcome;
@@ -20,7 +19,6 @@ pub struct IntentSpec {
 pub struct Target {
     pub roles: Vec<String>,
     pub property: Property,
-    /// Include all existing semantic overrides as well as the lexical role.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub include_semantic: bool,
 }
@@ -135,7 +133,6 @@ pub struct IntentReport {
     pub properties: Vec<PropertyOutcome>,
     pub requirements: Vec<PropertyOutcome>,
     pub preferences: Vec<Preference>,
-    /// Required constraints failed; proposed property changes were not retained.
     pub rolled_back: bool,
 }
 
@@ -318,8 +315,6 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
         }
         for (role, semantic_rule) in targets {
             let p = target.property;
-            // Semantic patches often omit fg/opacity and inherit the lexical
-            // treatment. Solve that effective color without filling other slots.
             let inherited = crate::validate::resolved_style(&revised, &role);
             let effective_opacity = match semantic_rule {
                 Some(index) => {
@@ -543,7 +538,6 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
         .iter()
         .any(|r| r.outcome == Outcome::Infeasible)
     {
-        // Required constraints are transactional: return the original, never an invalid candidate.
         report.outcome = Outcome::Infeasible;
         report.rolled_back = true;
         return Ok((theme.clone(), report));

@@ -1,5 +1,3 @@
-//! Explicit scope-stack probes for the documented VS Code import subset.
-//! This is rule resolution over supplied scopes, not a TextMate tokenizer.
 use crate::ir::{Property, Style};
 use serde::Serialize;
 use serde_json::Value;
@@ -42,8 +40,6 @@ fn score(selector: &str, stack: &[String]) -> Option<usize> {
     Some(parts.len() * 0x10000 + parts.last().unwrap().len())
 }
 
-/// Probe the retained source document of an imported theme. Unsupported
-/// selectors qualify the result: they may override these calculated values.
 pub fn resolve_scope_stack(
     source: &Value,
     stack: &[String],

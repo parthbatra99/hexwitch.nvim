@@ -103,7 +103,6 @@ fn malformed_annotations_are_authoring_errors_not_model_failures() {
     let mut suite_value: Value =
         serde_json::from_str(&std::fs::read_to_string(suite()).unwrap()).unwrap();
     suite_value["cases"][0]["checks"] = serde_json::json!([{"check":"bool","target":{"roles":["surface.base"],"property":"bg"},"value":false}]);
-    // Keep paths anchored in the real eval root; the exact test file is removed.
     let path = root().join(format!(
         ".eval-contract-failure-{}.json",
         std::process::id()

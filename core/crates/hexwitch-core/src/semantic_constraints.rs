@@ -1,6 +1,3 @@
-//! Enumerate effective semantic treatments for required contrast floors.
-//! Independent rule patches are not enough: fg and opacity may come from
-//! different simultaneously applicable rules. Bounded enumeration fails closed.
 use crate::ir::{Role, Style, Theme};
 use crate::semantic::{portable_role, resolve_semantic, SemanticContext, STANDARD_TYPES};
 use std::collections::BTreeSet;

@@ -1,8 +1,8 @@
 # Evaluation suites
 
-Keep seven results separate: color correctness, import fidelity, revision
-correctness, interpretation quality, scene readability, adapter fidelity, human
-preference/intent preservation. A schema pass is not semantic accuracy, and a
+Keep engine results separate: color correctness, import fidelity, revision
+correctness, interpretation quality, calculated scene readability, and human
+preference/intent preservation. Editor runtime fidelity is deferred. A schema pass is not semantic accuracy, and a
 contrast pass is not a comfort or productivity result.
 
 `manifest.json` is the legacy metric regression set. Its six theme files are

@@ -1,37 +1,28 @@
-# Reproducible prototype baseline
+# Engine development baseline
 
-## Scope
+Current scope: Rust engine, evaluations, compatible API transport and local browser
+playground. Editor clients, emitters, Lua dependencies, editor test runners and
+editor-install CI are removed. Prior adapter implementations remain available in
+Git history, not the active tree.
 
-P0 checkpoints the existing thin adapter and preserves `adapters/nvim-legacy/`.
-Neither the legacy plugin nor its history is removed. `FUTURE_PLAN.md` remains
-the planning baseline; package evidence belongs in `docs/IMPLEMENTATION_STATUS.md`.
+## Environment
 
-## Local environment verified
+- Stable Rust toolchain with rustfmt/clippy.
+- Python 3 for fixture metadata and authored replay rebuilds.
+- Browser for the loopback playground; no frontend build dependencies.
+- `curl` for explicitly requested compatible API calls.
+- Optional Node + Playwright for browser smoke tests. These are not runtime deps.
 
-- macOS, Rust stable (workspace `core/rust-toolchain.toml`).
-- Neovim 0.10+ required for the thin client (`vim.system`, `nvim_get_hl`).
-- Engine requires no network for regression tests. Provider calls are opt-in.
-- Legacy tests additionally need Plenary and Telescope; the CI job retains
-  its relocated working directory and minimal init.
-
-## Commands
+## Verification
 
 ```sh
+cargo test --manifest-path core/Cargo.toml --all --locked
 cargo fmt --manifest-path core/Cargo.toml --all --check
 cargo clippy --manifest-path core/Cargo.toml --all-targets --locked -- -D warnings
-cargo test --manifest-path core/Cargo.toml --all --locked
+python3 core/eval/verify-fixtures.py
+python3 -m unittest discover -s core/eval -p 'test_*.py'
 ```
 
-Initial checkpoint: 84 tests pass, including the real-binary thin-adapter test
-and real headless-Neovim emitted-highlight checks. Formatting and clippy pass.
-These are functionality checks, not evidence of aesthetic quality, faithful
-complete-theme import, live-provider reliability, or comprehensive readability.
-Legacy unit tests are a separate CI suite; do not imply they ran locally without
-its optional dependencies.
-
-## Integration ownership
-
-The primary session owns shared contracts, `main.rs`, `lib.rs`, manifests,
-shared schemas, and integration. Delegated packages use named branches and
-worktrees, explicit allowed paths, focused tests, failure fixtures, limitations,
-and compatibility notes. Contracts merge before their consumers.
+Tests must run without any installed editor or personal editor configuration.
+External-provider tests are separate opt-in observations, never prerequisites for
+offline CI. Canned replay validates contracts/evaluators, not model accuracy.

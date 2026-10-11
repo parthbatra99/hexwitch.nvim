@@ -1,14 +1,10 @@
-//! `hexwitch` CLI — thin, composable surface over hexwitch-core.
-//!
-//! M0 scope: color inspection primitives (`convert`, `contrast`) so the
-//! engine's math is dogfoodable from day one. Ingest/analyze/revise/emit
-//! subcommands arrive with their milestones and must stay scriptable —
-//! the Neovim adapter (and later VS Code/Zed) drive this same binary.
-
 mod api_config;
 mod artifact;
 mod machine;
+mod playground;
 mod provider;
+mod providers;
+mod references;
 
 use clap::{Parser, Subcommand};
 use hexwitch_core::color::{contrast_verdict, gamut_map, Oklch, Srgb};
@@ -22,7 +18,7 @@ use hexwitch_core::eval::{render_report, run_eval_dir};
     disable_help_subcommand = true
 )]
 struct Cli {
-    /// Versioned JSON response envelope (never parse human stderr).
+    #[arg(help = "Versioned JSON response envelope (never parse human stderr)")]
     #[arg(long, global = true)]
     machine: bool,
     #[arg(long, global = true, default_value = "local")]
@@ -33,9 +29,21 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    /// Discover protocol, engine, and supported operation versions.
+    #[command(about = "Start the loopback-only interactive engine playground")]
+    Playground {
+        #[arg(long, default_value_t = 7331)]
+        port: u16,
+        #[arg(
+            long,
+            help = "Where saved providers live (default: $HEXWITCH_PROVIDERS_FILE or ~/.config/hexwitch/providers.json). Key values are never written"
+        )]
+        providers_file: Option<std::path::PathBuf>,
+        #[command(flatten)]
+        api: api_config::ApiOptions,
+    },
+    #[command(about = "Discover protocol, engine, and supported operation versions")]
     Capabilities,
-    /// Import source data into validated IR (migration must be explicit).
+    #[command(about = "Import source data into validated IR (migration must be explicit)")]
     Import {
         path: std::path::PathBuf,
         #[arg(long)]
@@ -43,13 +51,13 @@ enum Command {
         #[arg(short, long)]
         out: Option<std::path::PathBuf>,
     },
-    /// Validate calculated scenes; unknown rendering is unverified, not pass.
+    #[command(about = "Validate calculated scenes; unknown rendering is unverified, not pass")]
     Validate {
         path: std::path::PathBuf,
         #[arg(long)]
         scenes: Option<std::path::PathBuf>,
     },
-    /// Judge recorded v1 model responses against semantic outcomes (offline).
+    #[command(about = "Judge recorded v1 model responses against semantic outcomes (offline)")]
     EvalInterpretation {
         suite: std::path::PathBuf,
         #[arg(long)]
@@ -57,111 +65,99 @@ enum Command {
         #[arg(short, long)]
         out: Option<std::path::PathBuf>,
     },
-    /// Convert a color between representations.
+    #[command(about = "Convert a color between representations")]
     Convert {
-        /// Color as #rrggbb.
+        #[arg(help = "Color as #rrggbb")]
         color: String,
-        /// Target representation.
+        #[arg(help = "Target representation")]
         #[arg(short, long, value_enum, default_value_t = Target::Oklch)]
         to: Target,
     },
-    /// WCAG contrast between two colors, with verdicts.
+    #[command(about = "WCAG contrast between two colors, with verdicts")]
     Contrast {
-        /// Foreground as #rrggbb.
+        #[arg(help = "Foreground as #rrggbb")]
         foreground: String,
-        /// Background as #rrggbb.
+        #[arg(help = "Background as #rrggbb")]
         background: String,
-        /// Emit machine-readable JSON instead of text.
+        #[arg(help = "Emit machine-readable JSON instead of text")]
         #[arg(long)]
         json: bool,
     },
-    /// Gamut-map an OKLCH color into sRGB (chroma reduction, hue kept).
+    #[command(about = "Gamut-map an OKLCH color into sRGB (chroma reduction, hue kept)")]
     Map {
-        /// OKLCH lightness, 0-1.
+        #[arg(help = "OKLCH lightness, 0-1")]
         l: f64,
-        /// OKLCH chroma, >= 0.
+        #[arg(help = "OKLCH chroma, >= 0")]
         c: f64,
-        /// OKLCH hue in degrees.
+        #[arg(help = "OKLCH hue in degrees")]
         h: f64,
     },
-    /// Ingest a VS Code-format theme JSON and print its fingerprint
-    /// (contrast ladder, accent budget).
+    #[command(
+        about = "Ingest a VS Code-format theme JSON and print its fingerprint (contrast ladder, accent budget)"
+    )]
     Analyze {
-        /// Path to a VS Code theme .json file.
+        #[arg(help = "Path to a VS Code theme .json file")]
         path: std::path::PathBuf,
-        /// Emit the full fingerprint as JSON.
+        #[arg(help = "Emit the full fingerprint as JSON")]
         #[arg(long)]
         json: bool,
     },
-    /// Emit an editor artifact from a theme JSON file.
-    Emit {
-        /// Path to a theme .json file (VS Code format or IR format).
-        path: std::path::PathBuf,
-        /// Target editor.
-        #[arg(short, long, value_enum, default_value_t = Editor::Nvim)]
-        target: Editor,
-        /// Write to this path instead of stdout.
-        #[arg(short, long)]
-        out: Option<std::path::PathBuf>,
-        /// Print the emit report to stderr.
-        #[arg(long)]
-        report: bool,
-    },
-    /// Run the eval set: ingest + analyze reference themes, compare
-    /// against goldens and invariants. Non-zero exit on failure.
+    #[command(
+        about = "Run the eval set: ingest + analyze reference themes, compare against goldens and invariants. Non-zero exit on failure"
+    )]
     Eval {
-        /// Eval directory containing manifest.json. Defaults to `eval`
-        /// relative to the current directory (the workspace root is `core/`).
+        #[arg(
+            help = "Eval directory containing manifest.json. Defaults to `eval` relative to the current directory (the workspace root is `core/`)"
+        )]
         #[arg(default_value = "eval")]
         dir: std::path::PathBuf,
     },
-    /// Apply an edit spec to a theme: protected roles survive, changes
-    /// apply minimally, everything else stays bit-identical.
+    #[command(
+        about = "Apply an edit spec to a theme: protected roles survive, changes apply minimally, everything else stays bit-identical"
+    )]
     Revise {
-        /// Path to a theme .json file (IR or VS Code format).
+        #[arg(help = "Path to a theme .json file (IR or VS Code format)")]
         path: std::path::PathBuf,
-        /// Path to an edit-spec .json file.
+        #[arg(help = "Path to an edit-spec .json file")]
         #[arg(short, long)]
         spec: std::path::PathBuf,
-        /// Write the revised theme (IR JSON) here instead of stdout.
+        #[arg(help = "Write the revised theme (IR JSON) here instead of stdout")]
         #[arg(short, long)]
         out: Option<std::path::PathBuf>,
-        /// Also emit a Neovim colorscheme to this path.
-        #[arg(long)]
-        emit_nvim: Option<std::path::PathBuf>,
-        /// Print the revision report even on success.
+        #[arg(help = "Print the revision report even on success")]
         #[arg(long)]
         report: bool,
-        /// Write a machine-readable revision report for editor clients.
+        #[arg(help = "Write a machine-readable engine revision report")]
         #[arg(long)]
         report_json: Option<std::path::PathBuf>,
     },
-    /// Interpret a natural-language request as an edit spec (LLM bridge).
-    /// The model never picks colors; it emits actions that are validated
-    /// hard and translated deterministically.
+    #[command(
+        about = "Interpret a natural-language request as an edit spec (LLM bridge). The model never picks colors; it emits actions that are validated hard and translated deterministically"
+    )]
     Interpret {
-        /// Path to a theme .json file (IR or VS Code format).
+        #[arg(help = "Path to a theme .json file (IR or VS Code format)")]
         path: std::path::PathBuf,
-        /// The request, e.g. "darker background, readable comments, keep
-        /// the syntax colors". Required unless --from-llm is given.
+        #[arg(
+            help = "The request, e.g. \"darker background, readable comments, keep the syntax colors\". Required unless --from-llm is given"
+        )]
         prompt: Option<String>,
-        /// Print the exact prompt that would be sent and exit (no network).
+        #[arg(help = "Print the exact prompt that would be sent and exit (no network)")]
         #[arg(long)]
         dry_run: bool,
-        /// Offline mode: validate a saved model response instead of
-        /// calling a provider.
+        #[arg(
+            help = "Offline mode: validate a saved model response instead of calling a provider"
+        )]
         #[arg(long)]
         from_llm: Option<std::path::PathBuf>,
-        /// Write the validated edit spec here (IR EditSpec JSON).
+        #[arg(help = "Write the validated edit spec here (IR EditSpec JSON)")]
         #[arg(short, long)]
         out: Option<std::path::PathBuf>,
-        /// OpenAI-compatible API connection; keys stay in the named environment variable.
         #[command(flatten)]
         api: api_config::ApiOptions,
-        /// Property-aware interpretation with explicit clarification outcomes.
+        #[arg(help = "Property-aware interpretation with explicit clarification outcomes")]
         #[arg(long)]
         v1: bool,
-        /// Reviewed prior requests/actions for relative iteration (v1 only).
+        #[arg(help = "Reviewed prior requests/actions for relative iteration (v1 only)")]
         #[arg(long, requires = "v1")]
         context: Option<std::path::PathBuf>,
     },
@@ -175,37 +171,8 @@ enum Target {
     Hex,
 }
 
-/// Editor emission targets (grows with M4: VS Code, Zed).
-#[derive(clap::ValueEnum, Clone, Copy)]
-enum Editor {
-    Nvim,
-}
-
 fn parse_color(s: &str) -> Result<Srgb, String> {
     Srgb::from_hex(s).map_err(|e| e.to_string())
-}
-
-fn summarize_report(report: &hexwitch_core::emit::EmitReport) -> String {
-    let mut s = String::new();
-    s.push_str(&format!(
-        "emit report: {} defined, {} linked, {} skipped, {} unconsumed IR role(s)\n",
-        report.defined.len(),
-        report.linked.len(),
-        report.skipped.len(),
-        report.unconsumed_roles.len()
-    ));
-    for (group, role) in report.skipped.iter().take(10) {
-        s.push_str(&format!("  skipped {group}: IR lacks {role}\n"));
-    }
-    for role in report.unconsumed_roles.iter().take(10) {
-        s.push_str(&format!(
-            "  unconsumed: {role} (no mapping in this target yet)\n"
-        ));
-    }
-    for (role, property, reason) in &report.losses {
-        s.push_str(&format!("  loss: {role} {property}: {reason}\n"));
-    }
-    s
 }
 
 fn main() {
@@ -222,6 +189,11 @@ fn main() {
 
 fn run(command: Command) -> Result<(), String> {
     match command {
+        Command::Playground {
+            port,
+            providers_file,
+            api,
+        } => playground::serve(port, api, providers_file)?,
         Command::Capabilities => println!("{}", hexwitch_core::protocol::capabilities()),
         Command::Import {
             path,
@@ -366,41 +338,6 @@ fn run(command: Command) -> Result<(), String> {
                 }
             }
         }
-        Command::Emit {
-            path,
-            target,
-            out,
-            report,
-        } => {
-            let source = read_input(&path)?;
-            let _ = source;
-            let theme =
-                hexwitch_core::import_path::load_theme_path(&path).map_err(|e| e.to_string())?;
-            let emitted = match target {
-                Editor::Nvim => {
-                    hexwitch_core::emit::emit_nvim(&theme).map_err(|e| e.to_string())?
-                }
-            };
-            match out {
-                Some(p) => {
-                    if let Some(parent) = p.parent() {
-                        std::fs::create_dir_all(parent)
-                            .map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
-                    }
-                    artifact::write_atomic(&p, emitted.lua.as_bytes())
-                        .map_err(|e| format!("cannot write {}: {e}", p.display()))?;
-                    if report {
-                        eprintln!("{}", summarize_report(&emitted.report));
-                    }
-                }
-                None => {
-                    print!("{}", emitted.lua);
-                    if report {
-                        eprintln!("{}", summarize_report(&emitted.report));
-                    }
-                }
-            }
-        }
         Command::Eval { dir } => {
             let outcomes = run_eval_dir(&dir).map_err(|e| format!("eval failed: {e}"))?;
             print!("{}", render_report(&outcomes));
@@ -412,11 +349,10 @@ fn run(command: Command) -> Result<(), String> {
             path,
             spec,
             out,
-            emit_nvim,
             report,
             report_json,
         } => {
-            ensure_distinct(&[out.as_deref(), emit_nvim.as_deref(), report_json.as_deref()])?;
+            ensure_distinct(&[out.as_deref(), report_json.as_deref()])?;
             let theme_json = read_input(&path)?;
             let _ = theme_json;
             let theme = hexwitch_core::import_path::load_theme_path(&path)
@@ -433,24 +369,6 @@ fn run(command: Command) -> Result<(), String> {
                 eprintln!(
                     "({} role(s) failed; failures keep their original colors)",
                     revision.failed.len()
-                );
-            }
-
-            if let Some(nvim_out) = emit_nvim {
-                let emitted =
-                    hexwitch_core::emit::emit_nvim(&revised).map_err(|e| e.to_string())?;
-                if let Some(parent) = nvim_out.parent() {
-                    std::fs::create_dir_all(parent)
-                        .map_err(|e| format!("cannot create {}: {e}", parent.display()))?;
-                }
-                artifact::write_atomic(&nvim_out, emitted.lua.as_bytes())
-                    .map_err(|e| format!("cannot write {}: {e}", nvim_out.display()))?;
-                eprintln!(
-                    "emitted {} ({} defined, {} linked, {} skipped)",
-                    nvim_out.display(),
-                    emitted.report.defined.len(),
-                    emitted.report.linked.len(),
-                    emitted.report.skipped.len()
                 );
             }
 
@@ -489,7 +407,6 @@ fn run(command: Command) -> Result<(), String> {
             let theme =
                 hexwitch_core::import_path::load_theme_path(&path).map_err(|e| e.to_string())?;
 
-            // Offline validation path: no network, no prompt needed.
             if let Some(response_path) = from_llm {
                 let raw = read_input(&response_path)?;
                 let llm =
@@ -680,7 +597,3 @@ fn write_spec(
     }
     Ok(())
 }
-
-// OpenAI-compatible connection resolution is centralized in api_config.rs.
-
-// Provider transport lives in provider.rs; no credential-bearing temporary files.

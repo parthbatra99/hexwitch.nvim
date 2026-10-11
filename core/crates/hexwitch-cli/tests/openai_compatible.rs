@@ -1,4 +1,3 @@
-//! Real HTTP transport to loopback mocks; no external APIs or real credentials.
 use std::io::{Read, Write};
 use std::process::Command;
 
