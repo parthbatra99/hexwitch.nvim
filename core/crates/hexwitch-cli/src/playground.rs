@@ -12,6 +12,7 @@ const HTML: &str = include_str!("../../../../playground/index.html");
 const JS: &str = include_str!("../../../../playground/app.js");
 const CSS: &str = include_str!("../../../../playground/style.css");
 const FONT: &[u8] = include_bytes!("../../../../playground/fonts/bricolage.woff2");
+const FAVICON: &str = include_str!("../../../../hexwitch-logo.svg");
 const MAX_BODY: usize = 8 * 1024 * 1024;
 
 struct State {
@@ -185,6 +186,7 @@ fn handle(mut stream: TcpStream, state: Arc<State>) -> Result<(), String> {
             "/app.js" => ("text/javascript; charset=utf-8", JS.as_bytes().to_vec()),
             "/style.css" => ("text/css; charset=utf-8", CSS.as_bytes().to_vec()),
             "/fonts/bricolage.woff2" => ("font/woff2", FONT.to_vec()),
+            "/favicon.svg" => ("image/svg+xml", FAVICON.as_bytes().to_vec()),
             "/api/live" => (
                 "application/json",
                 live_status(&state).to_string().into_bytes(),

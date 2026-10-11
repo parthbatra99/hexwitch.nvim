@@ -102,6 +102,10 @@ fn host_assets_security_review_history_export_and_matrix() {
     let (head, html) = host.http("GET", "/", None, None);
     assert!(head.contains("Content-Security-Policy"));
     assert!(html.contains("/app.js"));
+    assert!(html.contains("/favicon.svg"));
+    let (head, svg) = host.http("GET", "/favicon.svg", None, None);
+    assert!(head.contains("image/svg+xml"));
+    assert!(svg.starts_with("<svg"));
     let (_, js) = host.http("GET", "/app.js", None, None);
     assert!(js.contains("'use strict'"));
     let (head, _) = host.http(
