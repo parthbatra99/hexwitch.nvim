@@ -111,6 +111,17 @@ uses property-aware intent v1. Neither mode emits editor artifacts.
 
 ## Verify
 
+Git hooks in `.githooks/` run these checks. The pre-commit hook runs `fmt` and
+`clippy`. The pre-push hook runs the fixture checks, the Python and Rust tests,
+and the browser smoke when Playwright is on `NODE_PATH`. Enable them once per
+clone:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+To run the checks by hand:
+
 ```sh
 cargo fmt --manifest-path core/Cargo.toml --all --check
 cargo clippy --manifest-path core/Cargo.toml --all-targets --locked -- -D warnings
@@ -121,7 +132,7 @@ python3 -m unittest discover -s core/eval -p 'test_*.py'
 
 Optional real-browser checks use Playwright; see [playground verification and
 limitations](docs/playground.md). Live testing is opt-in and separate
-from offline CI. The configured small model has demonstrated valid-but-wrong
+from the offline checks. The configured small model has demonstrated valid-but-wrong
 saturation/opacity interpretations; this is an open quality issue, regardless
 of canned replay scores.
 

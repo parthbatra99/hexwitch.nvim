@@ -50,7 +50,7 @@ Offline host tests run real HTTP against a mock provider. They cover consent,
 origin rejection, revision guards, export and restore, and the provider registry:
 environment checks, catalog listing, save/select/remove, persistence across a
 restart, keyless local calls, read-only launch providers, and that no key value
-shows up in the file, the bootstrap payload or an export. CI makes no live calls.
+shows up in the file, the bootstrap payload or an export. The offline tests make no live calls.
 
 The optional headless Chrome smoke covers nudges, compare, keep/undo/redo,
 semantic italics, the readability floor, the matrix, theme switching, replay

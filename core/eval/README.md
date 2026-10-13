@@ -51,7 +51,7 @@ python3 -m unittest discover -s core/eval -p 'test_fixture_metadata.py'
 ```
 
 The validator rejects missing fields, unknown metadata, changed hashes and path
-escapes; CI runs it alongside the Rust suites. The six legacy excerpts still
+escapes; the pre-push hook runs it alongside the Rust suites. The six legacy excerpts still
 have unverified upstream license provenance and are not promoted to this suite.
 
 ## Executable interpretation evaluation
