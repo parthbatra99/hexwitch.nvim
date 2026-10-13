@@ -7,6 +7,7 @@
 <p align="center">
   <b>A programmable color engine for every theme you use.</b><br>
   Plain words or scripts in, typed intent through a Rust OKLCH solver, contrast-proven themes out.<br>
+  <b>A full edit, contrast floors included, lands in under 4 ms.</b><br>
   The model never picks a hex. The engine never ships a change that breaks a floor.
 </p>
 
@@ -21,6 +22,7 @@
 <p align="center">
   <a href="#run-it">Run it</a> ·
   <a href="#how-it-works">How it works</a> ·
+  <a href="#built-from-real-themes">Research</a> ·
   <a href="#benchmarks">Benchmarks</a> ·
   <a href="#how-it-compares">Comparison</a> ·
   <a href="#evals">Evals</a> ·
@@ -77,7 +79,7 @@ The solver does the rest:
 </p>
 
 <p align="center">
-  <img src="docs/media/clarifying-question.png" alt="A vague request 'make that blue quieter' gets a clarifying question; the answer produces a reviewable candidate" width="760">
+  <img src="docs/media/clarifying-question.png" alt="A vague request 'make that blue quieter' gets a clarifying question; the answer produces a reviewable candidate" width="900">
 </p>
 
 <details>
@@ -106,6 +108,43 @@ fixed hue with gamut mapping (4096 samples per direction, then 24 refinement
 steps) and stops at the first value that clears the floor after rounding.
 
 </details>
+
+## Built from real themes
+
+hexwitch loads 30+ well-known themes into one IR: Catppuccin, Dracula, Gruvbox,
+Nord, Solarized, Tokyo Night, VS Code Dark+ and the 23 Omarchy themes. Its
+`analyze` command fingerprints a theme in OKLCH. Across the six classic
+reference themes, the same patterns show up:
+
+| Theme | Comment contrast | Lowest-contrast syntax role | Comment chroma vs. median accent | Max accent chroma |
+|---|---:|---|---:|---:|
+| Catppuccin Mocha | 5.81:1 | comment | 0.037 vs 0.109 | 0.119 |
+| Dracula | 3.03:1 | comment | 0.080 vs 0.134 | 0.220 |
+| Gruvbox Dark | 4.02:1 | comment | 0.029 vs 0.158 | 0.218 |
+| Nord | 2.43:1 | comment | 0.044 vs 0.059 | 0.075 |
+| Solarized Dark | 2.79:1 | comment | 0.028 vs 0.139 | 0.151 |
+| Tokyo Night | 2.76:1 | comment | 0.068 vs 0.134 | 0.139 |
+
+Every theme makes comments the lowest-contrast syntax role and mutes them below
+the median accent chroma. Five of the six put them under 4.5:1. Each theme also keeps its
+accents inside a chroma budget. So hexwitch treats a theme's **contrast ladder**
+and **accent budget** as its identity. "More readable" moves lightness along a
+fixed hue, so it never turns a comment into a different color. Run
+`hexwitch analyze theme.json` to see any theme's fingerprint.
+
+The engine builds on established color science and editor behavior:
+
+- [OKLab/OKLCH](https://bottosson.github.io/posts/oklab/) for perceptually even
+  lightness, chroma and hue steps.
+- [WCAG 2](https://www.w3.org/TR/WCAG22/#dfn-contrast-ratio) relative luminance
+  for contrast, measured on the rounded hex.
+- [CSS Color 4](https://www.w3.org/TR/css-color-4/#gamut-mapping)-style gamut
+  mapping that gives up chroma before it gives up hue.
+- VS Code 1.95.0's own token-precedence rules, re-implemented and pinned with
+  fixtures.
+
+The result is a Rust engine where each rule is a typed operation and every
+operation finishes in milliseconds.
 
 ## Benchmarks
 
