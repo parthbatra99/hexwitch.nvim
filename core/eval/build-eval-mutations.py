@@ -13,15 +13,12 @@ def build():
     entries = []
 
     def mutate(name, case_id, transform, failure_kind, *, pair=None):
-        run = copy.deepcopy(replay)
-        run["label"] = "Known-bad evaluator sensitivity probe: " + name
-        response = next(r["response"] for r in run["responses"] if r["case_id"] == case_id)
+        response = copy.deepcopy(next(r["response"] for r in replay["responses"] if r["case_id"] == case_id))
         transform(response)
-        filename = name + ".json"
-        (directory / filename).write_text(json.dumps(run, indent=2) + "\n")
-        entry = dict(file=filename, case_id=case_id, expected_check=failure_kind)
+        entry = dict(name=name, case_id=case_id, expected_check=failure_kind)
         if pair:
             entry["expected_pair"] = pair
+        entry["response"] = response
         entries.append(entry)
 
     mutate("wrong-role", "i01", lambda r: r["actions"][0].update(roles=["surface.panel"]), "unrelated_changes")

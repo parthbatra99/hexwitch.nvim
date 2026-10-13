@@ -87,7 +87,8 @@ hexwitch --machine eval-interpretation core/eval/interpretation-matrix-v1.json \
 ```
 
 `build-eval-matrix.py` and `build-eval-mutations.py` reproduce authored fixtures.
-Thirteen known-bad runs in `mutations/` must trip specific detectors; those are
+`mutations/manifest.json` holds thirteen known-bad responses. Each replaces one
+case's response in the replay run and must trip a specific detector; they are
 sensitivity probes, not alternate provider benchmarks. Case setup is authored
 initial state; previous references carry actual sequential results and context.
 Never silently reset a sequence after a missing model response.

@@ -15,6 +15,24 @@ fn result(id: &str, report: &Evaluation) -> Value {
     serde_json::to_value(report.cases.iter().find(|c| c.id == id).unwrap()).unwrap()
 }
 
+fn write_mutated_run(mutation: &Value) -> PathBuf {
+    let mut run: Value = serde_json::from_str(&std::fs::read_to_string(replay()).unwrap()).unwrap();
+    let name = mutation["name"].as_str().unwrap();
+    run["label"] = Value::from(format!("Known-bad evaluator sensitivity probe: {name}"));
+    run["responses"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|r| r["case_id"] == mutation["case_id"])
+        .unwrap()["response"] = mutation["response"].clone();
+    let path = std::env::temp_dir().join(format!(
+        "hexwitch-mutation-{name}-{}.json",
+        std::process::id()
+    ));
+    std::fs::write(&path, run.to_string()).unwrap();
+    path
+}
+
 #[test]
 fn full_matrix_covers_original_requests_states_and_sequences() {
     let report = run_suite(&suite(), &replay()).unwrap();
@@ -56,20 +74,16 @@ fn known_bad_outputs_trigger_expected_detectors() {
     )
     .unwrap();
     for mutation in manifest["mutations"].as_array().unwrap() {
-        let report = run_suite(
-            &suite(),
-            &root()
-                .join("mutations")
-                .join(mutation["file"].as_str().unwrap()),
-        )
-        .unwrap();
+        let path = write_mutated_run(mutation);
+        let report = run_suite(&suite(), &path).unwrap();
+        std::fs::remove_file(path).unwrap();
         let case = result(mutation["case_id"].as_str().unwrap(), &report);
         let kind = mutation["expected_check"].as_str().unwrap();
         if kind == "pair_only" {
             assert_eq!(
                 report.failed, 0,
                 "individual checks should still pass: {}",
-                mutation["file"]
+                mutation["name"]
             );
             assert!(report.pair_failures > 0);
         } else if kind == "interpretation_validation" {
@@ -78,7 +92,7 @@ fn known_bad_outputs_trigger_expected_detectors() {
             assert_eq!(
                 case["passed"], false,
                 "mutation escaped detection: {}",
-                mutation["file"]
+                mutation["name"]
             );
             assert!(
                 case["checks"]
@@ -87,7 +101,7 @@ fn known_bad_outputs_trigger_expected_detectors() {
                     .iter()
                     .any(|c| c["kind"] == kind && c["passed"] == false),
                 "expected {kind} detector for {}: {case}",
-                mutation["file"]
+                mutation["name"]
             );
         }
         if let Some(pair) = mutation.get("expected_pair") {

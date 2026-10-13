@@ -37,8 +37,8 @@ class EvalMatrixTest(unittest.TestCase):
             spec.loader.exec_module(mutations)
             mutations.ROOT = target
             mutations.build()
-            for file in (ROOT / "mutations").glob("*.json"):
-                self.assertEqual((target / "mutations" / file.name).read_bytes(), file.read_bytes(), file.name)
+            manifest = "mutations/manifest.json"
+            self.assertEqual((target / manifest).read_bytes(), (ROOT / manifest).read_bytes(), manifest)
 
     def test_score_buckets_and_holdout_limitations_are_explicit(self):
         suite = json.loads((ROOT / "interpretation-matrix-v1.json").read_text())

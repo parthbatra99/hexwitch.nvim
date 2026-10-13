@@ -104,16 +104,38 @@ fn v1_rejects_untrusted_anchor_and_requires_original_request() {
     assert!(!ok);
     assert_eq!(result["errors"][0]["code"], "invalid_input");
 }
+fn read_eval(path: &str) -> Value {
+    serde_json::from_str(&std::fs::read_to_string(eval(path)).unwrap()).unwrap()
+}
+fn pair_only_mutated_run() -> std::path::PathBuf {
+    let manifest = read_eval("mutations/manifest.json");
+    let mutation = manifest["mutations"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|m| m["name"] == "pair-only-strength-gap")
+        .unwrap();
+    let mut run = read_eval("interpretation-matrix-replay.json");
+    run["responses"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|r| r["case_id"] == mutation["case_id"])
+        .unwrap()["response"] = mutation["response"].clone();
+    let path = std::env::temp_dir().join(format!("hexwitch-pair-only-{}.json", std::process::id()));
+    std::fs::write(&path, run.to_string()).unwrap();
+    path
+}
 #[test]
 fn pair_only_failure_is_not_reported_as_success() {
+    let run = pair_only_mutated_run();
     let (ok, result) = call(&[
         "eval-interpretation",
         eval("interpretation-matrix-v1.json").to_str().unwrap(),
         "--run",
-        eval("mutations/pair-only-strength-gap.json")
-            .to_str()
-            .unwrap(),
+        run.to_str().unwrap(),
     ]);
+    std::fs::remove_file(run).unwrap();
     assert!(
         ok,
         "domain evaluation failure is structured, not a transport error"
