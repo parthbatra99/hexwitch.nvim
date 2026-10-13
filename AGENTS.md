@@ -14,3 +14,9 @@
 - Use clear names and small functions instead. Keep prose documentation in Markdown files.
 - Preserve executable directives, required license notices, generated upstream files, and comment syntax inside runtime strings or test fixtures when it is data rather than source commentary.
 - Preserve user-facing CLI help as explicit Clap `help`/`about` attributes, not documentation comments.
+
+## Documentation
+
+- Run the `avoid-ai-writing` skill on every Markdown file you create or edit (`docs/`, READMEs, `FUTURE_PLAN.md`, this file), using the `docs` context, before finishing the task.
+- Describe the current state, not the history of changes. Change history belongs in commit messages.
+- Remove or update anything a change makes outdated, including links, counts and "not yet" claims. Do not add per-package or per-phase write-ups to `docs/`.

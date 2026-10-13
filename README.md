@@ -104,7 +104,7 @@ reference → IR → intent → deterministic revision → validation → candid
 | `core/crates/hexwitch-cli/` | Scriptable engine operations, compatible API transport, loopback playground host |
 | `playground/` | Browser controls/preview and opt-in browser smoke test |
 | `core/eval/` | Authored references, semantic contracts, replay runs, mutations, fixture verification |
-| `docs/contracts/` | Versioned engine and experiment contracts |
+| `docs/` | Status, playground internals, versioned engine and experiment contracts |
 
 Legacy CLI edit/replay formats remain for regression compatibility. The playground
 uses property-aware intent v1. Neither mode emits editor artifacts.
@@ -120,12 +120,12 @@ python3 -m unittest discover -s core/eval -p 'test_*.py'
 ```
 
 Optional real-browser checks use Playwright; see [playground verification and
-limitations](docs/packages/engine-playground.md). Live testing is opt-in and separate
+limitations](docs/playground.md). Live testing is opt-in and separate
 from offline CI. The configured small model has demonstrated valid-but-wrong
 saturation/opacity interpretations; this is an open quality issue, regardless
 of canned replay scores.
 
-[Implementation status](docs/IMPLEMENTATION_STATUS.md) ·
+[Status](docs/status.md) ·
 [IR/intent contract](docs/contracts/ir-v1.md) ·
 [Experiment contract](docs/contracts/experiment-v1.md) ·
 [Evaluation methodology](core/eval/README.md)

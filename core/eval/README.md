@@ -100,8 +100,13 @@ contexts/lifetime, hierarchy proxies and complete alternative acceptable answers
 
 Original held_out split labels are retained but these cases have been inspected;
 they are not a fresh blind holdout. All canned passes establish test machinery,
-not model accuracy, subjective identity preservation or visual quality. Details:
-`docs/packages/P2.6-eval-matrix.md`.
+not model accuracy, subjective identity preservation or visual quality.
+
+Proposed actions are judged as well as the final state. A model can propose an
+unsolicited unlock that a later required constraint rolls back; checking only the
+final theme would hide that. `action_absent` predicates catch it. In the same way,
+readable starting text does not show that a persistent or multi-background floor
+was understood, so `contrast_requested` checks contexts and lifetime directly.
 
 ## Human evaluation protocol (not yet run)
 
