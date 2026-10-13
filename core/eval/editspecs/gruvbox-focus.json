@@ -1,0 +1,17 @@
+{
+  "protect": [
+    "syntax.keyword",
+    "syntax.string",
+    "syntax.function",
+    "syntax.type",
+    "syntax.constant",
+    "syntax.variable",
+    "text.primary"
+  ],
+  "changes": [
+    { "target": "surface.base", "op": "darker", "amount": 0.04 },
+    { "target": "surface.panel", "op": "darker", "amount": 0.03 },
+    { "target": "surface.float", "op": "darker", "amount": 0.02 },
+    { "target": "syntax.comment", "op": "min_contrast", "against": "surface.base", "min": 4.5 }
+  ]
+}

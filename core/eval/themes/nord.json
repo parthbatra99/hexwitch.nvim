@@ -1,0 +1,20 @@
+{
+  "name": "Nord",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#2e3440",
+    "editor.foreground": "#d8dee9",
+    "sideBar.background": "#3b4252",
+    "editorWidget.background": "#3b4252",
+    "editorError.foreground": "#bf616a",
+    "editorWarning.foreground": "#ebcb8b"
+  },
+  "tokenColors": [
+    { "scope": "comment", "settings": { "foreground": "#616e88" } },
+    { "scope": ["keyword", "keyword.control"], "settings": { "foreground": "#81a1c1" } },
+    { "scope": ["entity.name.function", "support.function"], "settings": { "foreground": "#88c0d0" } },
+    { "scope": "string", "settings": { "foreground": "#a3be8c" } },
+    { "scope": ["entity.name.type", "entity.name.class"], "settings": { "foreground": "#8fbcbb" } },
+    { "scope": "variable", "settings": { "foreground": "#d8dee9" } }
+  ]
+}

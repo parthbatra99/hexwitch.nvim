@@ -1,0 +1,103 @@
+{
+  "meta": {
+    "name": "Eval ink",
+    "appearance": "dark",
+    "ir_version": 1
+  },
+  "styles": {
+    "surface.base": {
+      "bg": "#151c25",
+      "bg_opacity": 1
+    },
+    "surface.panel": {
+      "bg": "#242e3b"
+    },
+    "surface.float": {
+      "bg": "#2b3747"
+    },
+    "surface.gutter": {
+      "fg": "#586779"
+    },
+    "text.primary": {
+      "fg": "#e5edf6"
+    },
+    "text.secondary": {
+      "fg": "#9cabbc"
+    },
+    "syntax.comment": {
+      "fg": "#586678",
+      "italic": true,
+      "bold": true,
+      "underline": "single",
+      "strikethrough": true
+    },
+    "syntax.keyword": {
+      "fg": "#bca2ec",
+      "italic": true,
+      "bold": true
+    },
+    "syntax.string": {
+      "fg": "#73c796"
+    },
+    "syntax.function": {
+      "fg": "#70cfa5",
+      "bold": true,
+      "underline": "single",
+      "strikethrough": true
+    },
+    "syntax.variable": {
+      "fg": "#87bde2"
+    },
+    "syntax.type": {
+      "fg": "#e4bd76"
+    },
+    "interaction.selection": {
+      "bg": "#394f70",
+      "bg_opacity": 0.3
+    },
+    "interaction.search": {
+      "bg": "#9b7325",
+      "bg_opacity": 0.3
+    },
+    "interaction.search-current": {
+      "bg": "#b38739",
+      "bg_opacity": 0.65
+    },
+    "diagnostic.error.text": {
+      "fg": "#df8179"
+    },
+    "other.unrelated-plugin": {
+      "fg": "#bb66cc",
+      "bg": "#101010",
+      "italic": true
+    }
+  },
+  "modifiers": [
+    {
+      "role": "syntax.comment",
+      "modifiers": [
+        "documentation"
+      ],
+      "token_type": "comment",
+      "style": {
+        "italic": true
+      },
+      "priority": 1
+    },
+    {
+      "role": "syntax.keyword",
+      "modifiers": [
+        "declaration"
+      ],
+      "token_type": "keyword",
+      "style": {
+        "italic": true,
+        "bold": true
+      },
+      "priority": 2
+    }
+  ],
+  "extensions": {
+    "vscode.semanticHighlighting": true
+  }
+}

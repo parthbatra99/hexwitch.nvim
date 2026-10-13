@@ -1,0 +1,458 @@
+{
+  "version": 1,
+  "purpose": "Known-bad evaluator sensitivity, not model results",
+  "mutations": [
+    {
+      "name": "wrong-role",
+      "case_id": "i01",
+      "expected_check": "unrelated_changes",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.panel"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "implicit-whole-style-unlock",
+      "case_id": "i46",
+      "expected_check": "protection",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "unlock",
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "unrelated-palette-change",
+      "case_id": "i29",
+      "expected_check": "unrelated_changes",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_bool",
+            "roles": [
+              "*"
+            ],
+            "property": "italic",
+            "include_semantic": true,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "chroma",
+            "roles": [
+              "syntax.string"
+            ],
+            "property": "fg",
+            "include_semantic": true,
+            "scope": null,
+            "color": null,
+            "number": -0.02,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "missed-semantic-italics",
+      "case_id": "i29",
+      "expected_check": "property_correctness",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_bool",
+            "roles": [
+              "*"
+            ],
+            "property": "italic",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "unnecessary-clarification",
+      "case_id": "i02",
+      "expected_check": "strength",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [
+          "Do you really want lighter comments?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "name": "invented-anchor",
+      "case_id": "i40",
+      "expected_check": "interpretation_validation",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_color",
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": "#0000ff",
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "overbroad-lock",
+      "case_id": "i06",
+      "expected_check": "protection",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "*"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "pair-only-strength-gap",
+      "case_id": "i16",
+      "expected_check": "pair_only",
+      "expected_pair": "slightly-versus-much",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.039,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "weak-much-change",
+      "case_id": "i17",
+      "expected_check": "strength",
+      "expected_pair": "slightly-versus-much",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.02,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "lost-sequential-lock",
+      "case_id": "seq-refused",
+      "expected_check": "protection",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "unlock",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 0.04,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "base-only-selection-floor",
+      "case_id": "i23",
+      "expected_check": "readability",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "omitted-persistent-floor",
+      "case_id": "seq-readable",
+      "expected_check": "readability",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "cleared-unrelated-decoration",
+      "case_id": "i49",
+      "expected_check": "preservation",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Authored contract response; not provider output.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "state",
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "underline",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": "clear",
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "strikethrough",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    }
+  ]
+}

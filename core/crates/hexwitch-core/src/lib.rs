@@ -1,0 +1,25 @@
+pub mod analyze;
+pub mod backdrop;
+pub mod color;
+pub mod eval;
+mod eval_contract;
+mod eval_pairs;
+pub mod experiment;
+pub mod import_path;
+pub mod ingest;
+pub mod intent;
+pub mod interpret;
+pub mod interpret_eval;
+pub mod interpret_v1;
+pub mod ir;
+pub mod jsonc;
+pub mod protocol;
+pub mod revise;
+pub mod scope;
+pub mod selector;
+pub mod semantic;
+mod semantic_constraints;
+pub mod solver;
+pub mod validate;
+
+pub const IR_VERSION: u32 = 1;

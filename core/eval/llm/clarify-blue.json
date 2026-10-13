@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "decision": "needs_clarification",
+  "notes": "Several roles use blue; changing all of them would guess your intent.",
+  "questions": ["Which blue should become quieter: keywords, functions, or the selection?"],
+  "actions": []
+}

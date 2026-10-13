@@ -1,0 +1,6 @@
+{
+  "name": "Malformed semantic boundary",
+  "colors": {"editor.background":"#000000"},
+  "semanticHighlighting": true,
+  "semanticTokenColors": {"variable..readonly": {"foreground":"#123456"}}
+}

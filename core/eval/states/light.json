@@ -1,0 +1,98 @@
+{
+  "meta": {
+    "name": "Eval paper",
+    "appearance": "light",
+    "ir_version": 1
+  },
+  "styles": {
+    "surface.base": {
+      "bg": "#f3eee5",
+      "bg_opacity": 1
+    },
+    "surface.panel": {
+      "bg": "#e4ddd1"
+    },
+    "surface.float": {
+      "bg": "#fffaf1"
+    },
+    "surface.gutter": {
+      "fg": "#a19a90"
+    },
+    "text.primary": {
+      "fg": "#25201b"
+    },
+    "text.secondary": {
+      "fg": "#776e63"
+    },
+    "syntax.comment": {
+      "fg": "#a49b8f",
+      "italic": true,
+      "bold": true,
+      "underline": "single",
+      "strikethrough": true
+    },
+    "syntax.keyword": {
+      "fg": "#7054a0",
+      "italic": true,
+      "bold": true
+    },
+    "syntax.string": {
+      "fg": "#35734e"
+    },
+    "syntax.function": {
+      "fg": "#2e7956",
+      "bold": true,
+      "underline": "single",
+      "strikethrough": true
+    },
+    "syntax.variable": {
+      "fg": "#376d9c"
+    },
+    "syntax.type": {
+      "fg": "#916125"
+    },
+    "interaction.selection": {
+      "bg": "#394f70",
+      "bg_opacity": 0.3
+    },
+    "interaction.search": {
+      "bg": "#9b7325",
+      "bg_opacity": 0.3
+    },
+    "interaction.search-current": {
+      "bg": "#b38739",
+      "bg_opacity": 0.65
+    },
+    "diagnostic.error.text": {
+      "fg": "#ae453f"
+    }
+  },
+  "modifiers": [
+    {
+      "role": "syntax.comment",
+      "modifiers": [
+        "documentation"
+      ],
+      "token_type": "comment",
+      "style": {
+        "italic": true
+      },
+      "priority": 1
+    },
+    {
+      "role": "syntax.keyword",
+      "modifiers": [
+        "declaration"
+      ],
+      "token_type": "keyword",
+      "style": {
+        "italic": true,
+        "bold": true
+      },
+      "priority": 2
+    }
+  ],
+  "extensions": {
+    "vscode.semanticHighlighting": true
+  }
+}

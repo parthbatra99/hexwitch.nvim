@@ -1,0 +1,3461 @@
+{
+  "version": 1,
+  "origin": "Hexwitch authored semantic state matrix",
+  "license": "MIT",
+  "revision": "eval-matrix-1",
+  "purpose": "All 50 corpus requests plus state variants, sequential preservation and paired consistency",
+  "limitations": [
+    "Original held_out labels retained, but cases inspected during implementation are not a fresh independent holdout",
+    "Canned responses test the evaluator, not model quality",
+    "Secondary/hue/chroma checks are numerical proxies, not human preference",
+    "Some relational/context requests require clarification; edit/clarification/unsupported scores are separate"
+  ],
+  "cases": [
+    {
+      "id": "i01",
+      "source_id": "i01",
+      "split": "development",
+      "category": "direct",
+      "request": "Make the background darker.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "lightness",
+          "min_delta": -0.12,
+          "max_delta": -0.005,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i02",
+      "source_id": "i02",
+      "split": "development",
+      "category": "direct",
+      "request": "Make comments lighter.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "lightness",
+          "min_delta": 0.005,
+          "max_delta": 0.15,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i03",
+      "source_id": "i03",
+      "split": "development",
+      "category": "direct",
+      "request": "Reduce string saturation.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "chroma",
+          "min_delta": -0.12,
+          "max_delta": -0.005,
+          "target": {
+            "roles": [
+              "syntax.string"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.string"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i04",
+      "source_id": "i04",
+      "split": "development",
+      "category": "direct",
+      "request": "Use #aa7744 for functions.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "color",
+          "value": "#aa7744",
+          "target": {
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.function"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i05",
+      "source_id": "i05",
+      "split": "development",
+      "category": "protection",
+      "request": "Keep the background and make comments easier to read.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "contrast",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            }
+          ],
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i06",
+      "source_id": "i06",
+      "split": "development",
+      "category": "protection",
+      "request": "Lock just the keyword foreground.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "locked",
+          "value": true,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "action_present",
+          "op": "lock",
+          "scope": "persistent",
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": []
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.keyword"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i07",
+      "source_id": "i07",
+      "split": "development",
+      "category": "protection",
+      "request": "Keep the background color, but remove its transparency.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "number",
+          "value": 1,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg_opacity",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        }
+      ],
+      "expectation": "edit",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_number",
+            "target": {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg_opacity",
+              "include_semantic": false
+            },
+            "value": 0.4
+          }
+        ]
+      }
+    },
+    {
+      "id": "i08",
+      "source_id": "i08",
+      "split": "development",
+      "category": "protection",
+      "request": "Don't change the syntax colors during this request.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "action_present",
+          "op": "lock",
+          "scope": "request",
+          "target": {
+            "roles": [
+              "syntax.*"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "locked",
+          "value": false,
+          "target": {
+            "roles": [
+              "syntax.*"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i09",
+      "source_id": "i09",
+      "split": "development",
+      "category": "multiple",
+      "request": "Darker background, brighter comments, no italics.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "lightness",
+          "min_delta": -0.12,
+          "max_delta": -0.005,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "contrast",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            }
+          ],
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "bool",
+          "value": false,
+          "target": {
+            "roles": [
+              "*"
+            ],
+            "property": "italic",
+            "include_semantic": true
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            },
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            {
+              "roles": [
+                "*"
+              ],
+              "property": "italic",
+              "include_semantic": true
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i10",
+      "source_id": "i10",
+      "split": "development",
+      "category": "multiple",
+      "request": "Make selections subtler and search results more prominent.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i11",
+      "source_id": "i11",
+      "split": "development",
+      "category": "multiple",
+      "request": "Keep functions green but soften keyword saturation.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "chroma",
+          "min_delta": -0.12,
+          "max_delta": -0.005,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.keyword"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.function"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i12",
+      "source_id": "i12",
+      "split": "development",
+      "category": "multiple",
+      "request": "Set comments to #888888 and remove their bold styling.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "color",
+          "value": "#888888",
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "bool",
+          "value": false,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "bold",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "bold",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i13",
+      "source_id": "i13",
+      "split": "development",
+      "category": "ambiguous",
+      "request": "Make that blue quieter.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i14",
+      "source_id": "i14",
+      "split": "development",
+      "category": "ambiguous",
+      "request": "Make it more like the previous one.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i15",
+      "source_id": "i15",
+      "split": "development",
+      "category": "ambiguous",
+      "request": "Tone down the highlights.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i18",
+      "source_id": "i18",
+      "split": "development",
+      "category": "strength",
+      "request": "Less saturation than before, but only a little.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i20",
+      "source_id": "i20",
+      "split": "development",
+      "category": "contradiction",
+      "request": "Make the background both black and white.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i24",
+      "source_id": "i24",
+      "split": "development",
+      "category": "iteration",
+      "request": "Undo only the last keyword color change.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i25",
+      "source_id": "i25",
+      "split": "development",
+      "category": "unlock",
+      "request": "Unlock the background foreground, not its background color.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i37",
+      "source_id": "i37",
+      "split": "held_out",
+      "category": "ambiguous",
+      "request": "This one is too cold.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i38",
+      "source_id": "i38",
+      "split": "held_out",
+      "category": "ambiguous",
+      "request": "Keep the red I like.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i39",
+      "source_id": "i39",
+      "split": "held_out",
+      "category": "strength",
+      "request": "A tiny bit less bold-looking syntax.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i44",
+      "source_id": "i44",
+      "split": "held_out",
+      "category": "iteration",
+      "request": "Keep the last background but revert the new comment italics.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i45",
+      "source_id": "i45",
+      "split": "held_out",
+      "category": "iteration",
+      "request": "Again, but half the previous saturation change.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i47",
+      "source_id": "i47",
+      "split": "held_out",
+      "category": "unlock",
+      "request": "Keep keyword hue protected but let me remove italics.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i16",
+      "source_id": "i16",
+      "split": "development",
+      "category": "strength",
+      "request": "Make the background slightly darker.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "lightness",
+          "min_delta": -0.04,
+          "max_delta": -0.005,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i17",
+      "source_id": "i17",
+      "split": "development",
+      "category": "strength",
+      "request": "Make the background much darker.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "lightness",
+          "min_delta": -0.16,
+          "max_delta": -0.06,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i19",
+      "source_id": "i19",
+      "split": "development",
+      "category": "contradiction",
+      "request": "Do not touch comments; make comments brighter.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "any_of",
+          "alternatives": [
+            [
+              {
+                "check": "decision",
+                "allowed": [
+                  "needs_clarification"
+                ]
+              },
+              {
+                "check": "no_mutation"
+              }
+            ],
+            [
+              {
+                "check": "outcome",
+                "allowed": [
+                  "refused"
+                ]
+              },
+              {
+                "check": "action_present",
+                "op": "lock",
+                "scope": "persistent",
+                "target": {
+                  "roles": [
+                    "syntax.comment"
+                  ],
+                  "property": "fg",
+                  "include_semantic": false
+                }
+              },
+              {
+                "check": "preserved",
+                "target": {
+                  "roles": [
+                    "syntax.comment"
+                  ],
+                  "property": "fg",
+                  "include_semantic": false
+                }
+              },
+              {
+                "check": "only_changed",
+                "allowed": []
+              },
+              {
+                "check": "only_lock_changes",
+                "allowed": [
+                  {
+                    "roles": [
+                      "syntax.comment"
+                    ],
+                    "property": "fg",
+                    "include_semantic": false
+                  }
+                ]
+              }
+            ]
+          ]
+        }
+      ],
+      "expectation": "mixed"
+    },
+    {
+      "id": "i21",
+      "source_id": "i21",
+      "split": "development",
+      "category": "unsupported",
+      "request": "Change my font to a larger size.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "unsupported"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "unsupported"
+    },
+    {
+      "id": "i22",
+      "source_id": "i22",
+      "split": "development",
+      "category": "unsupported",
+      "request": "Make the editor play music.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "unsupported"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "unsupported"
+    },
+    {
+      "id": "i43",
+      "source_id": "i43",
+      "split": "held_out",
+      "category": "unsupported",
+      "request": "Use animated rainbow text.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "unsupported"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "unsupported"
+    },
+    {
+      "id": "i23",
+      "source_id": "i23",
+      "split": "development",
+      "category": "iteration",
+      "request": "Now make comments readable in selections too.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "contrast_requested",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            },
+            {
+              "surface": "surface.base",
+              "overlays": [
+                "interaction.selection"
+              ]
+            }
+          ],
+          "min": 4.5,
+          "persistent": false,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "contrast",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            },
+            {
+              "surface": "surface.base",
+              "overlays": [
+                "interaction.selection"
+              ]
+            }
+          ],
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "lock",
+            "target": {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            },
+            "scope": "persistent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i26",
+      "source_id": "i26",
+      "split": "development",
+      "category": "unlock",
+      "request": "You may change the keyword color now.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "locked",
+          "value": false,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "action_present",
+          "op": "unlock",
+          "scope": null,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": []
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.keyword"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        }
+      ],
+      "expectation": "edit",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "lock",
+            "target": {
+              "roles": [
+                "syntax.keyword"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            "scope": "persistent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i27",
+      "source_id": "i27",
+      "split": "development",
+      "category": "secondary",
+      "request": "Comments should be readable but remain secondary.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "secondary",
+          "primary": "text.primary",
+          "background": {
+            "surface": "surface.base",
+            "overlays": []
+          },
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i28",
+      "source_id": "i28",
+      "split": "development",
+      "category": "secondary",
+      "request": "Make line numbers easier to see without competing with code.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "secondary",
+          "primary": "text.primary",
+          "background": {
+            "surface": "surface.base",
+            "overlays": []
+          },
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "surface.gutter"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.gutter"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i29",
+      "source_id": "i29",
+      "split": "development",
+      "category": "typography",
+      "request": "No italics anywhere.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "bool",
+          "value": false,
+          "target": {
+            "roles": [
+              "*"
+            ],
+            "property": "italic",
+            "include_semantic": true
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "*"
+              ],
+              "property": "italic",
+              "include_semantic": true
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i30",
+      "source_id": "i30",
+      "split": "development",
+      "category": "typography",
+      "request": "Bold functions but not keywords.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "bool",
+          "value": true,
+          "target": {
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "bold",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "bool",
+          "value": false,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "bold",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.function"
+              ],
+              "property": "bold",
+              "include_semantic": false
+            },
+            {
+              "roles": [
+                "syntax.keyword"
+              ],
+              "property": "bold",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_bool",
+            "target": {
+              "roles": [
+                "syntax.function"
+              ],
+              "property": "bold",
+              "include_semantic": false
+            },
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "i31",
+      "source_id": "i31",
+      "split": "held_out",
+      "category": "direct",
+      "request": "Lighten only the floating popup surface.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "lightness",
+          "min_delta": 0.005,
+          "max_delta": 0.12,
+          "target": {
+            "roles": [
+              "surface.float"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.float"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i32",
+      "source_id": "i32",
+      "split": "held_out",
+      "category": "direct",
+      "request": "Use my #4f9077 accent for strings.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "color",
+          "value": "#4f9077",
+          "target": {
+            "roles": [
+              "syntax.string"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.string"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i33",
+      "source_id": "i33",
+      "split": "held_out",
+      "category": "protection",
+      "request": "Preserve selection blue, make the selection fully opaque.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "number",
+          "value": 1,
+          "target": {
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "interaction.selection"
+              ],
+              "property": "bg_opacity",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "interaction.selection"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i34",
+      "source_id": "i34",
+      "split": "held_out",
+      "category": "protection",
+      "request": "Keep all colors; make comments italic.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "bool",
+          "value": true,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "italic",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "italic",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "*"
+              ],
+              "property": "fg",
+              "include_semantic": true
+            },
+            {
+              "roles": [
+                "*"
+              ],
+              "property": "bg",
+              "include_semantic": true
+            },
+            {
+              "roles": [
+                "*"
+              ],
+              "property": "special",
+              "include_semantic": true
+            }
+          ]
+        }
+      ],
+      "expectation": "edit",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_bool",
+            "target": {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "italic",
+              "include_semantic": false
+            },
+            "value": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "i35",
+      "source_id": "i35",
+      "split": "held_out",
+      "category": "multiple",
+      "request": "Softer strings, crisp errors, unchanged background.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification"
+    },
+    {
+      "id": "i36",
+      "source_id": "i36",
+      "split": "held_out",
+      "category": "multiple",
+      "request": "Disable keyword bold and make comments pass 4.5 on both code and selected text.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "contrast_requested",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            },
+            {
+              "surface": "surface.base",
+              "overlays": [
+                "interaction.selection"
+              ]
+            }
+          ],
+          "min": 4.5,
+          "persistent": false,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "bool",
+          "value": false,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "bold",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "contrast",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            },
+            {
+              "surface": "surface.base",
+              "overlays": [
+                "interaction.selection"
+              ]
+            }
+          ],
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.keyword"
+              ],
+              "property": "bold",
+              "include_semantic": false
+            },
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i40",
+      "source_id": "i40",
+      "split": "held_out",
+      "category": "strength",
+      "request": "Much quieter keywords, same hue.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "chroma",
+          "min_delta": -0.14,
+          "max_delta": -0.035,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "hue_preserved",
+          "tolerance_degrees": 3,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "contrast",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            }
+          ],
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.keyword"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i41",
+      "source_id": "i41",
+      "split": "held_out",
+      "category": "contradiction",
+      "request": "Lock every property and remove all italics.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "any_of",
+          "alternatives": [
+            [
+              {
+                "check": "decision",
+                "allowed": [
+                  "needs_clarification"
+                ]
+              },
+              {
+                "check": "no_mutation"
+              }
+            ],
+            [
+              {
+                "check": "outcome",
+                "allowed": [
+                  "refused"
+                ]
+              },
+              {
+                "check": "preserved",
+                "target": {
+                  "roles": [
+                    "*"
+                  ],
+                  "property": "italic",
+                  "include_semantic": true
+                }
+              }
+            ]
+          ]
+        }
+      ],
+      "expectation": "mixed"
+    },
+    {
+      "id": "i42",
+      "source_id": "i42",
+      "split": "held_out",
+      "category": "contradiction",
+      "request": "Set comments to black but require 7:1 on black.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "outcome",
+          "allowed": [
+            "infeasible"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "refusal",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_color",
+            "target": {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            },
+            "color": "#000000"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i46",
+      "source_id": "i46",
+      "split": "held_out",
+      "category": "unlock",
+      "request": "Unlock only selection transparency.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "locked",
+          "value": false,
+          "target": {
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": []
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "interaction.selection"
+              ],
+              "property": "bg_opacity",
+              "include_semantic": false
+            }
+          ]
+        }
+      ],
+      "expectation": "edit",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "lock",
+            "target": {
+              "roles": [
+                "interaction.selection"
+              ],
+              "property": "bg_opacity",
+              "include_semantic": false
+            },
+            "scope": "persistent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i48",
+      "source_id": "i48",
+      "split": "held_out",
+      "category": "secondary",
+      "request": "Readable muted diagnostics, not brighter than code.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "secondary",
+          "primary": "text.primary",
+          "background": {
+            "surface": "surface.base",
+            "overlays": []
+          },
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "diagnostic.error.text"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "diagnostic.error.text"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_color",
+            "target": {
+              "roles": [
+                "diagnostic.error.text"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            "color": "#6b4b49"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i49",
+      "source_id": "i49",
+      "split": "held_out",
+      "category": "typography",
+      "request": "Clear function underline but keep its color and bold.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "state",
+          "value": "clear",
+          "target": {
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "underline",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "bold",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "strikethrough",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.function"
+              ],
+              "property": "underline",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i50",
+      "source_id": "i50",
+      "split": "held_out",
+      "category": "typography",
+      "request": "Reset comment font styling to normal.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "bool",
+          "value": false,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "bold",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "bool",
+          "value": false,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "italic",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "state",
+          "value": "clear",
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "underline",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "bool",
+          "value": false,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "strikethrough",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "bold",
+              "include_semantic": false
+            },
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "italic",
+              "include_semantic": false
+            },
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "underline",
+              "include_semantic": false
+            },
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "strikethrough",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i05-already-readable",
+      "source_id": "i05",
+      "split": "development",
+      "category": "protection",
+      "request": "Keep the background and make comments easier to read.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "outcome",
+          "allowed": [
+            "unchanged"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "mixed",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_color",
+            "target": {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            "color": "#cbd5e1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i05-light",
+      "source_id": "i05",
+      "split": "development",
+      "category": "protection",
+      "request": "Keep the background and make comments easier to read.",
+      "theme": "states/light.json",
+      "checks": [
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "contrast",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            }
+          ],
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i05-locked",
+      "source_id": "i05",
+      "split": "development",
+      "category": "protection",
+      "request": "Keep the background and make comments easier to read.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "any_of",
+          "alternatives": [
+            [
+              {
+                "check": "decision",
+                "allowed": [
+                  "needs_clarification"
+                ]
+              },
+              {
+                "check": "no_mutation"
+              }
+            ],
+            [
+              {
+                "check": "outcome",
+                "allowed": [
+                  "infeasible",
+                  "refused"
+                ]
+              },
+              {
+                "check": "no_mutation"
+              }
+            ]
+          ]
+        }
+      ],
+      "expectation": "refusal",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "lock",
+            "target": {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            "scope": "persistent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i05-missing",
+      "source_id": "i05",
+      "split": "development",
+      "category": "protection",
+      "request": "Keep the background and make comments easier to read.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "decision",
+          "allowed": [
+            "needs_clarification"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "clarification",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "state",
+            "target": {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            "state": "clear"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i05-alpha",
+      "source_id": "i05",
+      "split": "development",
+      "category": "protection",
+      "request": "Keep the background and make comments easier to read.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "contrast",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            }
+          ],
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg_opacity",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_number",
+            "target": {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg_opacity",
+              "include_semantic": false
+            },
+            "value": 0.6
+          }
+        ]
+      }
+    },
+    {
+      "id": "i01-at-black",
+      "source_id": "i01",
+      "split": "development",
+      "category": "direct",
+      "request": "Make the background darker.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "any_of",
+          "alternatives": [
+            [
+              {
+                "check": "outcome",
+                "allowed": [
+                  "unchanged"
+                ]
+              },
+              {
+                "check": "no_mutation"
+              }
+            ],
+            [
+              {
+                "check": "decision",
+                "allowed": [
+                  "unchanged"
+                ]
+              },
+              {
+                "check": "no_mutation"
+              }
+            ]
+          ]
+        }
+      ],
+      "expectation": "mixed",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_color",
+            "target": {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            },
+            "color": "#000000"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i02-at-white",
+      "source_id": "i02",
+      "split": "development",
+      "category": "direct",
+      "request": "Make comments lighter.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "outcome",
+          "allowed": [
+            "unchanged"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "mixed",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_color",
+            "target": {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            "color": "#ffffff"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i03-neutral",
+      "source_id": "i03",
+      "split": "development",
+      "category": "direct",
+      "request": "Reduce string saturation.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "any_of",
+          "alternatives": [
+            [
+              {
+                "check": "outcome",
+                "allowed": [
+                  "unchanged"
+                ]
+              },
+              {
+                "check": "no_mutation"
+              }
+            ],
+            [
+              {
+                "check": "decision",
+                "allowed": [
+                  "unchanged"
+                ]
+              },
+              {
+                "check": "no_mutation"
+              }
+            ]
+          ]
+        }
+      ],
+      "expectation": "mixed",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_color",
+            "target": {
+              "roles": [
+                "syntax.string"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            "color": "#888888"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i29-locked-typography",
+      "source_id": "i29",
+      "split": "development",
+      "category": "typography",
+      "request": "No italics anywhere.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "outcome",
+          "allowed": [
+            "partial"
+          ]
+        },
+        {
+          "check": "bool",
+          "value": true,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "italic",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "locked",
+          "value": true,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "italic",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "*"
+              ],
+              "property": "italic",
+              "include_semantic": true
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "refusal",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "lock",
+            "target": {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "italic",
+              "include_semantic": false
+            },
+            "scope": "persistent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i23-foreground-replacement",
+      "source_id": "i23",
+      "split": "development",
+      "category": "iteration",
+      "request": "Now make comments readable in selections too.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "any_of",
+          "alternatives": [
+            [
+              {
+                "check": "decision",
+                "allowed": [
+                  "needs_clarification"
+                ]
+              },
+              {
+                "check": "no_mutation"
+              }
+            ],
+            [
+              {
+                "check": "outcome",
+                "allowed": [
+                  "infeasible"
+                ]
+              },
+              {
+                "check": "no_mutation"
+              }
+            ]
+          ]
+        }
+      ],
+      "expectation": "refusal",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_color",
+            "target": {
+              "roles": [
+                "interaction.selection"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            "color": "#ffffff"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i33-already-opaque",
+      "source_id": "i33",
+      "split": "held_out",
+      "category": "protection",
+      "request": "Preserve selection blue, make the selection fully opaque.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "number",
+          "value": 1,
+          "target": {
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": []
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "interaction.selection"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        }
+      ],
+      "expectation": "mixed",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_number",
+            "target": {
+              "roles": [
+                "interaction.selection"
+              ],
+              "property": "bg_opacity",
+              "include_semantic": false
+            },
+            "value": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "i04-locked",
+      "source_id": "i04",
+      "split": "development",
+      "category": "direct",
+      "request": "Use #aa7744 for functions.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "outcome",
+          "allowed": [
+            "refused"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        },
+        {
+          "check": "action_absent",
+          "op": "unlock",
+          "target": {
+            "roles": [
+              "syntax.function"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        }
+      ],
+      "expectation": "refusal",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "lock",
+            "target": {
+              "roles": [
+                "syntax.function"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            "scope": "persistent"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i01-added-role",
+      "source_id": "i01",
+      "split": "development",
+      "category": "direct",
+      "request": "Make the background darker.",
+      "theme": "states/dark-extra-role.json",
+      "checks": [
+        {
+          "check": "lightness",
+          "min_delta": -0.12,
+          "max_delta": -0.005,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "i05-extra-unrelated",
+      "source_id": "i05",
+      "split": "development",
+      "category": "protection",
+      "request": "Keep the background and make comments easier to read.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "surface.float"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "contrast",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            }
+          ],
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_color",
+            "target": {
+              "roles": [
+                "surface.float"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            },
+            "color": "#394556"
+          }
+        ]
+      }
+    },
+    {
+      "id": "i45-with-context",
+      "source_id": "i45",
+      "split": "held_out",
+      "category": "iteration",
+      "request": "Again, but half the previous saturation change.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "chroma",
+          "min_delta": -0.027,
+          "max_delta": -0.013,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.keyword"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit",
+      "context": {
+        "previous_requests": [
+          "Reduce keyword chroma by 0.04."
+        ],
+        "previous_actions": [
+          {
+            "op": "chroma",
+            "target": {
+              "roles": [
+                "syntax.keyword"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            },
+            "delta": -0.04
+          }
+        ]
+      }
+    },
+    {
+      "id": "paraphrase-background",
+      "source_id": null,
+      "split": "development",
+      "category": "metamorphic",
+      "request": "Please darken only the editor background.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "lightness",
+          "min_delta": -0.12,
+          "max_delta": -0.005,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit"
+    },
+    {
+      "id": "seq-lock",
+      "source_id": null,
+      "split": "development",
+      "category": "iteration",
+      "request": "Lock only the background color.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "locked",
+          "value": true,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": []
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        }
+      ],
+      "expectation": "edit",
+      "setup": {
+        "version": 1,
+        "actions": [
+          {
+            "op": "set_number",
+            "target": {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg_opacity",
+              "include_semantic": false
+            },
+            "value": 0.5
+          }
+        ]
+      }
+    },
+    {
+      "id": "seq-opacity",
+      "source_id": null,
+      "split": "development",
+      "category": "iteration",
+      "request": "Now remove background transparency without unlocking its color.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "number",
+          "value": 1,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "locked",
+          "value": true,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg_opacity",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit",
+      "previous": "seq-lock"
+    },
+    {
+      "id": "seq-readable",
+      "source_id": null,
+      "split": "development",
+      "category": "iteration",
+      "request": "Make comments readable and keep this contrast requirement for future edits.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "contrast_requested",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            }
+          ],
+          "min": 4.5,
+          "persistent": true,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "contrast",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            }
+          ],
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "preserved",
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.comment"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit",
+      "previous": "seq-opacity"
+    },
+    {
+      "id": "seq-refused",
+      "source_id": null,
+      "split": "development",
+      "category": "iteration",
+      "request": "Make the background lighter.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "outcome",
+          "allowed": [
+            "refused"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        },
+        {
+          "check": "action_absent",
+          "op": "unlock",
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        }
+      ],
+      "expectation": "refusal",
+      "previous": "seq-readable"
+    },
+    {
+      "id": "seq-unlock",
+      "source_id": null,
+      "split": "development",
+      "category": "iteration",
+      "request": "Explicitly unlock only the background color and make it darker.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "locked",
+          "value": false,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "lightness",
+          "min_delta": -0.1,
+          "max_delta": -0.005,
+          "target": {
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "contrast",
+          "backgrounds": [
+            {
+              "surface": "surface.base",
+              "overlays": []
+            }
+          ],
+          "min": 4.5,
+          "target": {
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": [
+            {
+              "roles": [
+                "surface.base"
+              ],
+              "property": "bg",
+              "include_semantic": false
+            }
+          ]
+        }
+      ],
+      "expectation": "edit",
+      "previous": "seq-refused"
+    },
+    {
+      "id": "seq-idempotent",
+      "source_id": null,
+      "split": "development",
+      "category": "iteration",
+      "request": "Make comments readable again with the same persistent contrast floor.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "outcome",
+          "allowed": [
+            "unchanged"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "mixed",
+      "previous": "seq-unlock"
+    },
+    {
+      "id": "seq-local-lock",
+      "source_id": null,
+      "split": "development",
+      "category": "iteration",
+      "request": "Keep keyword foreground during this request, even if a change is proposed.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "action_present",
+          "op": "lock",
+          "scope": "request",
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "outcome",
+          "allowed": [
+            "refused"
+          ]
+        },
+        {
+          "check": "no_mutation"
+        }
+      ],
+      "expectation": "refusal"
+    },
+    {
+      "id": "seq-local-released",
+      "source_id": null,
+      "split": "development",
+      "category": "iteration",
+      "request": "Make keywords brighter on this next request.",
+      "theme": "states/dark.json",
+      "checks": [
+        {
+          "check": "lightness",
+          "min_delta": 0.005,
+          "max_delta": 0.1,
+          "target": {
+            "roles": [
+              "syntax.keyword"
+            ],
+            "property": "fg",
+            "include_semantic": false
+          }
+        },
+        {
+          "check": "only_changed",
+          "allowed": [
+            {
+              "roles": [
+                "syntax.keyword"
+              ],
+              "property": "fg",
+              "include_semantic": false
+            }
+          ]
+        },
+        {
+          "check": "only_lock_changes",
+          "allowed": []
+        }
+      ],
+      "expectation": "edit",
+      "previous": "seq-local-lock"
+    }
+  ],
+  "pairs": [
+    {
+      "check": "equivalent",
+      "id": "unrelated-role-invariance",
+      "left": "i01",
+      "right": "i01-added-role",
+      "targets": [
+        {
+          "roles": [
+            "surface.base"
+          ],
+          "property": "bg",
+          "include_semantic": false
+        }
+      ]
+    },
+    {
+      "check": "equivalent",
+      "id": "background-paraphrase",
+      "left": "i01",
+      "right": "paraphrase-background",
+      "targets": [
+        {
+          "roles": [
+            "surface.base"
+          ],
+          "property": "bg",
+          "include_semantic": false
+        }
+      ]
+    },
+    {
+      "check": "strength_ordered",
+      "id": "slightly-versus-much",
+      "smaller": "i16",
+      "larger": "i17",
+      "target": {
+        "roles": [
+          "surface.base"
+        ],
+        "property": "bg",
+        "include_semantic": false
+      },
+      "metric": "lightness",
+      "min_gap": 0.05
+    }
+  ]
+}

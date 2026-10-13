@@ -1,0 +1,383 @@
+{
+  "version": 1,
+  "label": "Hand-authored v1 contract replay",
+  "provider": "offline",
+  "model": "none",
+  "prompt_version": "property-intent-1",
+  "kind": "canned_replay",
+  "responses": [
+    {
+      "case_id": "i05",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Hand-authored property contract replay.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "contrast",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": [
+              {
+                "surface": "surface.base",
+                "overlays": []
+              }
+            ],
+            "min": 4.5,
+            "direction": "both",
+            "persistent": false
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i07",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Preserve the background RGB and make only its opacity fully opaque.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lock",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": "persistent",
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_number",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": 1,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i13",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "Several roles use blue; changing all of them would guess your intent.",
+        "questions": [
+          "Which blue should become quieter: keywords, functions, or the selection?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i16",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Hand-authored property contract replay.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.02,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i17",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Hand-authored property contract replay.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "lightness",
+            "roles": [
+              "surface.base"
+            ],
+            "property": "bg",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": -0.08,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i19",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "The comment protection conflicts with the requested change.",
+        "questions": [
+          "May comment foreground protection be removed, or should comments remain unchanged?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i21",
+      "response": {
+        "version": 1,
+        "decision": "unsupported",
+        "notes": "Font size is an editor setting, not a theme property.",
+        "questions": [],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i29",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Hand-authored property contract replay.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_bool",
+            "roles": [
+              "*"
+            ],
+            "property": "italic",
+            "include_semantic": true,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i32",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Hand-authored property contract replay.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_color",
+            "roles": [
+              "syntax.string"
+            ],
+            "property": "fg",
+            "include_semantic": false,
+            "scope": null,
+            "color": "#4f9077",
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i37",
+      "response": {
+        "version": 1,
+        "decision": "needs_clarification",
+        "notes": "Cold may refer to neutrals or syntax accents.",
+        "questions": [
+          "Do you mean the background tint or particular syntax accents?"
+        ],
+        "actions": []
+      }
+    },
+    {
+      "case_id": "i46",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Hand-authored property contract replay.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "unlock",
+            "roles": [
+              "interaction.selection"
+            ],
+            "property": "bg_opacity",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    },
+    {
+      "case_id": "i50",
+      "response": {
+        "version": 1,
+        "decision": "ready",
+        "notes": "Hand-authored property contract replay.",
+        "questions": [],
+        "actions": [
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "bold",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "italic",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "state",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "underline",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": null,
+            "underline": null,
+            "state": "clear",
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          },
+          {
+            "op": "set_bool",
+            "roles": [
+              "syntax.comment"
+            ],
+            "property": "strikethrough",
+            "include_semantic": false,
+            "scope": null,
+            "color": null,
+            "number": null,
+            "boolean": false,
+            "underline": null,
+            "state": null,
+            "backgrounds": null,
+            "min": null,
+            "direction": null,
+            "persistent": null
+          }
+        ]
+      }
+    }
+  ]
+}

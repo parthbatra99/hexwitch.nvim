@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "decision": "ready",
+  "notes": "I chose a new purple without a user-supplied anchor.",
+  "questions": [],
+  "actions": [
+    {"op":"set_color","roles":["syntax.keyword"],"property":"fg","include_semantic":false,"scope":null,"color":"#8844cc","number":null,"boolean":null,"underline":null,"state":null,"backgrounds":null,"min":null,"direction":null,"persistent":null}
+  ]
+}

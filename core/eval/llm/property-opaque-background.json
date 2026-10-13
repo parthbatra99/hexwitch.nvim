@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "decision": "ready",
+  "notes": "Preserve the background RGB and make only its opacity fully opaque.",
+  "questions": [],
+  "actions": [
+    {"op":"lock","roles":["surface.base"],"property":"bg","include_semantic":false,"scope":"persistent","color":null,"number":null,"boolean":null,"underline":null,"state":null,"backgrounds":null,"min":null,"direction":null,"persistent":null},
+    {"op":"set_number","roles":["surface.base"],"property":"bg_opacity","include_semantic":false,"scope":null,"color":null,"number":1,"boolean":null,"underline":null,"state":null,"backgrounds":null,"min":null,"direction":null,"persistent":null}
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "name": "Semantic precedence contract",
+  "type": "dark",
+  "semanticHighlighting": true,
+  "colors": {
+    "editor.background": "#101820",
+    "editor.foreground": "#ddeeff",
+    "editor.selectionBackground": "#468ace80",
+    "editor.selectionForeground": "#ffffff",
+    "editor.inactiveSelectionBackground": "#30405040",
+    "editor.findMatchBackground": "#eebb3380",
+    "editor.findMatchHighlightBackground": "#99663340",
+    "diffEditor.insertedLineBackground": "#22553360",
+    "diffEditor.removedLineBackground": "#66332260",
+    "editorGutter.deletedBackground": "#cc5566",
+    "terminal.background": "#081018",
+    "terminal.foreground": "#c0d0e0",
+    "terminal.ansiBlue": "#4080c0",
+    "editorWidget.border": "#506070",
+    "list.activeSelectionBackground": "#304860",
+    "list.activeSelectionForeground": "#ffffff"
+  },
+  "tokenColors": [
+    {"scope":"variable", "settings":{"foreground":"#778899", "fontStyle":"italic"}},
+    {"scope":"entity.name.type", "settings":{"foreground":"#88bbcc", "fontStyle":"bold"}},
+    {"scope":"source.rust variable.other.readwrite", "settings":{"foreground":"#bb9966"}},
+    {"scope":"comment", "settings":{"foreground":"#8899aa", "fontStyle":"italic underline strikethrough"}},
+    {"scope":"source.rust comment.line", "settings":{"fontStyle":""}},
+    {"scope":"meta.unsupported - comment", "settings":{"foreground":"#ee4444"}}
+  ],
+  "semanticTokenColors": {
+    "*": {"italic":false},
+    "variable": "#112233",
+    "*.readonly": {"foreground":"#334455", "bold":true},
+    "variable.readonly:rust": {"foreground":"#a1b2c380", "italic":true},
+    "variable.readonly.declaration": {"foreground":"#ccddee"},
+    "*.static": {"foreground":"#bb2244"},
+    "*.async": {"foreground":"#22bb44"},
+    "class": {"foreground":"#6688cc"},
+    "interface": {"foreground":"#cc8866"},
+    "function": {"bold":true, "fontStyle":"underline strikethrough"},
+    "customType.native": {"foreground":"#123456"},
+    "property": {"background":"#ff0000", "underline":false}
+  }
+}

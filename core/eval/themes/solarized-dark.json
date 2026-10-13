@@ -1,0 +1,19 @@
+{
+  "name": "Solarized Dark",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#002b36",
+    "editor.foreground": "#839496",
+    "sideBar.background": "#073642",
+    "editorWidget.background": "#073642",
+    "editorError.foreground": "#dc322f",
+    "editorWarning.foreground": "#b58900"
+  },
+  "tokenColors": [
+    { "scope": "comment", "settings": { "foreground": "#586e75", "fontStyle": "italic" } },
+    { "scope": ["keyword", "keyword.control"], "settings": { "foreground": "#859900" } },
+    { "scope": "string", "settings": { "foreground": "#2aa198" } },
+    { "scope": ["entity.name.type", "entity.name.class"], "settings": { "foreground": "#b58900" } },
+    { "scope": "variable", "settings": { "foreground": "#268bd2" } }
+  ]
+}

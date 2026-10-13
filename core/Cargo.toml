@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+members = ["crates/hexwitch-core", "crates/hexwitch-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/parthbatra99/hexwitch.nvim"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+thiserror = "2"
+sha2 = "0.10"
+clap = { version = "4", features = ["derive"] }
+url = "2"
+
+[profile.release]
+lto = "thin"
+strip = true

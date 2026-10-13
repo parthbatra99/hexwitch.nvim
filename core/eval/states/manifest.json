@@ -1,0 +1,9 @@
+{
+  "version":1,
+  "suite":"interpretation_quality",
+  "references":[
+    {"file":"dark.json","origin":"Hexwitch authored evaluation-only dark role system","license":"MIT","revision":"eval-matrix-1","sha256":"603e0c7f340573ea4a51ee8c45edd58c1e976cb343c289ae42f2148013ac0df3","purpose":"Exercise independent property locks, missing states, overlays, semantic typography and contrast","expected":["dark appearance","distinct role colors and explicit semantic typography"],"limitations":["Synthetic; not an aesthetic reference","Not live editor resolution"]},
+    {"file":"light.json","origin":"Hexwitch authored evaluation-only light role system","license":"MIT","revision":"eval-matrix-1","sha256":"59fbe65569269df315c3d78a52df0aed82161884a5dc688139bc18864454d0e1","purpose":"Prevent hard-coded lightening from passing dark-only readability evaluations","expected":["light appearance","readability repair may need darker foreground"],"limitations":["Synthetic; not a mechanical inversion quality claim","Not live editor resolution"]},
+    {"file":"dark-extra-role.json","origin":"Hexwitch authored dark evaluation state plus unrelated extension role","license":"MIT","revision":"eval-matrix-1","sha256":"ca7d1af8367ca864608ad84471a80ae0fb572d7dbb8c210f6a33443c3a1f2c02","purpose":"Metamorphic unrelated-role invariance","expected":["target background transformation matches base dark state","unrelated extension role unchanged"],"limitations":["One extension-role invariant","Not exhaustive adapter/plugin context"]}
+  ]
+}

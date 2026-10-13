@@ -1,0 +1,10 @@
+{
+  "notes": "Read the request as: darken the base surface slightly, ensure comments pass the 4.5:1 normal-text floor against the new base, and keep all syntax accent colors exactly as they are.",
+  "actions": [
+    { "action": "protect", "target": "syntax.keyword", "amount": null, "against": null, "min": null, "shift": null },
+    { "action": "protect", "target": "syntax.string", "amount": null, "against": null, "min": null, "shift": null },
+    { "action": "protect", "target": "syntax.function", "amount": null, "against": null, "min": null, "shift": null },
+    { "action": "darker", "target": "surface.base", "amount": 0.04, "against": null, "min": null, "shift": null },
+    { "action": "min_contrast", "target": "syntax.comment", "amount": null, "against": "surface.base", "min": 4.5, "shift": null }
+  ]
+}

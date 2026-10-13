@@ -1,0 +1,22 @@
+{
+  "name": "Dracula",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#282a36",
+    "editor.foreground": "#f8f8f2",
+    "sideBar.background": "#282a36",
+    "editorWidget.background": "#282a36",
+    "editor.lineHighlightBackground": "#44475a",
+    "editorError.foreground": "#ff5555",
+    "editorWarning.foreground": "#f1fa8c"
+  },
+  "tokenColors": [
+    { "scope": "comment", "settings": { "foreground": "#6272a4", "fontStyle": "italic" } },
+    { "scope": ["keyword", "storage", "storage.type"], "settings": { "foreground": "#ff79c6", "fontStyle": "italic" } },
+    { "scope": ["entity.name.function", "support.function"], "settings": { "foreground": "#50fa7b" } },
+    { "scope": "string", "settings": { "foreground": "#f1fa8c" } },
+    { "scope": ["entity.name.type", "support.type"], "settings": { "foreground": "#8be9fd" } },
+    { "scope": ["constant"], "settings": { "foreground": "#ffb86c" } },
+    { "scope": "variable", "settings": { "foreground": "#f8f8f2" } }
+  ]
+}
