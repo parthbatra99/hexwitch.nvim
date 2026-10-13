@@ -27,6 +27,10 @@ press **Keep**.
 The model proposes intent, not a replacement palette. You can also skip the model
 entirely: click any token and nudge it by hand.
 
+<p align="center">
+  <img src="docs/media/hexwitch-nudge-review-keep.gif" alt="Nudging Tokyo Night keywords warmer and more vivid, comparing before and after, then keeping the change" width="860">
+</p>
+
 > **Scope:** hexwitch is a theme engine, a browser playground and an evaluation
 > suite. It does not ship editor adapters, colorscheme emitters or release
 > packages. Theme-file import is a way to load a reference, not an editor
@@ -69,6 +73,10 @@ Everything in this list works offline. No API key needed.
 To describe changes in words instead, [connect a model](#connect-a-model).
 
 ## What you can do
+
+<p align="center">
+  <img src="docs/media/review.jpg" alt="Review card for a pending keyword change: hex diff, contrast before and after, and Keep or Discard" width="860">
+</p>
 
 | Action | How |
 |---|---|
