@@ -1,4 +1,5 @@
 .claude/
+.video_agent/
 
 core/target/
 node_modules/

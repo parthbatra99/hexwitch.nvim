@@ -6,7 +6,7 @@ members = ["crates/hexwitch-core", "crates/hexwitch-cli"]
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/parth/hexwitch.nvim"
+repository = "https://github.com/parthbatra99/hexwitch.nvim"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }

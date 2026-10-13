@@ -1,9 +1,8 @@
 # Status
 
 Scope: the Rust engine, the local browser playground and the evaluation suites.
-Editor adapters, emitters and release packaging were removed; earlier adapter
-work is in Git history only. Direction and next steps are in
-[FUTURE_PLAN.md](../FUTURE_PLAN.md).
+Editor adapters, emitters and release packaging are out of scope. Direction and
+next steps are in [FUTURE_PLAN.md](../FUTURE_PLAN.md).
 
 ## Working today
 

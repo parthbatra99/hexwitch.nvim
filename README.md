@@ -1,51 +1,143 @@
-# hexwitch
+<p align="center">
+  <img src="hexwitch-logo.svg" alt="hexwitch logo" width="120">
+</p>
 
-An editor-independent theme engine and local browser playground. Start from a
-reference, make a deliberate change, inspect its property diff and validation,
-then accept or reject it. Rust computes the colors; a language model proposes
-intent, not a replacement palette.
+<h1 align="center">hexwitch</h1>
 
-**Current scope: engine, experiments, and evaluations only.** Editor adapters,
-colorscheme emitters, editor installation and release packaging have been removed.
-Theme-file import remains a reference-input format, not an editor integration.
+<p align="center">
+  Change a color theme one decision at a time.<br>
+  Ask for a change, see exactly what moved, then keep it or throw it away.
+</p>
 
-## Run the playground
+<p align="center">
+  <a href="#run-it-in-one-command">Quick start</a> ·
+  <a href="#your-first-five-minutes">First five minutes</a> ·
+  <a href="#try-the-engine-from-your-shell">Shell tour</a> ·
+  <a href="#engine-boundaries">How it works</a> ·
+  <a href="docs/status.md">Status</a>
+</p>
 
-Requires a Rust toolchain and a browser. Live interpretation also requires `curl`.
-No JavaScript build, plugins, or personal editor configuration are needed.
+---
+
+Say *"make the comments quieter"* or *"keywords a touch warmer"*. A language model
+turns your words into an intent. The Rust engine computes the new colors, checks
+contrast, and shows you a property-by-property diff. Nothing changes until you
+press **Keep**.
+
+The model proposes intent, not a replacement palette. You can also skip the model
+entirely: click any token and nudge it by hand.
+
+> **Scope:** hexwitch is a theme engine, a browser playground and an evaluation
+> suite. It does not ship editor adapters, colorscheme emitters or release
+> packages. Theme-file import is a way to load a reference, not an editor
+> integration.
+
+## Run it in one command
+
+You need a Rust toolchain and a browser. Live model requests also need `curl`.
+There is no JavaScript build step, no plugin and no editor configuration.
 
 ```sh
 cargo run --manifest-path core/Cargo.toml -p hexwitch-cli -- playground
 ```
 
-Open **http://127.0.0.1:7331**. Use `--port 0` for an available port; the host prints
-the URL. The host is loopback-only, keeps one experiment in memory, and stops with
-Ctrl-C. Export before stopping if you want to resume.
+Open **http://127.0.0.1:7331**. Pass `--port 0` to pick any free port; the host
+prints the URL.
 
-### Connect a model
+The host listens on loopback only, keeps one experiment in memory and stops with
+Ctrl-C. Export your session before stopping if you want to come back to it.
 
-Nudges, checks and history work offline. To describe changes in plain words,
-open **Connect a model** (from the welcome card, the model chip, or
-**More → Providers & models**) and follow the three steps:
+## Your first five minutes
 
-1. **Pick a provider:** OpenAI, OpenRouter, a server on this machine (Ollama,
+Everything in this list works offline. No API key needed.
+
+- [ ] **Pick a starting theme.** Open the theme picker and search the 23 official
+      [Omarchy](https://github.com/basecamp/omarchy) themes, or start from the
+      built-in Eval ink/paper reference.
+- [ ] **Click a keyword in the preview.** A popover opens. Press *warmer* twice
+      and *more vivid* once. Each nudge stacks onto the pending change.
+- [ ] **Hold Space.** The preview flips back to the original while you hold it.
+- [ ] **Read the review card.** It lists every property that changed and compares
+      validation with the current theme. A failure that was already there is not
+      blamed on your edit.
+- [ ] **Press Keep**, then **⌘Z**. You are back where you started. **⇧⌘Z** brings
+      the change back.
+- [ ] **Switch the scene.** Preview TypeScript, Rust, Python or Go under normal,
+      selection, search, added-line and floating scenes, and check that your
+      change still reads well in each.
+
+To describe changes in words instead, [connect a model](#connect-a-model).
+
+## What you can do
+
+| Action | How |
+|---|---|
+| **Talk** | Describe a change in the composer. The model chip picks the provider and model. Choose **Offline** to see the exact prompt without sending it. Clarifying questions appear in the session; answer them in the composer. |
+| **Nudge** | Click any token, swatch or the background. Options: lighter/darker, more vivid/muted, warmer/cooler, a 4.5:1 readability floor, an exact color, typography, underline, opacity, locks and optional semantic rules. |
+| **Review** | Changed tokens are outlined. Toggle Before/After or hold Space. **Keep** asks for a second look ("Keep anyway") only when a check got worse. |
+| **Go back** | Every kept change is a step in the session. Jump to any step, or use ⌘Z / ⇧⌘Z. |
+| **Watch a request** | A live card shows elapsed time (confirmed by the engine every second), what the request is waiting on, and a **Stop** button that kills the request. |
+| **Recover from errors** | A bad key, unknown model, timeout or unreachable host becomes a card that says what went wrong, with **Try again**, **Change model** and **Providers**. |
+| **Bring your own theme** | Import IR or theme JSON/JSONC as a reference. |
+| **Save your work** | **More → Save/Open session** exports and restores everything, including a pending candidate and any open question. |
+
+### Keyboard shortcuts
+
+| Keys | Does |
+|---|---|
+| <kbd>Space</kbd> (hold) | Show the theme before the pending change |
+| <kbd>⌘</kbd> <kbd>Z</kbd> | Step back through kept changes |
+| <kbd>⇧</kbd> <kbd>⌘</kbd> <kbd>Z</kbd> | Step forward |
+
+## Connect a model
+
+Nudges, checks and history work without one. To describe changes in plain words,
+open **Connect a model** from the welcome card, the model chip, or
+**More → Providers & models**, then follow three steps:
+
+1. **Pick a provider.** OpenAI, OpenRouter, a server on this machine (Ollama,
    LM Studio), or any OpenAI-compatible API root such as a team gateway.
-2. **Add your key:** name an environment variable the engine can read
+2. **Add your key.** Name an environment variable the engine can read
    (recommended; the page tells you whether it is set), or paste a key that the
    engine keeps in memory until it stops. Local servers need no key.
-3. **Build your model list:** the engine fetches the provider's catalog (no prompt
-   data is sent); pick the models you use and star a default. They appear under
-   the model chip next to the composer.
+3. **Build your model list.** The engine fetches the provider's catalog without
+   sending any prompt data. Pick the models you use and star a default. They
+   appear under the model chip next to the composer.
 
-Providers are saved to `~/.config/hexwitch/providers.json` (or
-`$XDG_CONFIG_HOME`, `$HEXWITCH_PROVIDERS_FILE`, `--providers-file`) with key
-**variable names only**; pasted keys are never written to disk, sent to the
-browser, or exported. `/chat/completions` and `/models` are appended to the API
-root; no `/v1` is added. HTTP is supported but unencrypted. Nothing is sent until
-you pick a model and press send, and the composer always names the host it sends
-to. Automatic retries are disabled.
+Nothing is sent until you pick a model and press send. The composer always names
+the host it sends to.
 
-Launch flags still work and appear as a read-only provider, selected on start:
+<details>
+<summary><b>Where are providers saved, and what happens to my key?</b></summary>
+
+<br>
+
+Providers are saved to `~/.config/hexwitch/providers.json`. Override the location
+with `$XDG_CONFIG_HOME`, `$HEXWITCH_PROVIDERS_FILE` or `--providers-file`.
+
+The file stores key **variable names only**. Pasted keys are never written to
+disk, sent to the browser or exported. HTTP endpoints work but are unencrypted.
+Automatic retries are disabled.
+
+</details>
+
+<details>
+<summary><b>My gateway's URL doesn't work</b></summary>
+
+<br>
+
+hexwitch appends `/chat/completions` and `/models` to the API root you enter. It
+does not add `/v1`, so include it yourself if your gateway needs it, for example
+`https://gateway.example.com/v1`.
+
+</details>
+
+<details>
+<summary><b>Can I configure a provider from the command line?</b></summary>
+
+<br>
+
+Yes. Launch flags show up as a read-only provider that is selected on start:
 
 ```sh
 cargo run --manifest-path core/Cargo.toml -p hexwitch-cli -- playground \
@@ -54,43 +146,34 @@ cargo run --manifest-path core/Cargo.toml -p hexwitch-cli -- playground \
   --model FAST_SMALLER
 ```
 
-## What you can test
+</details>
 
-The workspace has two halves: the theme preview on the left, the session on the
-right.
+## Try the engine from your shell
 
-- **Talk:** describe a change in the composer. The model chip picks the provider
-  and model, or **Offline**, which shows the exact prompt instead of sending it.
-  Clarifying questions appear in the session; answer them in the composer.
-- **Nudge:** click any token, swatch or the background to open a popover with
-  lighter/darker, more vivid/muted, warmer/cooler, a 4.5:1 readability floor,
-  an exact color, typography, underline, opacity and locks. Optionally include
-  semantic rules. Nudges stack onto the pending change until you keep it.
-- **Review:** changed tokens are outlined; toggle Before/After or hold Space.
-  The review card lists property changes and compares validation against the
-  current theme, so pre-existing failures are not blamed on the edit. Keep
-  needs a second look ("Keep anyway") only when a check got worse.
-- **History:** every kept change is a step in the session; **Go back** jumps to
-  any step, and ⌘Z / ⇧⌘Z step through them.
-- **Watching a request:** while a model works, the session shows a live card
-  with the elapsed time (confirmed by the engine every second), what it is
-  waiting on, and a **Stop** button that really kills the request. Failures
-  become cards that say what went wrong (bad key, unknown model, timeout,
-  unreachable host...) with **Try again**, **Change model** and **Providers**.
-- **References:** the built-in Eval ink/paper states plus all 23 official
-  [Omarchy](https://github.com/basecamp/omarchy) themes in a searchable picker;
-  import IR or theme JSON/JSONC. Preview TypeScript, Rust, Python or Go
-  under normal, selection, search, added-line and floating scenes.
-- **More menu:** save/open sessions (export/restore including pending
-  candidates and questions), contrast checker, providers, and developer tools:
-  engine inspector with explicit IntentSpecs, replay of saved model JSON, and the
-  74-case regression matrix with three paired checks.
+The color math behind the playground is also a CLI. A few commands to try:
 
-Browser rendering is a portable role visualization, **not editor conformance**.
-Model output is not automatically proven to preserve intent; a schema-valid wrong
-edit can still become a reviewable candidate. Check the diff before accepting.
+```console
+$ cargo run -q --manifest-path core/Cargo.toml -p hexwitch-cli -- contrast '#c0caf5' '#1a1b26'
+#c0caf5 on #1a1b26: 10.59:1  (AAA)
 
-## Engine boundaries
+$ cargo run -q --manifest-path core/Cargo.toml -p hexwitch-cli -- convert '#7aa2f7'
+oklch(0.71898 0.13216 264.20)
+
+$ cargo run -q --manifest-path core/Cargo.toml -p hexwitch-cli -- map 0.7 0.4 250
+#3fa3ff  (oklch l=0.7004 c=0.1633 h=249.88; chroma reduced by 59.2%)
+```
+
+`map` takes an OKLCH color that sRGB can't show and reduces chroma while keeping
+the hue. Run with `--help` to see `import`, `validate`, `analyze` and the
+evaluation commands.
+
+## For developers
+
+The **More** menu has a contrast checker and developer tools: an engine inspector
+with explicit IntentSpecs, replay of saved model JSON, and the 74-case regression
+matrix with three paired checks.
+
+### Engine boundaries
 
 ```text
 reference → IR → intent → deterministic revision → validation → candidate review
@@ -106,21 +189,24 @@ reference → IR → intent → deterministic revision → validation → candid
 | `core/eval/` | Authored references, semantic contracts, replay runs, mutations, fixture verification |
 | `docs/` | Status, playground internals, versioned engine and experiment contracts |
 
-Legacy CLI edit/replay formats remain for regression compatibility. The playground
-uses property-aware intent v1. Neither mode emits editor artifacts.
+Legacy CLI edit/replay formats remain for regression compatibility. The
+playground uses property-aware intent v1. Neither mode emits editor artifacts.
 
-## Verify
+### Verify
 
-Git hooks in `.githooks/` run these checks. The pre-commit hook runs `fmt` and
+Git hooks in `.githooks/` run the checks. The pre-commit hook runs `fmt` and
 `clippy`. The pre-push hook runs the fixture checks, the Python and Rust tests,
-and the browser smoke when Playwright is on `NODE_PATH`. Enable them once per
-clone:
+and the browser smoke test when Playwright is on `NODE_PATH`. Enable them once
+per clone:
 
 ```sh
 git config core.hooksPath .githooks
 ```
 
-To run the checks by hand:
+<details>
+<summary><b>Run the checks by hand</b></summary>
+
+<br>
 
 ```sh
 cargo fmt --manifest-path core/Cargo.toml --all --check
@@ -131,10 +217,22 @@ python3 -m unittest discover -s core/eval -p 'test_*.py'
 ```
 
 Optional real-browser checks use Playwright; see [playground verification and
-limitations](docs/playground.md). Live testing is opt-in and separate
-from the offline checks. The configured small model has demonstrated valid-but-wrong
-saturation/opacity interpretations; this is an open quality issue, regardless
-of canned replay scores.
+limitations](docs/playground.md). Live testing is opt-in and separate from the
+offline checks.
+
+</details>
+
+## Known limits
+
+- The browser preview visualizes theme roles. It is **not proof of how an editor
+  will render them**.
+- Model output is not proven to preserve your intent. A schema-valid but wrong
+  edit can still become a candidate, so read the diff before you keep it.
+- The configured small model has produced valid-but-wrong saturation and opacity
+  interpretations. This is an open quality issue, whatever the canned replay
+  scores say.
+
+---
 
 [Status](docs/status.md) ·
 [IR/intent contract](docs/contracts/ir-v1.md) ·
