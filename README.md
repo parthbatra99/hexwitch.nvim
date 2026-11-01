@@ -25,9 +25,7 @@
   <a href="#what-were-building">What we're building</a>
 </p>
 
-<p align="center">
-  <img src="docs/media/playground-demo.mp4" alt="An 80-second narrated tour of the playground: switch from Eval ink to Catppuccin Latte, nudge a keyword warmer and more vivid, compare before and after, keep the change from the review card, raise comments to 4.5:1 with one tap, and step back and forward through the session history" width="900">
-</p>
+![An 80-second narrated tour of the playground: switch from Eval ink to Catppuccin Latte, nudge a keyword warmer and more vivid, compare before and after, keep the change from the review card, raise comments to 4.5:1 with one tap, and step back and forward through the session history](docs/media/playground-demo.mp4)
 
 ## Run it
 
