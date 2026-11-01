@@ -6,7 +6,7 @@
 
 <p align="center">
   <b>A programmable color engine for every theme you use.</b><br>
-  The model never picks a hex. The engine never ships a change that breaks a floor.
+  <b>Typed intent in · OKLCH solve · contrast floors on every diff</b>
 </p>
 
 <p align="center">
@@ -26,8 +26,8 @@
 </p>
 
 <p align="center">
-  <a href="docs/media/playground-nudge-review.png">
-    <img src="docs/media/playground-nudge-review.png" alt="The playground with Tokyo Night (Omarchy) loaded: the keyword inspector open after warmer twice and more vivid once, and the Session review card showing #bb9af7 → #d28fee with Keep change and Discard" width="900">
+  <a href="docs/media/playground-overview-latte.png">
+    <img src="docs/media/playground-overview-latte.png" alt="The playground with Catppuccin Latte (Omarchy) loaded: a keyword nudged warmer twice and more vivid once in the code preview, and the Session review card showing #ea76cb → #fd6bae with No new problems, Keep change and Discard" width="900">
   </a>
 </p>
 
@@ -72,11 +72,31 @@ The solver does the rest:
 - **Constraints persist.** Per-property locks, and rules such as "comments ≥ 4.5:1
   on `surface.base`", are stored in the theme and enforced on every later edit.
 
+Features up close, one per tab:
+
+<details open name="playground-features">
+<summary><b>Nudge inspector</b> · click any token</summary>
+
 <p align="center">
-  <a href="docs/media/playground-readable-comments.png">
-    <img src="docs/media/playground-readable-comments.png" alt="The nudge inspector on a comment reading 4.52:1 readable, and the review card lifting comments from 1.91:1 to 4.52:1 across every scene" width="900">
-  </a>
+  <img src="docs/media/playground-feature-nudge.png" alt="The nudge inspector on syntax.keyword in Catppuccin Latte: the current color with its live contrast verdict, one-tap Lighter, Darker, More vivid, More muted, Warmer and Cooler buttons, a single-shot Make readable everywhere at 4.5:1, and an exact-color field with a semantic-rules toggle">
 </p>
+</details>
+
+<details name="playground-features">
+<summary><b>One-tap readability</b> · "Make readable everywhere · 4.5:1"</summary>
+
+<p align="center">
+  <img src="docs/media/playground-feature-readable.png" alt="The review card after the one-tap fix: Comments readable, #acb0be to #6a6e7a, Normal scene comments contrast 1.91 to 4.50, Fixed 1 with 17 already failing and 45 can't be verified across all 70 checks, Discard and Keep change below">
+</p>
+</details>
+
+<details name="playground-features">
+<summary><b>Review card</b> · nothing ships without you</summary>
+
+<p align="center">
+  <img src="docs/media/playground-feature-review.png" alt="The review card for a keyword nudged warmer twice and more vivid once: Keywords #ea76cb to #fd6bae, No new problems, 18 already failing and 45 can't be verified across all 70 checks, with Discard and Keep change">
+</p>
+</details>
 
 <details>
 <summary><b>The same edit as a script</b></summary>
