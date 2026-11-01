@@ -26,9 +26,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/media/playground-overview-latte.png">
-    <img src="docs/media/playground-overview-latte.png" alt="The playground with Catppuccin Latte (Omarchy) loaded: a keyword nudged warmer twice and more vivid once in the code preview, and the Session review card showing #ea76cb → #fd6bae with No new problems, Keep change and Discard" width="900">
-  </a>
+  <img src="docs/media/playground-demo.mp4" alt="An 80-second narrated tour of the playground: switch from Eval ink to Catppuccin Latte, nudge a keyword warmer and more vivid, compare before and after, keep the change from the review card, raise comments to 4.5:1 with one tap, and step back and forward through the session history" width="900">
 </p>
 
 ## Run it
@@ -39,6 +37,12 @@ cargo run --manifest-path core/Cargo.toml -p hexwitch-cli -- playground
 
 Open **http://127.0.0.1:7331**, load any of the 23 Omarchy themes and click a
 token. No API key and no JavaScript build needed.
+
+<p align="center">
+  <a href="docs/media/playground-overview-latte.png">
+    <img src="docs/media/playground-overview-latte.png" alt="The playground with Catppuccin Latte (Omarchy) loaded: a keyword nudged warmer twice and more vivid once in the code preview, and the Session review card showing #ea76cb → #fd6bae with No new problems, Keep change and Discard" width="900">
+  </a>
+</p>
 
 ## How it works
 
