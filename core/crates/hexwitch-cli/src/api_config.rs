@@ -1,6 +1,10 @@
 use crate::provider::OutputFormat;
 use clap::Args;
 
+const DEFAULT_BASE: &str = "https://api.openai.com/v1";
+const DEFAULT_KEY_ENV: &str = "OPENAI_API_KEY";
+const DEFAULT_MODEL: &str = "gpt-4o-mini";
+
 #[derive(Debug, Clone, Args)]
 pub struct ApiOptions {
     #[arg(help = "API root, e.g. https://api.openai.com/v1. Appends /chat/completions")]
@@ -15,9 +19,6 @@ pub struct ApiOptions {
     #[arg(help = "json_schema, json_object, or none. Validation always stays strict locally")]
     #[arg(long,value_enum,default_value_t=OutputFormat::JsonSchema)]
     pub response_format: OutputFormat,
-    #[arg(help = "Legacy convenience alias; prefer explicit base URL and key environment")]
-    #[arg(long)]
-    pub provider: Option<String>,
 }
 
 pub struct Connection {
@@ -80,20 +81,10 @@ impl ApiOptions {
         self.base_url.is_some()
             || self.api_key_env.is_some()
             || self.model.is_some()
-            || self.provider.is_some()
             || std::env::var("OPENAI_BASE_URL").is_ok_and(|s| !s.is_empty())
     }
     pub fn public_config(&self) -> Result<serde_json::Value, String> {
-        let (base, key, model) = match self.provider.as_deref() {
-            None | Some("openai") => ("https://api.openai.com/v1", "OPENAI_API_KEY", "gpt-4o-mini"),
-            Some("openrouter") => (
-                "https://openrouter.ai/api/v1",
-                "OPENROUTER_API_KEY",
-                "openai/gpt-4o-mini",
-            ),
-            _ => return Err("unknown legacy provider alias".into()),
-        };
-        let key = self.api_key_env.as_deref().unwrap_or(key);
+        let key = self.api_key_env.as_deref().unwrap_or(DEFAULT_KEY_ENV);
         if !key_name_valid(key) {
             return Err(
                 "api-key-env must be an environment variable name, not a credential".into(),
@@ -107,18 +98,13 @@ impl ApiOptions {
                     .ok()
                     .filter(|s| !s.is_empty())
             })
-            .unwrap_or_else(|| base.into());
+            .unwrap_or_else(|| DEFAULT_BASE.into());
         endpoint(&base)?;
         Ok(
-            serde_json::json!({"base_url":base,"api_key_env":key,"key_present":std::env::var(key).is_ok_and(|s|!s.is_empty()),"model":self.model.as_deref().unwrap_or(model),"response_format":match self.response_format { OutputFormat::JsonSchema=>"json_schema",OutputFormat::JsonObject=>"json_object",OutputFormat::None=>"none" }}),
+            serde_json::json!({"base_url":base,"api_key_env":key,"key_present":std::env::var(key).is_ok_and(|s|!s.is_empty()),"model":self.model.as_deref().unwrap_or(DEFAULT_MODEL),"response_format":match self.response_format { OutputFormat::JsonSchema=>"json_schema",OutputFormat::JsonObject=>"json_object",OutputFormat::None=>"none" }}),
         )
     }
     pub fn resolve(&self) -> Result<Connection, String> {
-        let (default_base,default_key,default_model)=match self.provider.as_deref(){
-            None|Some("openai")=>("https://api.openai.com/v1","OPENAI_API_KEY","gpt-4o-mini"),
-            Some("openrouter")=>("https://openrouter.ai/api/v1","OPENROUTER_API_KEY","openai/gpt-4o-mini"),
-            Some(_)=>return Err("legacy provider alias must be openai or openrouter; use --base-url for any compatible provider".into()),
-        };
         let environment_base = std::env::var("OPENAI_BASE_URL")
             .ok()
             .filter(|s| !s.is_empty());
@@ -126,9 +112,9 @@ impl ApiOptions {
             self.base_url
                 .as_deref()
                 .or(environment_base.as_deref())
-                .unwrap_or(default_base),
+                .unwrap_or(DEFAULT_BASE),
         )?;
-        let key_name = self.api_key_env.as_deref().unwrap_or(default_key);
+        let key_name = self.api_key_env.as_deref().unwrap_or(DEFAULT_KEY_ENV);
         if !key_name_valid(key_name) {
             return Err(
                 "api-key-env must be an environment variable name, not a credential".into(),
@@ -141,7 +127,7 @@ impl ApiOptions {
         if key.chars().any(char::is_control) {
             return Err("API key contains invalid control characters".into());
         }
-        let model = self.model.as_deref().unwrap_or(default_model);
+        let model = self.model.as_deref().unwrap_or(DEFAULT_MODEL);
         if model.trim().is_empty() || model.len() > 256 || model.chars().any(char::is_control) {
             return Err("model must be a nonempty identifier without control characters".into());
         }

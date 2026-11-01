@@ -1,6 +1,6 @@
 use crate::backdrop::Backdrop;
 use crate::color::Srgb;
-use crate::intent::{Action, Constraint, IntentReport, IntentSpec, Scope, Target};
+use crate::intent::{Action, IntentReport, IntentSpec, Scope, Target};
 use crate::ir::{Property, PropertyState, Theme, UnderlineStyle};
 use crate::protocol::Outcome;
 use crate::solver::Direction;
@@ -244,7 +244,6 @@ pub fn validate(
         version: 1,
         actions: vec![],
         requirements: vec![],
-        preferences: vec![],
     };
     for (index, action) in model.actions.iter().enumerate() {
         let invalid = |reason: &str| format!("action #{index} ({}): {reason}", action.op);
@@ -353,28 +352,12 @@ pub fn validate(
                     if !crate::selector::valid_selector(selector) {
                         return Err(invalid("invalid selector"));
                     }
-                    for role in theme
-                        .styles
-                        .keys()
-                        .filter(|r| crate::selector::matches(selector, r))
-                    {
-                        let constraint = Constraint {
-                            role: role.clone(),
-                            property: target.property,
-                            backgrounds: backgrounds.clone(),
-                            min,
-                            persistent,
-                            include_semantic: target.include_semantic,
-                        };
-                        if !spec.requirements.contains(&constraint) {
-                            spec.requirements.push(constraint);
-                        }
-                    }
                 }
                 Action::Contrast {
                     target,
                     backgrounds,
                     min,
+                    persistent,
                     direction: action
                         .direction
                         .ok_or_else(|| invalid("direction required"))?,

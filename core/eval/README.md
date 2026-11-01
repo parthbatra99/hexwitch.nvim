@@ -5,10 +5,7 @@ correctness, interpretation quality, calculated scene readability, and human
 preference/intent preservation. Editor runtime fidelity is deferred. A schema pass is not semantic accuracy, and a
 contrast pass is not a comfort or productivity result.
 
-`manifest.json` is the legacy metric regression set. Its six theme files are
-curated excerpts; do not describe them as complete faithful imports. Upstream
-revision/license verification remains work before adding them to a release
-fidelity corpus. `import/manifest.json` adds a complete pinned Dark+ reference
+`import/manifest.json` holds a complete pinned Dark+ reference
 and included base with original upstream MIT notice, plus authored semantic
 success/failure fixtures. Explicit scope probes are not full editor rendering.
 
@@ -51,8 +48,7 @@ python3 -m unittest discover -s core/eval -p 'test_fixture_metadata.py'
 ```
 
 The validator rejects missing fields, unknown metadata, changed hashes and path
-escapes; the pre-push hook runs it alongside the Rust suites. The six legacy excerpts still
-have unverified upstream license provenance and are not promoted to this suite.
+escapes; the pre-push hook runs it alongside the Rust suites.
 
 ## Executable interpretation evaluation
 

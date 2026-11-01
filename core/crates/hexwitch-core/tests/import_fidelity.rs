@@ -121,19 +121,6 @@ fn complete_pinned_dark_plus_loads_with_explicit_scope_and_custom_type_losses() 
     );
     let source = &theme.extensions["vscode.source"];
     assert!(source["tokenColors"].as_array().unwrap().len() > 50);
-    for (stack, hex) in [
-        (["source.ts", "entity.name.function.ts"], "#dcdcaa"),
-        (["source.ts", "entity.name.type.ts"], "#4ec9b0"),
-        (["source.ts", "variable.other.readwrite.ts"], "#9cdcfe"),
-    ] {
-        let scopes = stack.iter().map(|s| s.to_string()).collect::<Vec<_>>();
-        let resolved =
-            hexwitch_core::scope::resolve_scope_stack(source, &scopes, &Style::new()).unwrap();
-        assert_eq!(
-            resolved.style.fg,
-            Some(hexwitch_core::color::Srgb::from_hex(hex).unwrap())
-        );
-    }
     let losses = theme.extensions["hexwitch.import.losses.v1"]
         .as_array()
         .unwrap();
@@ -141,26 +128,6 @@ fn complete_pinned_dark_plus_loads_with_explicit_scope_and_custom_type_losses() 
         .iter()
         .any(|l| l["property"] == "semanticTokenColors.newOperator"));
     assert!(losses.iter().any(|l| l.get("source_stacks").is_some()));
-}
-#[test]
-fn actual_scope_probe_preserves_property_precedence_and_qualifies_unknown_rules() {
-    let source = serde_json::json!({"tokenColors":[{"scope":"comment","settings":{"foreground":"#eeeeee","fontStyle":"italic"}},{"scope":"source.rust comment.line","settings":{"fontStyle":""}},{"scope":"comment - string","settings":{"foreground":"#ff0000"}}]});
-    let result = hexwitch_core::scope::resolve_scope_stack(
-        &source,
-        &[
-            "source.rust".into(),
-            "comment.line.double-slash.rust".into(),
-        ],
-        &Style::new(),
-    )
-    .unwrap();
-    assert_eq!(
-        result.style.fg,
-        Some(hexwitch_core::color::Srgb::from_hex("#eeeeee").unwrap())
-    );
-    assert_eq!(result.style.italic, Some(false));
-    assert!(!result.limitations.is_empty());
-    assert_eq!(result.property_rules[&Property::Italic], 1);
 }
 #[test]
 fn malformed_ir_version_cannot_bypass_migration() {

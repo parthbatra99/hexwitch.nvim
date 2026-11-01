@@ -290,16 +290,6 @@ impl DiffPart {
     }
 }
 
-impl Role {
-    pub fn terminal_slot(slot: u8) -> Result<Self, RoleParseError> {
-        if slot < 16 {
-            Ok(Role::Terminal(slot))
-        } else {
-            Err(RoleParseError(format!("terminal.{slot}")))
-        }
-    }
-}
-
 impl fmt::Display for Role {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -477,11 +467,5 @@ mod tests {
         let strings: Vec<String> = roles.iter().map(|r| r.to_string()).collect();
         assert_eq!(strings, strings.clone());
         assert_eq!(roles, roles.clone());
-    }
-
-    #[test]
-    fn terminal_slot_validates() {
-        assert!(matches!(Role::terminal_slot(15), Ok(Role::Terminal(15))));
-        assert!(Role::terminal_slot(16).is_err());
     }
 }

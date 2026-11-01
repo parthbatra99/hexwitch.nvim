@@ -75,8 +75,8 @@ has been checked against a running editor or language server.
 
 ## Intent
 
-`--machine revise` treats a spec as v1 when it has `version:1` and `actions`.
-Legacy `protect`/`changes` specs are still accepted but are not property-exact.
+`--machine revise` requires a spec with `version:1` and `actions`; legacy
+`protect`/`changes` specs are rejected.
 An action target is `{roles:[selectors], property:"bg_opacity", include_semantic?:false}`.
 With `include_semantic` true the action also applies to every existing semantic
 override, and locks, refusals and reports keep the rule's identity. Selectors are
@@ -108,14 +108,13 @@ Persistent constraints are stored under `hexwitch.constraints.v1`, and adding th
 same requirement twice is a no-op.
 
 Semantic floors check the combined effect of applicable modifier and language
-rules, not each rule alone. Above 256 contexts or eight modifiers the check is
-unverified and fails closed. Reports name the failing `semantic_context`.
-`preferences` (target, weight 0..1, reason) are reported but not yet optimized.
+rules, not each rule alone. Above 2048 contexts (modifiers x languages x types)
+the check is unverified and fails closed. Reports name the failing `semantic_context`.
 Outcomes are separate from parse errors.
 
 ## Interpretation v1
 
-`interpret --v1` is opt-in, and legacy replay still works. A model response has
+Interpretation is the v1 stack only; the legacy v0 replay is gone. A model response has
 `version`, `decision`, `notes`, `questions` and `actions`. Each action names a
 role collection, property, `include_semantic` and every operation field, using
 null for fields it does not use. The provider schema has one branch per operation:
@@ -130,7 +129,7 @@ report; `--out` writes an IntentSpec only for actionable responses and leaves
 existing files alone otherwise. Replay still needs the original request so user
 hex anchors can be checked without trusting colors the model produced. `--context`
 supplies reviewed `previous_requests`/`previous_actions`, never inferred history.
-`--dry-run --v1` prints the exact prompts without calling the network.
+`--dry-run` prints the exact prompts without calling the network.
 
 ## Evaluation
 
@@ -166,8 +165,7 @@ Live interpretation uses OpenAI-compatible Chat Completions only. `--base-url` (
 `/v1` added. URLs with credentials, query strings, fragments or a full endpoint
 path are rejected. `--api-key-env` names the environment variable holding the key
 (default `OPENAI_API_KEY`); a literal key is never accepted on the command line.
-Legacy `--provider` aliases only set defaults. Clients discover profiles through
-`capabilities.provider_transport`.
+Clients discover profiles through `capabilities.provider_transport`.
 
 `--response-format` is `json_schema`, `json_object` or `none`. Local validation is
 equally strict in every mode, and the non-schema modes put the schema in the

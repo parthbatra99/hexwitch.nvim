@@ -1,6 +1,10 @@
 use crate::ir::{Role, Style, Theme};
-use crate::semantic::{portable_role, resolve_semantic, SemanticContext, STANDARD_TYPES};
+use crate::semantic::{
+    portable_role, resolve_semantic_prevalidated, SemanticContext, STANDARD_TYPES,
+};
 use std::collections::BTreeSet;
+
+const MAX_CONTEXTS: usize = 2048;
 
 pub(crate) fn treatments(
     theme: &Theme,
@@ -17,13 +21,12 @@ pub(crate) fn treatments(
     {
         return Ok(vec![]);
     }
+    theme.validate()?;
+    base.validate()?;
     let modifiers: BTreeSet<_> = rules
         .iter()
         .flat_map(|r| r.modifiers.iter().cloned())
         .collect();
-    if modifiers.len() > 8 {
-        return Err("semantic constraint context limit exceeded; floor unverified".into());
-    }
     let modifiers: Vec<_> = modifiers.into_iter().collect();
     let mut languages = BTreeSet::from([None]);
     languages.extend(rules.iter().map(|r| r.language.clone()));
@@ -36,12 +39,17 @@ pub(crate) fn treatments(
     if types.is_empty() {
         return Err("semantic constraint type mapping unavailable; floor unverified".into());
     }
-    let count = (1usize << modifiers.len())
-        .checked_mul(languages.len())
-        .and_then(|n| n.checked_mul(types.len()))
-        .ok_or("semantic constraint context count overflow")?;
-    if count > 256 {
-        return Err("semantic constraint context limit exceeded; floor unverified".into());
+    let count = 1usize
+        .checked_shl(modifiers.len() as u32)
+        .and_then(|n| n.checked_mul(languages.len()))
+        .and_then(|n| n.checked_mul(types.len()));
+    if !count.is_some_and(|count| count <= MAX_CONTEXTS) {
+        return Err(format!(
+            "semantic constraint context limit exceeded: {} modifiers x {} languages x {} types exceeds {MAX_CONTEXTS} contexts; floor unverified",
+            modifiers.len(),
+            languages.len(),
+            types.len()
+        ));
     }
     let mut treatments = vec![];
     for token_type in types {
@@ -57,7 +65,7 @@ pub(crate) fn treatments(
                         .map(|(_, m)| m.clone())
                         .collect(),
                 };
-                let resolved = resolve_semantic(theme, role, &context, base)?;
+                let resolved = resolve_semantic_prevalidated(theme, role, &context, base)?;
                 if !resolved.limitations.is_empty() {
                     return Err(format!(
                         "semantic floor unverified: {}",

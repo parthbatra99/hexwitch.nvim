@@ -213,6 +213,42 @@ fn wrong_host_missing_token_and_oversized_body_are_rejected() {
         assert!(reply.starts_with(&format!("HTTP/1.1 {status}")));
     }
 }
+#[test]
+fn pending_clarification_gates_new_requests_until_answered_or_rejected() {
+    let host = Host::new(&[]);
+    let question = json!({"version":1,"decision":"needs_clarification","notes":"Choose a target.","questions":["Comments or keywords?"],"actions":[]});
+    let asked = host.post(
+        "/api/prompt",
+        json!({"revision":0,"mode":"replay","request":"Make blue less intense","response":question.to_string()}),
+    );
+    assert_eq!(asked["ok"], true);
+    assert!(asked["result"]["state"]["clarification"].is_object());
+
+    let fresh = host.post(
+        "/api/prompt",
+        json!({"revision":1,"mode":"replay","request":"Never mind, darken the background","response":question.to_string()}),
+    );
+    assert_eq!(fresh["ok"], false);
+    assert!(fresh.to_string().contains("pending question"));
+
+    let revised = host.post(
+        "/api/revise",
+        json!({"revision":1,"spec":{"version":1,"actions":[]}}),
+    );
+    assert_eq!(revised["ok"], false);
+    assert!(revised.to_string().contains("pending question"));
+
+    let rejected = host.post("/api/reject", json!({"revision":1}));
+    assert_eq!(rejected["ok"], true);
+    let ready = json!({"version":1,"decision":"ready","notes":"Darken the base background.","questions":[],"actions":[{"op":"lightness","roles":["surface.base"],"property":"bg","include_semantic":false,"scope":null,"color":null,"number":-0.02,"boolean":null,"underline":null,"state":null,"backgrounds":null,"min":null,"direction":null,"persistent":null}]});
+    let after = host.post(
+        "/api/prompt",
+        json!({"revision":2,"mode":"replay","request":"Darken the background","response":ready.to_string()}),
+    );
+    assert_eq!(after["ok"], true);
+    assert!(after["result"]["state"]["candidate"].is_object());
+    assert!(after["result"]["state"]["candidate"]["report"]["warnings"].is_null());
+}
 fn read_request(stream: &mut TcpStream) -> (String, Value) {
     stream
         .set_read_timeout(Some(std::time::Duration::from_secs(10)))

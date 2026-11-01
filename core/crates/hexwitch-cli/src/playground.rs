@@ -326,6 +326,11 @@ fn dispatch(path: &str, body: Value, state: &State) -> Result<Value, String> {
             let request = if let Some(answer) = body.get("answer").and_then(Value::as_str) {
                 experiment.answer_request(answer, rev)?
             } else {
+                if experiment.clarification.is_some() {
+                    return Err(
+                        "answer the pending question (or reject it) before a new request".into(),
+                    );
+                }
                 text(&body, "request")?.to_string()
             };
             (experiment.current().clone(), experiment.context(), request)
@@ -422,6 +427,11 @@ fn dispatch(path: &str, body: Value, state: &State) -> Result<Value, String> {
             experiment.import(theme, rev)?;
         }
         "/api/revise" => {
+            if experiment.clarification.is_some() {
+                return Err(
+                    "answer the pending question (or reject it) before a new request".into(),
+                );
+            }
             let spec = serde_json::from_value(body.get("spec").cloned().ok_or("spec required")?)
                 .map_err(|e| e.to_string())?;
             experiment.propose(

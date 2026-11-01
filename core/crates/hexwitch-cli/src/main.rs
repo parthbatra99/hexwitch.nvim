@@ -8,7 +8,6 @@ mod references;
 
 use clap::{Parser, Subcommand};
 use hexwitch_core::color::{contrast_verdict, gamut_map, Oklch, Srgb};
-use hexwitch_core::eval::{render_report, run_eval_dir};
 
 #[derive(Parser)]
 #[command(
@@ -103,22 +102,12 @@ enum Command {
         json: bool,
     },
     #[command(
-        about = "Run the eval set: ingest + analyze reference themes, compare against goldens and invariants. Non-zero exit on failure"
-    )]
-    Eval {
-        #[arg(
-            help = "Eval directory containing manifest.json. Defaults to `eval` relative to the current directory (the workspace root is `core/`)"
-        )]
-        #[arg(default_value = "eval")]
-        dir: std::path::PathBuf,
-    },
-    #[command(
-        about = "Apply an edit spec to a theme: protected roles survive, changes apply minimally, everything else stays bit-identical"
+        about = "Apply an intent spec to a theme: required floors are re-verified on the final theme and a failing floor rolls the edit back"
     )]
     Revise {
         #[arg(help = "Path to a theme .json file (IR or VS Code format)")]
         path: std::path::PathBuf,
-        #[arg(help = "Path to an edit-spec .json file")]
+        #[arg(help = "Path to an intent-spec .json file (version 1)")]
         #[arg(short, long)]
         spec: std::path::PathBuf,
         #[arg(help = "Write the revised theme (IR JSON) here instead of stdout")]
@@ -132,7 +121,7 @@ enum Command {
         report_json: Option<std::path::PathBuf>,
     },
     #[command(
-        about = "Interpret a natural-language request as an edit spec (LLM bridge). The model never picks colors; it emits actions that are validated hard and translated deterministically"
+        about = "Interpret a natural-language request as an intent spec (LLM bridge). The model never picks colors; it emits actions that are validated hard and translated deterministically"
     )]
     Interpret {
         #[arg(help = "Path to a theme .json file (IR or VS Code format)")]
@@ -149,16 +138,13 @@ enum Command {
         )]
         #[arg(long)]
         from_llm: Option<std::path::PathBuf>,
-        #[arg(help = "Write the validated edit spec here (IR EditSpec JSON)")]
+        #[arg(help = "Write the validated intent spec here (intent spec JSON)")]
         #[arg(short, long)]
         out: Option<std::path::PathBuf>,
         #[command(flatten)]
         api: api_config::ApiOptions,
-        #[arg(help = "Property-aware interpretation with explicit clarification outcomes")]
+        #[arg(help = "Reviewed prior requests/actions for relative iteration")]
         #[arg(long)]
-        v1: bool,
-        #[arg(help = "Reviewed prior requests/actions for relative iteration (v1 only)")]
-        #[arg(long, requires = "v1")]
         context: Option<std::path::PathBuf>,
     },
 }
@@ -338,13 +324,6 @@ fn run(command: Command) -> Result<(), String> {
                 }
             }
         }
-        Command::Eval { dir } => {
-            let outcomes = run_eval_dir(&dir).map_err(|e| format!("eval failed: {e}"))?;
-            print!("{}", render_report(&outcomes));
-            if outcomes.iter().any(|o| !o.passed) {
-                std::process::exit(1);
-            }
-        }
         Command::Revise {
             path,
             spec,
@@ -353,25 +332,40 @@ fn run(command: Command) -> Result<(), String> {
             report_json,
         } => {
             ensure_distinct(&[out.as_deref(), report_json.as_deref()])?;
-            let theme_json = read_input(&path)?;
-            let _ = theme_json;
             let theme = hexwitch_core::import_path::load_theme_path(&path)
                 .map_err(|e| format!("cannot load theme: {e}"))?;
             let spec_json = read_input(&spec)?;
-            let spec = hexwitch_core::revise::EditSpec::from_json(&spec_json)
-                .map_err(|e| format!("invalid edit spec: {e}"))?;
+            let value: serde_json::Value = serde_json::from_str(&spec_json)
+                .map_err(|e| format!("invalid intent spec: {e}"))?;
+            if value.get("version").is_none() {
+                return Err("intent spec requires a version field; legacy edit specs are no longer supported".into());
+            }
+            let spec: hexwitch_core::intent::IntentSpec =
+                serde_json::from_value(value).map_err(|e| format!("invalid intent spec: {e}"))?;
 
-            let (revised, revision) = hexwitch_core::revise::revise(&theme, &spec)
+            let (revised, revision) = hexwitch_core::intent::revise_intent(&theme, &spec)
                 .map_err(|e| format!("revision refused: {e}"))?;
 
-            eprint!("{}", revision.summary());
-            if !revision.failed.is_empty() || report {
+            let outcome = serde_json::to_value(revision.outcome)
+                .ok()
+                .and_then(|v| v.as_str().map(str::to_string))
+                .unwrap_or_else(|| "unknown".into());
+            eprintln!(
+                "{outcome}: {} property outcome(s), {} requirement(s){}",
+                revision.properties.len(),
+                revision.requirements.len(),
+                if revision.rolled_back {
+                    " (rolled back)"
+                } else {
+                    ""
+                }
+            );
+            if report {
                 eprintln!(
-                    "({} role(s) failed; failures keep their original colors)",
-                    revision.failed.len()
+                    "{}",
+                    serde_json::to_string_pretty(&revision).map_err(|e| e.to_string())?
                 );
             }
-
             if let Some(path) = report_json {
                 let json = serde_json::to_string_pretty(&revision).map_err(|e| e.to_string())?;
                 artifact::write_atomic(&path, json.as_bytes())
@@ -394,60 +388,8 @@ fn run(command: Command) -> Result<(), String> {
             from_llm,
             out,
             api,
-            v1,
             context,
-        } => {
-            if v1 {
-                return run_interpret_v1(path, prompt, dry_run, from_llm, out, api, context);
-            }
-            use hexwitch_core::interpret as interp;
-
-            let theme_json = read_input(&path)?;
-            let _ = theme_json;
-            let theme =
-                hexwitch_core::import_path::load_theme_path(&path).map_err(|e| e.to_string())?;
-
-            if let Some(response_path) = from_llm {
-                let raw = read_input(&response_path)?;
-                let llm =
-                    interp::parse_model_output(&raw).map_err(|e| format!("model output: {e}"))?;
-                let spec = interp::llm_spec_to_edit_spec(&llm)
-                    .map_err(|e| format!("invalid spec: {e}"))?;
-                spec.validate(&theme)
-                    .map_err(|e| format!("invalid theme targets: {e}"))?;
-                if let Some(notes) = &llm.notes {
-                    eprintln!("notes: {notes}");
-                }
-                write_spec(&spec, out)?;
-                return Ok(());
-            }
-
-            let prompt = prompt.ok_or("a PROMPT is required (or use --from-llm)")?;
-            let system = interp::system_prompt();
-            let user = interp::user_prompt(&theme, &prompt);
-
-            if dry_run {
-                println!("--- system ---\n{system}\n--- user ---\n{user}");
-                return Ok(());
-            }
-
-            let connection = api.resolve()?;
-            let llm = provider::call_provider(
-                &connection.endpoint,
-                &connection.key,
-                &connection.model,
-                &system,
-                &user,
-                connection.format,
-            )
-            .map_err(|e| e.to_string())?;
-            let spec = interp::llm_spec_to_edit_spec(&llm).map_err(|e| e.to_string())?;
-            spec.validate(&theme).map_err(|e| e.to_string())?;
-            if let Some(notes) = llm.notes {
-                eprintln!("notes: {notes}");
-            }
-            write_spec(&spec, out)?;
-        }
+        } => run_interpret_v1(path, prompt, dry_run, from_llm, out, api, context)?,
     }
     Ok(())
 }
@@ -463,7 +405,7 @@ fn run_interpret_v1(
     context: Option<std::path::PathBuf>,
 ) -> Result<(), String> {
     let theme = hexwitch_core::import_path::load_theme_path(&path).map_err(|e| e.to_string())?;
-    let prompt=prompt.ok_or("v1 interpretation requires the original request, including for offline trusted-color validation")?;
+    let prompt=prompt.ok_or("interpretation requires the original request, including for offline trusted-color validation")?;
     let context = match context {
         Some(p) => serde_json::from_str(&read_input(&p)?).map_err(|e| e.to_string())?,
         None => hexwitch_core::interpret_v1::IterationContext::default(),
@@ -580,20 +522,4 @@ fn machine_main(command: Command, request_id: &str) {
     if failed {
         std::process::exit(1);
     }
-}
-
-fn write_spec(
-    spec: &hexwitch_core::revise::EditSpec,
-    out: Option<std::path::PathBuf>,
-) -> Result<(), String> {
-    let json = serde_json::to_string_pretty(spec).map_err(|e| e.to_string())?;
-    match out {
-        Some(p) => {
-            artifact::write_atomic(&p, json.as_bytes())
-                .map_err(|e| format!("cannot write {}: {e}", p.display()))?;
-            eprintln!("edit spec written to {}", p.display());
-        }
-        None => println!("{json}"),
-    }
-    Ok(())
 }

@@ -115,35 +115,17 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                 let raw = read_input(&spec).map_err(io)?;
                 let value: Value =
                     serde_json::from_str(&raw).map_err(|e| invalid(e.to_string()))?;
-                let (revised, report, outcome) = if value.get("version").is_some() {
-                    let spec = serde_json::from_value(value).map_err(|e| invalid(e.to_string()))?;
-                    let (revised, report) =
-                        hexwitch_core::intent::revise_intent(&original, &spec).map_err(invalid)?;
-                    let outcome = report.outcome;
-                    (revised, json!(report), outcome)
-                } else {
-                    let spec = hexwitch_core::revise::EditSpec::from_json(&raw)
-                        .map_err(|e| invalid(e.to_string()))?;
-                    let (revised, report) = hexwitch_core::revise::revise(&original, &spec)
-                        .map_err(|e| {
-                            let code = match e {
-                                hexwitch_core::revise::ReviseError::UnknownProtectRole(_)
-                                | hexwitch_core::revise::ReviseError::UnknownTargetRole {
-                                    ..
-                                } => ErrorCode::MissingTarget,
-                                _ => ErrorCode::InvalidInput,
-                            };
-                            (code, e.to_string())
-                        })?;
-                    let outcome = if !report.failed.is_empty() || !report.refused.is_empty() {
-                        Outcome::Partial
-                    } else if report.applied.is_empty() {
-                        Outcome::Unchanged
-                    } else {
-                        Outcome::Satisfied
-                    };
-                    (revised, json!(report), outcome)
-                };
+                if value.get("version").is_none() {
+                    return Err(invalid(
+                        "intent spec requires a version field; legacy edit specs are no longer supported"
+                            .into(),
+                    ));
+                }
+                let spec = serde_json::from_value(value).map_err(|e| invalid(e.to_string()))?;
+                let (revised, report) =
+                    hexwitch_core::intent::revise_intent(&original, &spec).map_err(invalid)?;
+                let outcome = report.outcome;
+                let report = json!(report);
                 if let Some(p) = report_json {
                     artifact::write_atomic(&p, report.to_string().as_bytes())
                         .map_err(|e| io(e.to_string()))?;
@@ -162,105 +144,58 @@ pub fn run(command: Command, request_id: &str) -> Response<Value> {
                 prompt,
                 api,
                 out,
-                v1,
                 context,
             } => {
                 let theme = theme(&path)?;
-                if v1 {
-                    let request = prompt.ok_or_else(|| {
-                        invalid("v1 requires original request, including offline replay".into())
-                    })?;
-                    let context = match context {
-                        Some(p) => serde_json::from_str(&read_input(&p).map_err(io)?)
-                            .map_err(|e| invalid(e.to_string()))?,
-                        None => hexwitch_core::interpret_v1::IterationContext::default(),
-                    };
-                    let user = hexwitch_core::interpret_v1::user_prompt(&theme, &request, &context)
-                        .map_err(invalid)?;
-                    let system = hexwitch_core::interpret_v1::system_prompt();
-                    if dry_run {
-                        return Ok((
-                            Outcome::Unchanged,
-                            json!({"system":system,"user":user,"schema":hexwitch_core::interpret_v1::response_schema_for_request(&request)}),
-                        ));
-                    }
-                    let response = match from_llm {
-                        Some(p) => hexwitch_core::interpret_v1::parse_model_output(
-                            &read_input(&p).map_err(io)?,
+                let request = prompt
+                    .ok_or_else(|| {
+                        invalid(
+                            "interpretation requires the original request, including offline replay"
+                                .into(),
                         )
-                        .map_err(invalid)?,
-                        None => {
-                            let connection = api
-                                .resolve()
-                                .map_err(|e| (ErrorCode::ProviderUnavailable, e))?;
-                            provider::call_provider_v1(
-                                &connection.endpoint,
-                                &connection.key,
-                                &connection.model,
-                                &system,
-                                &user,
-                                connection.format,
-                                &request,
-                            )
-                            .map_err(provider_error)?
-                        }
-                    };
-                    let interpreted =
-                        hexwitch_core::interpret_v1::validate(&response, &theme, &request)
-                            .map_err(invalid)?;
-                    if let Some(spec) = &interpreted.spec {
-                        write_spec_value(&json!(spec), out).map_err(io)?;
-                    }
-                    return Ok((interpreted.outcome, json!(interpreted)));
-                }
+                    })?;
+                let context = match context {
+                    Some(p) => serde_json::from_str(&read_input(&p).map_err(io)?)
+                        .map_err(|e| invalid(e.to_string()))?,
+                    None => hexwitch_core::interpret_v1::IterationContext::default(),
+                };
+                let user = hexwitch_core::interpret_v1::user_prompt(&theme, &request, &context)
+                    .map_err(invalid)?;
+                let system = hexwitch_core::interpret_v1::system_prompt();
                 if dry_run {
                     return Ok((
                         Outcome::Unchanged,
-                        json!({"system":hexwitch_core::interpret::system_prompt(),"user":hexwitch_core::interpret::user_prompt(&theme,prompt.as_deref().unwrap_or(""))}),
+                        json!({"system":system,"user":user,"schema":hexwitch_core::interpret_v1::response_schema_for_request(&request)}),
                     ));
                 }
-                let llm = if let Some(path) = from_llm {
-                    hexwitch_core::interpret::parse_model_output(&read_input(&path).map_err(io)?)
-                        .map_err(|e| invalid(e.to_string()))?
-                } else {
-                    let prompt =
-                        prompt.ok_or_else(|| invalid("non-empty prompt required".into()))?;
-                    if prompt.trim().is_empty() {
-                        return Err(invalid("non-empty prompt required".into()));
-                    }
-                    let connection = api
-                        .resolve()
-                        .map_err(|e| (ErrorCode::ProviderUnavailable, e))?;
-                    provider::call_provider(
-                        &connection.endpoint,
-                        &connection.key,
-                        &connection.model,
-                        &hexwitch_core::interpret::system_prompt(),
-                        &hexwitch_core::interpret::user_prompt(&theme, &prompt),
-                        connection.format,
+                let response = match from_llm {
+                    Some(p) => hexwitch_core::interpret_v1::parse_model_output(
+                        &read_input(&p).map_err(io)?,
                     )
-                    .map_err(|e| {
-                        let code = match e.code {
-                            "timeout" => ErrorCode::Timeout,
-                            "rate_limited" => ErrorCode::RateLimited,
-                            "refusal" => ErrorCode::ProviderRefusal,
-                            "payload_too_large" => ErrorCode::PayloadTooLarge,
-                            _ => ErrorCode::ProviderUnavailable,
-                        };
-                        (code, e.to_string())
-                    })?
+                    .map_err(invalid)?,
+                    None => {
+                        let connection = api
+                            .resolve()
+                            .map_err(|e| (ErrorCode::ProviderUnavailable, e))?;
+                        provider::call_provider_v1(
+                            &connection.endpoint,
+                            &connection.key,
+                            &connection.model,
+                            &system,
+                            &user,
+                            connection.format,
+                            &request,
+                        )
+                        .map_err(provider_error)?
+                    }
                 };
-                let spec = hexwitch_core::interpret::llm_spec_to_edit_spec(&llm)
-                    .map_err(|e| invalid(e.to_string()))?;
-                spec.validate(&theme)
-                    .map_err(|e| (ErrorCode::MissingTarget, e.to_string()))?;
-                let outcome = if spec.changes.is_empty() && spec.protect.is_empty() {
-                    Outcome::NeedsClarification
-                } else {
-                    Outcome::Satisfied
-                };
-                write_spec_value(&json!(spec), out).map_err(io)?;
-                Ok((outcome, json!({"spec":spec,"notes":llm.notes})))
+                let interpreted =
+                    hexwitch_core::interpret_v1::validate(&response, &theme, &request)
+                        .map_err(invalid)?;
+                if let Some(spec) = &interpreted.spec {
+                    write_spec_value(&json!(spec), out).map_err(io)?;
+                }
+                Ok((interpreted.outcome, json!(interpreted)))
             }
             _ => Err((
                 ErrorCode::UnsupportedCapability,

@@ -626,6 +626,14 @@ fn ingest_vscode_value(root: Value) -> Result<Theme, IngestError> {
     ) {
         losses.push(serde_json::json!({"property":"type","reason":"high-contrast appearance retained in source; separate high-contrast capability not modeled"}));
     }
+    if root.get("type").is_none() {
+        losses.push(
+            serde_json::json!({"property":"type","reason":"theme type absent; defaulted to dark"}),
+        );
+    }
+    if root.get("name").is_none() {
+        losses.push(serde_json::json!({"property":"name","reason":"theme name absent; defaulted to Unnamed"}));
+    }
     if let Some(layers) = root.get("hexwitchSemanticLayers") {
         let layers = layers
             .as_array()
@@ -683,6 +691,9 @@ fn ingest_vscode_value(root: Value) -> Result<Theme, IngestError> {
             }
         }
     }
+    if theme.styles.is_empty() {
+        losses.push(serde_json::json!({"property":"styles","reason":"no styles imported; core roles unpopulated"}));
+    }
     theme.extensions.insert(
         "hexwitch.import.losses.v1".into(),
         serde_json::json!(losses),
@@ -725,6 +736,33 @@ mod tests {
             }),
             Some(Srgb::from_hex("#fb4934").unwrap())
         );
+    }
+
+    #[test]
+    fn silent_defaults_and_empty_imports_record_losses() {
+        let t = ingest_vscode_json(r#"{"colors":{}}"#).unwrap();
+        assert_eq!(t.meta.name, "Unnamed");
+        assert_eq!(t.meta.appearance, Appearance::Dark);
+        let losses = t.extensions["hexwitch.import.losses.v1"]
+            .as_array()
+            .unwrap();
+        assert!(losses.iter().any(|l| l["property"] == "type"
+            && l["reason"].as_str().unwrap().contains("defaulted to dark")));
+        assert!(losses
+            .iter()
+            .any(|l| l["property"] == "name" && l["reason"].as_str().unwrap().contains("Unnamed")));
+        assert!(losses.iter().any(|l| l["property"] == "styles"
+            && l["reason"].as_str().unwrap().contains("no styles imported")));
+        let named = ingest_vscode_json(
+            r##"{"name":"N","type":"light","colors":{"editor.background":"#ffffff"}}"##,
+        )
+        .unwrap();
+        let losses = named.extensions["hexwitch.import.losses.v1"]
+            .as_array()
+            .unwrap();
+        assert!(!losses.iter().any(|l| l["property"] == "type"
+            || l["property"] == "name"
+            || l["property"] == "styles"));
     }
 
     #[test]

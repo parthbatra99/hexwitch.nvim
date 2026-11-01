@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
 
-use crate::color::{contrast_ratio, Srgb};
+use crate::color::Srgb;
 use crate::ir::role::{Role, Surface, SyntaxRole, TextRole};
 use crate::ir::style::Style;
 use crate::IR_VERSION;
@@ -144,19 +144,6 @@ impl Theme {
 
     pub fn base_bg(&self) -> Option<Srgb> {
         self.bg(&Role::Surface(Surface::Base))
-    }
-
-    pub fn fg_contrast_against(&self, role: &Role, backdrop: Srgb) -> Option<f64> {
-        self.fg(role).map(|fg| {
-            contrast_ratio(
-                crate::color::composite_over(
-                    fg,
-                    self.get(role).and_then(|s| s.fg_opacity).unwrap_or(1.0),
-                    backdrop,
-                ),
-                backdrop,
-            )
-        })
     }
 
     pub fn check_core_roles(&self) -> Result<(), Vec<ThemeError>> {
@@ -425,20 +412,6 @@ mod tests {
             t.set(role, Style::fg(Srgb::new(0xde, 0xde, 0xde)));
         }
         assert!(t.check_core_roles().is_ok());
-    }
-
-    #[test]
-    fn fg_contrast_against_base() {
-        let t = gruvbox_ish();
-        let base = t.base_bg().unwrap();
-        let text = t
-            .fg_contrast_against(&Role::Text(TextRole::Primary), base)
-            .unwrap();
-        let comment = t
-            .fg_contrast_against(&Role::Syntax(SyntaxRole::Comment), base)
-            .unwrap();
-        assert!((text - 10.75).abs() < 0.05, "text {text}");
-        assert!((comment - 4.02).abs() < 0.05, "comment {comment}");
     }
 
     #[test]

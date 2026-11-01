@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::color::{contrast_ratio, Srgb};
-use crate::ir::role::{Role, Surface, SyntaxRole, TextRole};
+use crate::ir::role::Role;
 use crate::ir::theme::{Appearance, Theme};
 
 #[derive(Debug, Error, PartialEq)]
@@ -116,41 +116,10 @@ pub fn fingerprint(theme: &Theme) -> Result<Fingerprint, AnalyzeError> {
     })
 }
 
-pub fn polarity_is_consistent(theme: &Theme) -> bool {
-    let (Some(base), Some(primary)) = (theme.base_bg(), theme.fg(&Role::Text(TextRole::Primary)))
-    else {
-        return false;
-    };
-    match theme.meta.appearance {
-        Appearance::Dark => base.relative_luminance() < primary.relative_luminance(),
-        Appearance::Light => base.relative_luminance() > primary.relative_luminance(),
-    }
-}
-
-pub fn comment_not_brighter_than_primary(theme: &Theme) -> bool {
-    let Some(base) = theme.base_bg() else {
-        return false;
-    };
-    let primary = theme.fg(&Role::Text(TextRole::Primary));
-    let comment = theme.fg(&Role::Syntax(SyntaxRole::Comment));
-    match (primary, comment) {
-        (Some(p), Some(c)) => contrast_ratio(c, base) <= contrast_ratio(p, base) + 1e-9,
-        _ => false,
-    }
-}
-
-pub fn core_surfaces() -> Vec<Role> {
-    vec![
-        Role::Surface(Surface::Base),
-        Role::Surface(Surface::Gutter),
-        Role::Surface(Surface::Panel),
-        Role::Surface(Surface::Float),
-    ]
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ir::role::{Surface, SyntaxRole, TextRole};
     use crate::ir::style::Style;
 
     fn tiny() -> Theme {
@@ -193,19 +162,6 @@ mod tests {
         let mut t = Theme::new("empty", Appearance::Dark);
         t.set(Role::Text(TextRole::Primary), Style::fg(Srgb::WHITE));
         assert!(matches!(fingerprint(&t), Err(AnalyzeError::MissingBase(_))));
-    }
-
-    #[test]
-    fn invariants_hold_for_well_formed_theme() {
-        assert!(polarity_is_consistent(&tiny()));
-        assert!(comment_not_brighter_than_primary(&tiny()));
-    }
-
-    #[test]
-    fn invariants_catch_inversion() {
-        let mut t = tiny();
-        t.meta.appearance = Appearance::Light;
-        assert!(!polarity_is_consistent(&t));
     }
 
     #[test]

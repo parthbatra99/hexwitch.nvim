@@ -574,28 +574,18 @@ fn evaluate_predicate(
                 let ok = match check {
                     Predicate::HuePreserved {
                         tolerance_degrees, ..
-                    } => {
-                        if !tolerance_degrees.is_finite()
-                            || !(0.0..=180.0).contains(tolerance_degrees)
-                        {
-                            return Err("invalid hue tolerance".into());
-                        }
-                        color(a, target.property)
-                            .zip(color(b, target.property))
-                            .is_some_and(|(a, b)| {
-                                let distance = (a.to_oklch().h - b.to_oklch().h).abs();
-                                distance.min(360.0 - distance) <= *tolerance_degrees
-                            })
-                    }
+                    } => color(a, target.property)
+                        .zip(color(b, target.property))
+                        .is_some_and(|(a, b)| {
+                            let distance = (a.to_oklch().h - b.to_oklch().h).abs();
+                            distance.min(360.0 - distance) <= *tolerance_degrees
+                        }),
                     Predicate::Secondary {
                         primary,
                         background,
                         min,
                         ..
                     } => {
-                        if !min.is_finite() || !(1.0..=21.0).contains(min) {
-                            return Err("invalid secondary readability floor".into());
-                        }
                         let bg = background.resolve(after)?;
                         let primary_style = after
                             .get(primary)
@@ -616,19 +606,8 @@ fn evaluate_predicate(
                     Predicate::Preserved { .. } => {
                         property(a, target.property) == property(b, target.property)
                     }
-                    Predicate::Bool { value, .. } => {
-                        if !matches!(
-                            target.property,
-                            Property::Bold | Property::Italic | Property::Strikethrough
-                        ) {
-                            return Err("bool check needs typography property".into());
-                        }
-                        bool_value(b, target.property) == Some(*value)
-                    }
+                    Predicate::Bool { value, .. } => bool_value(b, target.property) == Some(*value),
                     Predicate::Number { value, .. } => {
-                        if !value.is_finite() {
-                            return Err("nonfinite expectation".into());
-                        }
                         number(b, target.property).is_some_and(|n| (n - value).abs() <= 1e-9)
                     }
                     Predicate::Locked { value, .. } => b.is_locked(target.property) == *value,
@@ -642,28 +621,19 @@ fn evaluate_predicate(
                         min_delta,
                         max_delta,
                         ..
-                    } => {
-                        if !min_delta.is_finite() || !max_delta.is_finite() || min_delta > max_delta
-                        {
-                            return Err("invalid metric bounds".into());
-                        }
-                        color(a, target.property)
-                            .zip(color(b, target.property))
-                            .is_some_and(|(a, b)| {
-                                let delta = if matches!(check, Predicate::Lightness { .. }) {
-                                    b.to_oklch().l - a.to_oklch().l
-                                } else {
-                                    b.to_oklch().c - a.to_oklch().c
-                                };
-                                delta >= *min_delta && delta <= *max_delta
-                            })
-                    }
+                    } => color(a, target.property)
+                        .zip(color(b, target.property))
+                        .is_some_and(|(a, b)| {
+                            let delta = if matches!(check, Predicate::Lightness { .. }) {
+                                b.to_oklch().l - a.to_oklch().l
+                            } else {
+                                b.to_oklch().c - a.to_oklch().c
+                            };
+                            delta >= *min_delta && delta <= *max_delta
+                        }),
                     Predicate::Contrast {
                         backgrounds, min, ..
                     } => {
-                        if !min.is_finite() || !(1.0..=21.0).contains(min) {
-                            return Err("invalid contrast expectation".into());
-                        }
                         let backgrounds = crate::backdrop::resolve_all(after, backgrounds)?;
                         let alpha = match target.property {
                             Property::Fg => b.fg_opacity,
@@ -982,7 +952,7 @@ pub fn run_suite(suite_path: &Path, run_path: &Path) -> Result<Evaluation, Strin
         }
         results.push(result);
     }
-    let pair_results = crate::eval_pairs::evaluate_pairs(&suite.pairs, &turns, &ids)?;
+    let pair_results = crate::eval_pairs::evaluate_pairs(&suite.pairs, &turns)?;
     let pair_failures = pair_results.iter().filter(|p| !p.passed).count();
     let mut categories = BTreeMap::new();
     let mut classes = BTreeMap::new();

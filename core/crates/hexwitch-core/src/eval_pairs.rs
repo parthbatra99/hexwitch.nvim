@@ -1,15 +1,10 @@
 use super::interpret_eval::{color, property, styles, Metric, Pair, PairResult, Turn};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 pub(super) fn evaluate_pairs(
     pairs: &[Pair],
     turns: &BTreeMap<String, Turn>,
-    case_ids: &BTreeSet<String>,
 ) -> Result<Vec<PairResult>, String> {
-    if pairs.len() > 256 {
-        return Err("pair count limit".into());
-    }
-    let mut ids = BTreeSet::new();
     let mut results = vec![];
     for pair in pairs {
         let (id, left, right) = match pair {
@@ -23,14 +18,6 @@ pub(super) fn evaluate_pairs(
                 ..
             } => (id, smaller, larger),
         };
-        if id.trim().is_empty()
-            || !ids.insert(id.clone())
-            || !case_ids.contains(left)
-            || !case_ids.contains(right)
-            || left == right
-        {
-            return Err("invalid pair identifier or case reference".into());
-        }
         let mut findings = vec![];
         if let (Some(a), Some(b)) = (turns.get(left), turns.get(right)) {
             if !a.passed || !b.passed {
@@ -38,9 +25,6 @@ pub(super) fn evaluate_pairs(
             }
             match pair {
                 Pair::Equivalent { targets, .. } => {
-                    if targets.is_empty() {
-                        return Err("equivalence targets required".into());
-                    }
                     if a.model.decision != b.model.decision {
                         findings.push("paraphrase decisions differ".into());
                     }
@@ -86,9 +70,6 @@ pub(super) fn evaluate_pairs(
                     min_gap,
                     ..
                 } => {
-                    if !min_gap.is_finite() || *min_gap < 0.0 {
-                        return Err("invalid pair gap".into());
-                    }
                     let ab = styles(&a.before, target)?;
                     let aa = styles(&a.after, target)?;
                     let bb = styles(&b.before, target)?;

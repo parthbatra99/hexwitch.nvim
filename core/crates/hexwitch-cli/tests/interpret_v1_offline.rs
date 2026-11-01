@@ -29,7 +29,6 @@ fn property_interpretation_writes_reviewable_intent_and_revises_offline() {
         "interpret",
         theme.to_str().unwrap(),
         "Keep the background color, but remove its transparency.",
-        "--v1",
         "--from-llm",
         response.to_str().unwrap(),
         "--out",
@@ -65,7 +64,6 @@ fn clarification_does_not_write_or_overwrite_action_artifact() {
         "interpret",
         eval("themes/nord.json").to_str().unwrap(),
         "Make that blue quieter.",
-        "--v1",
         "--from-llm",
         eval("llm/clarify-blue.json").to_str().unwrap(),
         "--out",
@@ -86,7 +84,6 @@ fn v1_rejects_untrusted_anchor_and_requires_original_request() {
         "interpret",
         eval("themes/nord.json").to_str().unwrap(),
         "Warmer keywords.",
-        "--v1",
         "--from-llm",
         eval("llm/invalid-invented-anchor.json").to_str().unwrap(),
     ]);
@@ -95,7 +92,6 @@ fn v1_rejects_untrusted_anchor_and_requires_original_request() {
     let (ok, result) = call(&[
         "interpret",
         eval("themes/nord.json").to_str().unwrap(),
-        "--v1",
         "--from-llm",
         eval("llm/property-opaque-background.json")
             .to_str()

@@ -479,6 +479,7 @@ function reviewSummary(comparison) {
 function reviewCard() {
   const candidate = state.candidate;
   const validation = candidate.validation;
+  const engineWarnings = candidate.report?.warnings || [];
   const scenes = validation.scenes || [];
   const comparison = compareScenes(scenes);
   const risky = comparison.worse.length > 0;
@@ -505,6 +506,7 @@ function reviewCard() {
     el('div', { class: 'card-head' }, el('strong', { text: 'Ready to review' }), status),
     el('span', { class: 'faint', style: 'font-size:12.5px;margin-top:-8px', text: candidate.label }),
     el('div', { class: 'changes' }, changes.length ? changes : el('span', { class: 'faint', text: 'No visible property changes.' })),
+    engineWarnings.length ? el('ul', { class: 'warning-list' }, engineWarnings.map(warning => el('li', { text: warning }))) : null,
     shown.length ? el('div', { class: 'checks' }, shown.map(tile)) : null,
     risky ? el('ul', { class: 'warning-list' }, comparison.worse.slice(0, 3).map(scene => el('li', { text: `${sceneLabel(scene)}: ${scene.reasons.join('; ') || scene.status}` }))) : null,
     summary || scenes.length ? el('details', { class: 'all-checks' }, el('summary', { text: summary ? `${summary} · all ${scenes.length} checks` : `All ${scenes.length} checks` }),

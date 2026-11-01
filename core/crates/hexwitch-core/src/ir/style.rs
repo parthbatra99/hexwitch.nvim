@@ -235,12 +235,6 @@ impl Style {
         s
     }
 
-    pub fn pair(fg: Srgb, bg: Srgb) -> Self {
-        let mut s = Style::fg(fg);
-        s.bg = Some(bg);
-        s
-    }
-
     pub fn with_provenance(mut self, provenance: Provenance) -> Self {
         self.provenance = provenance;
         self

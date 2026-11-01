@@ -141,10 +141,19 @@ pub fn resolve_semantic(
 ) -> Result<SemanticResolution, String> {
     theme.validate()?;
     context.validate()?;
+    base.validate()?;
+    resolve_semantic_prevalidated(theme, role, context, base)
+}
+
+pub(crate) fn resolve_semantic_prevalidated(
+    theme: &Theme,
+    role: &Role,
+    context: &SemanticContext,
+    base: &Style,
+) -> Result<SemanticResolution, String> {
     if portable_role(&context.token_type).is_some_and(|expected| expected != *role) {
         return Err("semantic context does not match foreground role".into());
     }
-    base.validate()?;
     if !theme.styles.contains_key(role) {
         return Err(format!("missing semantic base role {role}"));
     }

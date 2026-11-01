@@ -11,8 +11,6 @@ pub struct IntentSpec {
     pub actions: Vec<Action>,
     #[serde(default)]
     pub requirements: Vec<Constraint>,
-    #[serde(default)]
-    pub preferences: Vec<Preference>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -78,6 +76,8 @@ pub enum Action {
         min: f64,
         #[serde(default)]
         direction: Direction,
+        #[serde(default)]
+        persistent: bool,
     },
 }
 impl Action {
@@ -109,13 +109,6 @@ pub struct Constraint {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub include_semantic: bool,
 }
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct Preference {
-    pub target: Target,
-    pub weight: f64,
-    pub reason: String,
-}
 #[derive(Debug, Clone, Serialize)]
 pub struct PropertyOutcome {
     pub role: Role,
@@ -132,8 +125,38 @@ pub struct IntentReport {
     pub outcome: Outcome,
     pub properties: Vec<PropertyOutcome>,
     pub requirements: Vec<PropertyOutcome>,
-    pub preferences: Vec<Preference>,
     pub rolled_back: bool,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
+}
+
+fn changed_outside_targets(theme: &Theme, revised: &Theme, spec: &IntentSpec) -> Vec<String> {
+    let mut allowed: Vec<Role> = vec![];
+    for action in &spec.actions {
+        for selector in &action.target().roles {
+            for role in theme
+                .styles
+                .keys()
+                .filter(|role| crate::selector::matches(selector, role))
+            {
+                if !allowed.contains(role) {
+                    allowed.push(role.clone());
+                }
+            }
+        }
+    }
+    let mut warnings = vec![];
+    for (role, before) in &theme.styles {
+        if !allowed.contains(role) && revised.styles.get(role) != Some(before) {
+            warnings.push(format!("changed outside requested targets: {role}"));
+        }
+    }
+    for role in revised.styles.keys() {
+        if !theme.styles.contains_key(role) && !allowed.contains(role) {
+            warnings.push(format!("changed outside requested targets: {role}"));
+        }
+    }
+    warnings
 }
 
 fn roles(theme: &Theme, target: &Target) -> Result<Vec<Role>, String> {
@@ -244,12 +267,6 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
             }
         }
     }
-    for preference in &spec.preferences {
-        roles(theme, &preference.target)?;
-        if !preference.weight.is_finite() || !(0.0..=1.0).contains(&preference.weight) {
-            return Err("invalid preference weight".into());
-        }
-    }
     let mut constraints: Vec<Constraint> = theme
         .extensions
         .get("hexwitch.constraints.v1")
@@ -262,8 +279,38 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
             constraints.push(requirement.clone());
         }
     }
-    if constraints.len() > 1024 || spec.preferences.len() > 1024 {
-        return Err("persistent constraint or preference count limit exceeded".into());
+    for action in &spec.actions {
+        if let Action::Contrast {
+            target,
+            backgrounds,
+            min,
+            persistent,
+            ..
+        } = action
+        {
+            for selector in &target.roles {
+                for role in theme
+                    .styles
+                    .keys()
+                    .filter(|role| crate::selector::matches(selector, role))
+                {
+                    let constraint = Constraint {
+                        role: role.clone(),
+                        property: target.property,
+                        backgrounds: backgrounds.clone(),
+                        min: *min,
+                        persistent: *persistent,
+                        include_semantic: target.include_semantic,
+                    };
+                    if !constraints.contains(&constraint) {
+                        constraints.push(constraint);
+                    }
+                }
+            }
+        }
+    }
+    if constraints.len() > 1024 {
+        return Err("persistent constraint count limit exceeded".into());
     }
     for requirement in &constraints {
         if !theme.styles.contains_key(&requirement.role)
@@ -287,8 +334,8 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
         outcome: Outcome::Unchanged,
         properties: vec![],
         requirements: vec![],
-        preferences: spec.preferences.clone(),
         rolled_back: false,
+        warnings: vec![],
     };
     let mut local_locks = std::collections::BTreeSet::new();
     for action in &spec.actions {
@@ -571,6 +618,45 @@ pub fn revise_intent(theme: &Theme, spec: &IntentSpec) -> Result<(Theme, IntentR
     } else {
         Outcome::Unchanged
     };
+    report.warnings = changed_outside_targets(theme, &revised, spec);
     revised.validate()?;
     Ok((revised, report))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ir::*;
+
+    fn two_role_theme() -> Theme {
+        let mut t = Theme::new("warn", Appearance::Dark);
+        t.set(
+            Role::Surface(Surface::Base),
+            Style::bg(Srgb::from_hex("#101010").unwrap()),
+        );
+        t.set(
+            Role::Interaction(InteractionRole::Selection),
+            Style::fg(Srgb::from_hex("#dddddd").unwrap()),
+        );
+        t
+    }
+    fn spec_for(selector: &str) -> IntentSpec {
+        serde_json::from_value(serde_json::json!({"version":1,"actions":[{"op":"set_color","target":{"roles":[selector],"property":"fg"},"color":"#eeeeee"}]})).unwrap()
+    }
+
+    #[test]
+    fn changes_outside_targets_are_reported_as_warnings() {
+        let theme = two_role_theme();
+        let mut drifted = theme.clone();
+        drifted.set(
+            Role::Surface(Surface::Base),
+            Style::bg(Srgb::from_hex("#202020").unwrap()),
+        );
+        let warnings =
+            changed_outside_targets(&theme, &drifted, &spec_for("interaction.selection"));
+        assert_eq!(warnings.len(), 1);
+        assert!(warnings[0].contains("surface.base"));
+        assert!(changed_outside_targets(&theme, &drifted, &spec_for("surface.base")).is_empty());
+        assert!(changed_outside_targets(&theme, &drifted, &spec_for("*")).is_empty());
+    }
 }

@@ -4,7 +4,8 @@ use hexwitch_core::ir::*;
 
 fn theme() -> Theme {
     let mut t = Theme::new("contract", Appearance::Dark);
-    let mut s = Style::pair(Srgb::WHITE, Srgb::BLACK);
+    let mut s = Style::fg(Srgb::WHITE);
+    s.bg = Some(Srgb::BLACK);
     s.bg_opacity = Some(0.4);
     s.source = Some(SourceInfo {
         origin: Origin::Generated,
@@ -76,11 +77,20 @@ fn final_required_constraints_are_transactional() {
     assert_eq!(report.outcome, hexwitch_core::protocol::Outcome::Infeasible);
 }
 #[test]
+fn bare_contrast_action_rolls_back_when_later_edit_breaks_the_floor() {
+    let t = theme();
+    let spec: IntentSpec = serde_json::from_value(serde_json::json!({"version":1,"actions":[{"op":"contrast","target":{"roles":["interaction.selection"],"property":"fg"},"backgrounds":["#000000"],"min":4.5},{"op":"set_color","target":{"roles":["interaction.selection"],"property":"fg"},"color":"#0a0a0a"}]})).unwrap();
+    let (out, report) = revise_intent(&t, &spec).unwrap();
+    assert_eq!(out, t);
+    assert_eq!(report.outcome, hexwitch_core::protocol::Outcome::Infeasible);
+    assert!(report.rolled_back);
+    assert!(report
+        .requirements
+        .iter()
+        .any(|r| r.outcome == hexwitch_core::protocol::Outcome::Infeasible));
+}
+#[test]
 fn empty_and_arbitrary_input_is_rejected() {
-    assert!(hexwitch_core::interpret::parse_model_output("{}").is_err());
-    assert!(
-        hexwitch_core::interpret::parse_model_output(r#"{"actions":[],"invented":true}"#).is_err()
-    );
     let mut s = Style::new();
     s.blend = Some(101);
     assert!(s.validate().is_err());

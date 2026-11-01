@@ -53,7 +53,6 @@ fn custom_base_url_key_environment_and_output_modes_reach_chat_completions() {
                 "interpret",
                 root.join("themes/nord.json").to_str().unwrap(),
                 "Make that blue quieter.",
-                "--v1",
                 "--base-url",
                 &base,
                 "--api-key-env",
@@ -118,7 +117,6 @@ fn base_url_environment_is_supported_and_missing_key_errors_name_only_variable()
             "interpret",
             root.join("themes/nord.json").to_str().unwrap(),
             "Which blue?",
-            "--v1",
             "--api-key-env",
             "HEXWITCH_ENV_TEST_KEY",
         ])
@@ -134,7 +132,6 @@ fn base_url_environment_is_supported_and_missing_key_errors_name_only_variable()
             "interpret",
             root.join("themes/nord.json").to_str().unwrap(),
             "test",
-            "--v1",
             "--api-key-env",
             "HEXWITCH_MISSING_TEST_KEY",
         ])

@@ -1,4 +1,3 @@
-use hexwitch_core::interpret::{self, LlmSpec};
 use std::io::Write;
 use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
@@ -78,22 +77,6 @@ fn quote(value: &str) -> Result<String, ProviderError> {
             .replace('\r', "\\r")
             .replace('\t', "\\t")
     ))
-}
-
-pub fn call_provider(
-    endpoint: &str,
-    key: &str,
-    model: &str,
-    system: &str,
-    user: &str,
-    format: OutputFormat,
-) -> Result<LlmSpec, ProviderError> {
-    if key.is_empty() || key.chars().any(char::is_control) {
-        return Err(error("invalid_input", "invalid credential"));
-    }
-    let payload = payload(model, system, user, interpret::response_schema(), format);
-    let body = transport(endpoint, key, "POST", Some(&payload.to_string()), 120, None)?;
-    decode_response(&body)
 }
 
 fn transport(
@@ -340,34 +323,10 @@ fn decode_content(body: &str) -> Result<String, ProviderError> {
     Ok(content.to_string())
 }
 
-pub fn decode_response(body: &str) -> Result<LlmSpec, ProviderError> {
-    let content = decode_content(body)?;
-    let spec = interpret::parse_model_output(&content)
-        .map_err(|_| error("invalid_response", "model output failed schema parsing"))?;
-    interpret::llm_spec_to_edit_spec(&spec).map_err(|_| {
-        error(
-            "invalid_response",
-            "model output failed semantic validation",
-        )
-    })?;
-    Ok(spec)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Read;
-    #[test]
-    fn refuses_and_truncation_never_succeed() {
-        for (reason, code) in [("length", "truncated"), ("content_filter", "refusal")] {
-            let body = serde_json::json!({"choices":[{"finish_reason":reason,"message":{"content":"{}"}}]}).to_string();
-            assert_eq!(decode_response(&body).unwrap_err().code, code);
-        }
-        assert!(!decode_response("a credential echoed by a server")
-            .unwrap_err()
-            .to_string()
-            .contains("credential"));
-    }
     #[test]
     fn v1_response_decode_preserves_clarification_and_checks_completion_status() {
         let model = include_str!("../../../eval/llm/clarify-blue.json");

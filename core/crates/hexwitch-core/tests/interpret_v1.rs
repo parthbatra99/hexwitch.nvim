@@ -263,6 +263,42 @@ fn combined_semantic_color_and_opacity_cannot_claim_independent_passes() {
                 .is_some_and(|c| c.modifiers.len() == 2)));
 }
 #[test]
+fn rich_semantic_roles_verify_under_the_context_budget_and_refuse_over_it() {
+    let spec: hexwitch_core::intent::IntentSpec = serde_json::from_value(json!({"version":1,"actions":[],"requirements":[{"role":"syntax.comment","property":"fg","backgrounds":[{"surface":"surface.base","overlays":[]}],"min":1.0,"include_semantic":true}]})).unwrap();
+    for (count, expects_refusal) in [(9, false), (12, true)] {
+        let mut t = theme();
+        t.extensions
+            .insert("vscode.semanticHighlighting".into(), json!(true));
+        for index in 0..count {
+            t.modifiers.push(SemanticStyle {
+                role: Role::Syntax(SyntaxRole::Comment),
+                modifiers: std::collections::BTreeSet::from([format!("m{index}")]),
+                language: None,
+                style: Style {
+                    fg: Some(Srgb::WHITE),
+                    ..Style::new()
+                },
+                token_type: Some("comment".into()),
+                priority: 0,
+            });
+        }
+        let (out, report) = hexwitch_core::intent::revise_intent(&t, &spec).unwrap();
+        assert_eq!(out, t);
+        assert_eq!(report.rolled_back, expects_refusal);
+        if expects_refusal {
+            assert!(report
+                .requirements
+                .iter()
+                .any(|r| r.outcome == Outcome::Infeasible && r.reason.contains("context limit")));
+        } else {
+            assert!(report
+                .requirements
+                .iter()
+                .all(|r| r.outcome == Outcome::Satisfied));
+        }
+    }
+}
+#[test]
 fn request_local_locks_do_not_persist_and_unlocks_are_property_scoped() {
     let t = theme();
     let mut lock = action("lock", &["syntax.keyword"], "fg");

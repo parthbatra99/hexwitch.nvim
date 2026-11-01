@@ -6,17 +6,13 @@
 
 <p align="center">
   <b>A programmable color engine for every theme you use.</b><br>
-  Plain words or scripts in, typed intent through a Rust OKLCH solver, contrast-proven themes out.<br>
-  <b>A full edit, contrast floors included, lands in under 4 ms.</b><br>
   The model never picks a hex. The engine never ships a change that breaks a floor.
 </p>
 
 <p align="center">
-  <img alt="Rust" src="https://img.shields.io/badge/engine-Rust-b7410e">
-  <img alt="Tests" src="https://img.shields.io/badge/tests-168%20passing-2ea043">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-129%20passing-2ea043">
   <img alt="Eval matrix" src="https://img.shields.io/badge/eval%20matrix-74%2F74-2ea043">
   <img alt="Revise" src="https://img.shields.io/badge/revise-3.9%20ms-5b8def">
-  <img alt="License" src="https://img.shields.io/badge/license-MIT-lightgrey">
 </p>
 
 <p align="center">
@@ -30,7 +26,9 @@
 </p>
 
 <p align="center">
-  <img src="docs/media/nudge-and-review.png" alt="The playground with Tokyo Night loaded: a keyword nudged warmer twice and more vivid once, with the review card showing the hex diff, contrast per scene, and Keep or Discard" width="900">
+  <a href="docs/media/playground-nudge-review.png">
+    <img src="docs/media/playground-nudge-review.png" alt="The playground with Tokyo Night (Omarchy) loaded: the keyword inspector open after warmer twice and more vivid once, and the Session review card showing #bb9af7 → #d28fee with Keep change and Discard" width="900">
+  </a>
 </p>
 
 ## Run it
@@ -75,11 +73,9 @@ The solver does the rest:
   on `surface.base`", are stored in the theme and enforced on every later edit.
 
 <p align="center">
-  <img src="docs/media/readable-comments.png" alt="Comments lifted from 1.91:1 to 4.52:1 with one click; changed tokens outlined and pre-existing failures reported separately" width="900">
-</p>
-
-<p align="center">
-  <img src="docs/media/clarifying-question.png" alt="A vague request 'make that blue quieter' gets a clarifying question; the answer produces a reviewable candidate" width="900">
+  <a href="docs/media/playground-readable-comments.png">
+    <img src="docs/media/playground-readable-comments.png" alt="The nudge inspector on a comment reading 4.52:1 readable, and the review card lifting comments from 1.91:1 to 4.52:1 across every scene" width="900">
+  </a>
 </p>
 
 <details>
@@ -96,14 +92,19 @@ $ cat quieter.json
    "backgrounds":[{"surface":"surface.base","overlays":[]}],"min":4.5}
 ]}
 
-$ hexwitch --machine revise --spec quieter.json tokyo-night.json
-outcome: satisfied
-  syntax.comment  fg  #565f89 → #7781ae    2.76:1 → 4.51:1
-  syntax.keyword  fg  #bb9af7 → #9ea5ff
-  12 other roles unchanged
+$ hexwitch revise --spec quieter.json nord.json
+satisfied: 3 property outcome(s), 1 requirement(s)
+
+$ hexwitch --machine revise --spec quieter.json nord.json --report-json report.json
+{"outcome":"satisfied","rolled_back":false,
+ "properties":[{"role":"surface.base","property":"bg","outcome":"satisfied"},
+               {"role":"syntax.keyword","property":"fg","outcome":"satisfied"},
+               {"role":"syntax.comment","property":"fg","outcome":"satisfied"}],
+ "requirements":[{"role":"syntax.comment","property":"fg","outcome":"satisfied"}]}
 ```
 
-The JSON envelope is abridged. The contrast solver searches lightness along a
+The human summary goes to stderr and the revised theme JSON to stdout. The
+report above is abridged. The contrast solver searches lightness along a
 fixed hue with gamut mapping (4096 samples per direction, then 24 refinement
 steps) and stops at the first value that clears the floor after rounding.
 
@@ -111,10 +112,10 @@ steps) and stops at the first value that clears the floor after rounding.
 
 ## Built from real themes
 
-hexwitch loads 30+ well-known themes into one IR: Catppuccin, Dracula, Gruvbox,
-Nord, Solarized, Tokyo Night, VS Code Dark+ and the 23 Omarchy themes. Its
-`analyze` command fingerprints a theme in OKLCH. Across the six classic
-reference themes, the same patterns show up:
+hexwitch imports any VS Code-format theme into one IR; the 23 Omarchy themes
+and the pinned VS Code Dark+ reference ship with it. Its `analyze` command
+fingerprints a theme in OKLCH. Fingerprints recorded for six classic themes
+show the same patterns:
 
 | Theme | Comment contrast | Lowest-contrast syntax role | Comment chroma vs. median accent | Max accent chroma |
 |---|---:|---|---:|---:|
@@ -263,7 +264,7 @@ VS Code, and the multi-model leaderboard. See [FUTURE_PLAN.md](FUTURE_PLAN.md).
 hexwitch --machine capabilities
 hexwitch --machine import theme.json --out ir.json
 hexwitch --machine revise --spec intent.json ir.json --report-json report.json
-hexwitch --machine interpret --v1 --dry-run ir.json "keywords warmer"
+hexwitch --machine interpret --dry-run ir.json "keywords warmer"
 hexwitch --machine validate ir.json
 ```
 
@@ -325,7 +326,7 @@ cargo run --manifest-path core/Cargo.toml -p hexwitch-cli -- playground \
 | Color | sRGB ↔ OKLCH, hue-preserving gamut mapping, WCAG contrast on rounded output, opacity and alpha compositing |
 | IR v1 | Roles with fg/bg/special, opacity, bold/italic/underline/strikethrough, explicit `inherit`/`clear` states, per-property locks, provenance, semantic modifier and language rules, role relationships |
 | Import | VS Code JSON/JSONC with includes, semantic precedence checked against VS Code 1.95.0, loss reports |
-| Revision | `lock`, `unlock`, `set_color`, `set_number`, `set_bool`, `set_underline`, `state`, `lightness`, `chroma`, `hue`, `contrast`; persistent constraints; atomic rollback |
+| Revision | `lock`, `unlock`, `set_color`, `set_number`, `set_bool`, `set_underline`, `state`, `lightness`, `chroma`, `hue`, `contrast`; persistent constraints; atomic rollback; warnings when changes stray outside the requested targets |
 | Interpretation | OpenAI-compatible transport, per-operation schema, user-typed color anchors only, clarification and refusal, dry run |
 | Validation | Calculated scenes: normal, selection, search, diff, floating |
 | Experiments | Review before accept, undo/redo, stale-revision rejection, resumable questions, export and restore |
@@ -367,8 +368,9 @@ browser checks. Live model testing is opt-in.
 ## Today's edges
 
 Emitters are next, so themes stay in IR for now. The preview renders roles, not a
-real editor. A schema-valid but wrong model edit can reach review, which is why
-review exists. WCAG is a calculation, not a comfort study.
+real editor. A schema-valid but wrong model edit can reach review flagged, not
+blocked, when it strays outside its declared targets; that is why review exists.
+WCAG is a calculation, not a comfort study.
 
 ---
 

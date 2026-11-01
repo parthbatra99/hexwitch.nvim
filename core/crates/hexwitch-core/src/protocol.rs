@@ -94,7 +94,7 @@ pub fn capabilities() -> serde_json::Value {
         "ir_version": crate::IR_VERSION,
         "ir_features": ["property_opacity", "property_locks", "semantic_type_selectors", "semantic_priority", "independent_strikethrough"],
         "intent_features": ["include_semantic", "role_backdrops", "semantic_requirement_contexts", "rollback_report"],
-        "interpretation_versions": [0,1],
+        "interpretation_versions": [1],
         "interpretation_prompt_version": crate::interpret_v1::PROMPT_VERSION,
         "interpretation_schema_revision": 3,
         "interpretation_schema_features": ["operation_specific_nullability", "request_anchor_enum", "operation_property_enums", "numeric_delta_bounds"],
@@ -103,7 +103,7 @@ pub fn capabilities() -> serde_json::Value {
         "interpretation_eval": "recorded_semantic_outcomes",
         "evaluation_features": ["state_setup", "sequential_cases", "acceptable_alternatives", "paired_consistency", "proposal_guards", "scorecard_denominators"],
         "operations": ["import", "interpret", "revise", "validate", "eval_interpretation"],
-        "edit_spec_versions": [0, 1],
+        "edit_spec_versions": [1],
         "provider_transport": {"api":"openai_compatible_chat_completions","base_url_configurable":true,"url_schemes":["http","https"],"http_warning":true,"api_key_env_configurable":true,"structured_output":["json_schema","json_object","none"],"automatic_retry":false},
         "offline": true,
         "limitations": ["Scene calculations are not real-editor render verification", "Live provider and human preference evaluations are opt-in", "Cancellation is not yet supported; structured-output capability must be selected explicitly"]
