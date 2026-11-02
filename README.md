@@ -26,7 +26,7 @@
 </p>
 
 <p align="center">
-  <video src="https://raw.githubusercontent.com/parthbatra99/hexwitch.nvim/main/docs/media/playground-demo.mp4" controls width="900">
+  <video src="https://cdn.jsdelivr.net/gh/parthbatra99/hexwitch.nvim@main/docs/media/playground-demo.mp4" controls width="900">
     An 80-second narrated tour of the playground: switch from Eval ink to Catppuccin Latte, nudge a keyword warmer and more vivid, compare before and after, keep the change from the review card, raise comments to 4.5:1 with one tap, and step back and forward through the session history
   </video>
 </p>
