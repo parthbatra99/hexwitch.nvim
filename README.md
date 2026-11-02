@@ -25,7 +25,11 @@
   <a href="#what-were-building">What we're building</a>
 </p>
 
-![An 80-second narrated tour of the playground: switch from Eval ink to Catppuccin Latte, nudge a keyword warmer and more vivid, compare before and after, keep the change from the review card, raise comments to 4.5:1 with one tap, and step back and forward through the session history](https://github.com/user-attachments/assets/80929942-57e2-4379-9d6b-29ecfafdc382)
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/80929942-57e2-4379-9d6b-29ecfafdc382" controls width="900">
+    An 80-second narrated tour of the playground: switch from Eval ink to Catppuccin Latte, nudge a keyword warmer and more vivid, compare before and after, keep the change from the review card, raise comments to 4.5:1 with one tap, and step back and forward through the session history
+  </video>
+</p>
 
 ## Run it
 
